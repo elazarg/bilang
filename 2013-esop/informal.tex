@@ -1,0 +1,84 @@
+%!TEX root = ./recycling.tex
+%
+% intro.tex
+
+\section{Informal development\label{sec:informal}}
+
+In this section, we present the main ideas behind our logic informally, using
+the concurrent list algorithm of Section~\ref{sec:rcu} as a running example.
+
+\mypar{Local/shared state splitting and permissions.}  Before discussing the
+novel features of our logic, we review some concepts from prior work it relies
+upon. The key protocol enforced by the use of RCU's $\sync$ in the algorithm of
+Figure~\ref{fig:list} is that a writer should not deallocate a node a reader
+might be accessing. Program logics and type systems often reason about such
+protocols with the aid of {\em
+  permissions}~\cite{boyland,permissions,fucker-rustan}---a form of auxiliary
+state describing ways in which threads can operate on an area of memory; the
+ownership of permissions can be transferred between threads. When a reader gets
+a reference to a node at the {\tt ref} statement in {\tt search}, it can be
+viewed as taking the ownership of a permission for the node without which other
+threads cannot deallocate it.
+
+To express the notion of permissions owned exclusively by a thread, we adopt the
+approach taken in recent logics for concurrent
+programs~\cite{seplogic-concurrent,rgsep,sagl,fucker-rustan,cap,hyperv},
+partitioning the program state into several {\em thread-local} parts and one
+{\em shared} part (Figure~\ref{fig:egg}a). The part of the state local to a
+thread $t$ can only be accessed by this thread; we say that the thread {\em
+  owns} the permissions in this part. The shared part describes the state
+protected by the RCU lock: it can only be accessed by a thread when it is inside
+a read or a write section. The partitioning is defined by proofs in our logic:
+an assertion in the code of a thread restricts its local state and the shared
+state.  Thus, while reasoning about a thread, we do not have to consider local
+states of others. The state partitioning is also dynamic, meaning that we can
+transfer the ownership of permissions from the local state of a thread into the
+shared state and vice versa. The protocol for such ownership transfers can be
+specified, in a rely-guarantee fashion~\cite{Jones83,Pnueli}, with a pair of
+relations on the shared state showing how operations by threads in read or write
+sections change it.
+% \begin{figure}[t]
+% \includegraphics[scale=.37, trim= 0 15cm 0 0.1cm]{part}
+% \caption{(a) The partitioning of the program state into thread-local and shared.
+% (b) Custodian and shadow partitions.
+% \label{fig:egg}}
+% \end{figure}
+
+To reason about the algorithm in Figure~\ref{fig:list}, it is convenient to use
+{\em existential counting permissions}. When a node, say, at an address $x$, is
+inserted into the list, the {\em full} permission for it is transferred into the
+RCU-protected shared state. The full permission allows a thread accessing the
+shared state to perform any action on the node, including reading from, writing
+to or deallocating it. If, e.g., two reader threads, $t_1$ and $t_2$, each get a
+reference to the node $x$ at {\tt ref} in {\tt search}, the full permission will
+be split into two {\em existential} permissions, given to the respective
+readers, and a {\em master} permission, left in the shared state; see
+Figure~\ref{fig:egg}a, where the two types of permissions are denoted by {\sf
+  e} and {\sf m}.  An existential permission guarantees to a reader that the
+node will not be deallocated while it holds the permission and gives it the
+right to read from and write to the node.  The master permission keeps track of
+the number of existential permissions issued for the node. This lets us later
+recombine the two existential permissions with the master one into the full
+permission, which permits deallocating the node.
+
+
+% In this section, we present the main ideas behind our logic informally, 
+% pointing out various technical challenges and describing the way we chose to overcome them.
+
+% \begin{compactenum}
+% \item Temporal logic 
+% \item Separation logic 
+% \item Global temporal invariant
+% \item Local/Shared state partitioning
+% \item Rely Guarantee + Local Actions
+% \item Stability
+% \item Temporal Assertions
+% \item Permissions
+% \item (Temporal) Resource invariant  
+% \end{compactenum}
+
+%%% Local Variables:
+%%% TeX-master: "recycling"
+%%% mode: latex
+%%% End:  
+

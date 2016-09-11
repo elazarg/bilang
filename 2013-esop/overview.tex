@@ -1,0 +1,394 @@
+%!TEX root = ./recycling.tex
+%
+%
+
+\section{Overview\label{sec:Overview}}
+
+In this section we introduce our running example and 
+informally describe the various aspects of our approach.
+%reclamation mechanisms that we handle.
+
+\subsection{Running Example}
+
+Our running example is a concurrent counter algorithm with an
+\emph{increment-by-one} operation (\texttt{inc()}).
+We will show that the algorithm is \emph{memory safe}, i.e., it never accesses 
+the contents of non-allocated memory cells, 
+and that it does not leak memory.
+We will also show that the algorithm is \emph{correct} in the sense that
+every increment operation appears 
+to take effect instantaneously at a time between  its invocation and response.
+More formally, we will show that the  counter is \emph{linearisable} with respect to the 
+expected sequential specification given in Figure~\ref{fig:running}(spec).
+We note that the running example was chosen to be the simplest algorithm that we could come up with 
+which exposes the    
+challenges and subtleties in verifying a concurrent algorithm with explicit 
+recycling. 
+Similar challenges arise when verifying stacks, queues, and hash tables, 
+which we also verified. (See Section~\ref{sec:Disc}.)
+
+We present the algorithm in three stages.
+We first show a basic algorithm which is linearisable and memory safe 
+but leaks memory. 
+We then show a naive attempt to stop the leakage which results in an algorithm which is
+neither correct nor memory safe.
+Finally, we  contrast the two unsatisfactory algorithms with 
+one which is correct, memory safe, and does not leak memory.
+The algorithm uses hazard pointers.
+In later sections, we will also discuss implementations based on RCU and epochs. 
+%  latter algorithm to motivate a correct counter algorithm based on hazard-pointers 
+% and  provide an informal development of our approach using the latter algorithm.
+
+% Thus, after we formalise our results, we will discuss the hazard-pointer based counter implementation 
+% more formally, as well as  
+% other implementations based on RCU and epochs.  
+ 
+
+\sparagraph{The basic algorithm.}
+The basic algorithm, shown in Figure~\ref{fig:running}(a), 
+keeps the counter's current value in an heap-allocated   
+integer pointed to by the global variable $\cc$.
+To  \emph{increment} the value of the shared counter 
+we allocate a new memory cell 
+(line~\ref{inc:gc:alloc});\footnote{\label{fn:alloc}For simplicity, we assume that memory allocation always succeeds.}
+atomically read  the value of $\cc$ into a local pointer variable \texttt{p} (line~\ref{inc:gc:read});
+dereference \texttt{p}  to get the value \texttt{v} 
+of the counter (line~\ref{inc:gc:deref});
+and then store \texttt{v}'s successor in the newly allocated integer (line~\ref{inc:gc:store}).
+At that point, we try to atomically change the global variable $\cc$ to point to the newly allocated cell using 
+an atomic \emph{compare-and-swap} (\texttt{CAS}) command (line~\ref{inc:gc:cas}).
+The swap succeeds if the value of $\cc$ is the same as it was when we read it, i.e., if \texttt{C} is 
+equal to \texttt{p}, 
+and fails if it is not, e.g., due to a concurrent modification.
+If the swap succeed, we return the old value of the counter.
+Otherwise, we repeat our actions. 
+
+The memory safety and correctness of the algorithm come from the following properties:
+\begin{property}[Memory Safety]\label{prop:simple:mem} ~ 
+  
+\begin{compactenum}  
+\item \label{prop:inc:locals}
+No thread can  access the local variables of another,
+\item \label{prop:inc:cnn}
+\texttt{C} always point to an allocated memory cell, 
+\item \label{prop:inc:nfree}
+Allocated memory is not reclaimed, and
+% and  remains As memory long as a local variable \texttt{p} points to an allocated location.
+\item \label{prop:inc:val}
+Once \texttt{C} point to location $x$ the contents of $x$ do not change. %  as long as $x$ is allocated.
+\end{compactenum}
+\end{property}
+
+The above properties indeed hold:
+The first property, we assume to hold in our programming language.
+The second property is established 
+at the beginning of the algorithm when $\cc$ is initialised to point to a memory 
+cell containing zero, and it is preserved by the compare-and-swap  commands which 
+are the only ones to change the value of $\cc$.
+The third property is ensured because the algorithm  never  reclaims memory.
+The forth property holds because the algorithm changes the contents of the integer memory 
+cell it allocated only before it managed to make $\cc$ point to it.
+
+The first three properties ensure memory safety:
+Property (\ref{prop:inc:locals})
+ensures that the value of the local variable \texttt{p} 
+in line~\ref{inc:gc:deref} is the same value stored to it in line~\ref{inc:gc:read}.
+From this and properties (\ref{prop:inc:cnn}) and (\ref{prop:inc:nfree}) 
+we get that the \texttt{p} points to an allocated value is the location of an allocated  memory cell.
+The forth property, is needed to show the correctness  (linearisability) of the algorithm.
+It ensures that the contents of the location pointed to by \texttt{p} do not change 
+between lines~\ref{inc:gc:deref} and~\ref{inc:gc:cas} 
+and thus that a successful compare-and-swap operation 
+redirects the global variable $\cc$ from a location containing value $v$ to one
+which contains value $v+1$.
+% More conceptually, it allows to deduce from pointer \texttt{\cc} having the same value 
+% at lines~\ref{inc:gc:read} and~\ref{inc:gc:cas} a property of the contents of $\cc$ that holds 
+% the equality of the contents of the cell pointed to by $\cc$ is the  
+
+
+\sparagraph{A naive fix.}
+Figure~\ref{fig:running}(b) shows a naive attempt to prevent memory leakage
+in the basic algorithm 
+by adding an explicit reclamation command after the global variable is changed
+(line~\ref{inc:bug:free}).
+This change indeed stop the leakage but  makes the algorithm memory-unsafe and incorrect.
+
+To see that the algorithm is not memory safe consider the following scenario
+involving  threads $t_1$ and $t_2$ which attempt to increment the value of he counter concurrently.
+Thread $t_1$ executes the body of \texttt{inc()} up to (and including) line~\ref{prop:inc:read}
+and stores the value of $\cc$ at that time, say $c_1$ at its local variable \texttt{p}.
+Then a context switch occurs, and thread $t_2$ executes the whole body of \texttt{inc()} and, 
+in particular, reclaims cell $c_1$. 
+When  $t_1$ executions continues in line~\ref{prop:inc:deref}, it accesses an unallocated memory cell.    
+
+To see that the algorithm is incorrect, consider another scenario where 
+thread $t_1$ executes the body of \texttt{inc()} up to (and including) line~\ref{prop:inc:deref}
+where it has the value of $\cc$, say $c_1$, \emph{and} the contents of cell $c_1$, say $v_1$,
+stored at its local variable \texttt{p} and \texttt{v}, respectively.
+Then a context switch occurs, and thread $t_2$ executes the whole body of \texttt{inc()} and, 
+in particular, reclaims cell $c_1$ and increment the value of the counter to $v_1+1$.
+Then thread $t_1$ executes  \texttt{inc()} again and the allocation in line~\ref{inc:gc:alloc}
+returns the same location $c_1$ which was just reclaimed. 
+
+When  $t_1$ executions continues in line~\ref{prop:inc:deref}, it accesses an unallocated memory cell.    
+
+
+
+
+
+
+
+It adds an  
+The thread which  
+keeps the counter's current value in an heap-allocated
+
+
+., when implementing  it is also memory-safe:
+once a thread obtain a pointer to an allocated cell, e.g., line \ref{inc:gc:read},    
+the garbage collection ensures that that when a variable pointer when a cell a memorthread which it never dereferences an unallocated memory cell.
+Unfortunatelly,
+
+\begin{remark}
+Another possible way to block the memory leakage in of the basic algorithm is to execute it only 
+in managed environments. 
+The algorithm will remain memory safe and correct if the following
+weakening of property (\ref{prop:inc:nfree}) holds:
+\begin{property}[Garbage Collection]\label{prop:simple:gc}
+A memory cell is not reclaimed as long as it is reachable from 
+a local variable.
+\end{property}
+Indeed, most concurrent garbage collector algorithms would ensure this property.
+This explain the remark in ~\ref{Hazard} that the hazard pointer algorithm prevents the ABA problem if 
+GC prevents it.
+\TODO{} 
+\end{remark}
+
+% 
+% are a bit more subtle:
+% 
+% 
+% The reasoning coming from the above two properties 
+% The algorithm  never reclaims memory and does not perform any pointer arithmetics
+%  dereferences unallocated memory.
+% However, it does leak memory.
+% Informally, the memory safety and correctness 
+% (linearizability) of the algorithm comes from the following properties:
+% is correct in the sense that 
+% every increment operation appears 
+% to be executed instantaneously at the time its 
+% compare-and-swap command managed to change the value of $\cc$.
+% 
+% 
+% 
+% The algorithm is correct and never dereferences unallocated memory.
+% However, it does leak memory.
+% Informally, the memory safety and correctness 
+% (linearizability) of the algorithm comes from the following properties:
+% is correct in the sense that 
+% every increment operation appears 
+% to be executed instantaneously at the time its 
+% compare-and-swap command managed to change the value of $\cc$.
+% 
+% f the
+% global variable because of the following reasons:
+% \begin{compactitem}
+%   \item 
+%     only then the allocated memory cell become 
+%   accessible to the other threads.  
+%   
+% \end{compactitem}
+% More formally, the the counter is linearisable with respect to the 
+% expected specification of a sequential counter shown in Figure~\ref{ig:running}(spec).
+% 
+% 
+% never explicitly reclaims memory, thus it 
+% never accesses unallocated memory. 
+% In a managed environment this would not be a problem.
+% But in a unmanaged this would lead to memory leakage.
+% 
+% We explain this below, while exposing some of the hidden assumptions we used   as we
+% 
+% \sparagraph{A naive fix.}
+% Figure~\ref{fig:running}(b) shows a naive attempt to prevent memory leakage
+% by adding an explicit reclamation command after the global variable is changed
+% (line~\ref{inc:bug:free}).
+% This naive attempts makes the algorithm memory-unsafe and also non-linearisable.
+% 
+% explain below. 
+% 
+% 
+% 
+% 
+% It adds an  
+% The thread which  
+% keeps the counter's current value in an heap-allocated
+% 
+% 
+% ., when implementing  it is also memory-safe:
+% once a thread obtain a pointer to an allocated cell, e.g., line \ref{inc:gc:read},    
+% the garbage collection ensures that that when a variable pointer when a cell a memorthread which it never dereferences an unallocated memory cell.
+% Unfortunatelly, 
+% 
+% correct in the sense that 
+% 
+% A key reason for the seemingly 
+% 
+% 
+% 
+% 
+% go back to read the value of  read repeat our sequence of actions, starting from the 
+% except that we do not reallocate the integer cell,
+% until we succeed.
+%  
+% storing in it the successor of the current value of the counter, 
+% and then replacing the value of $\cc$ with 
+% that of the allocated memory cell. 
+% first allocate a memory cell.
+% atomically read 
+% the value of $\cc$ into a local pointer variable \texttt{p}, 
+% and then dereference it to get the value that it points to
+% into local variable \texttt{v}.
+% 
+% 
+% We use shared counter algorithm, shown in The Treiber stack [20] was an early 
+% example of a modern shared- memory concurrent algorithm. 
+% A version of the algorithm is given in figure 1. 
+% There is a shared linked list pointed to by a shared variable Top of 
+% nodes with a value field val and next field next. To push a new node onto the 
+% list we atomically read the value of Top, put that value in the next field of 
+% the new node, and try atomically to change Top from the value previously read to 
+% a pointer to the new node. If we can’t change the value of Top, because some 
+% other thread has altered the stack since we began, then we repeat. To pop we do 
+% the reverse: atomically read the value of Top; if it is NULL (nothing on the stack) 
+% return a distinguished value EMPTY; read the next field of the top cell; and if that 
+% cell is still on top of the stack, 
+% change Top to point to the next cell, repeating if the stack has changed.
+% Historically, the first problem to be noticed with this kind of algorithm was ABA: 
+% if we read the value of a global variable, seeing value A, and check later that it 
+% has value A, we cannot conclude that in the meantime it hasn’t changed to some 
+% other value B and then back again; the CAS on line 19; an algorithm which assumes 
+% that the state hasn’t changed can operate incorrectly. The problem arises in figure
+% 1 because of the use of memory recycling. Suppose that first we read the value of Top into 
+% local t on line 15 and the
+
+
+%\nr{Say that exhibits all problems: ABA etc. Consider adding linearizability.)}
+\begin{figure}[t]
+\begin{center}
+\begin{tabular}{ll}
+\multicolumn{2}{c}{
+$
+\{ \cc = \mathcal{C}\} \, \texttt{v = inc()} \, \{ v = \mathcal{C} \land \cc = \mathcal{C} + 1\}\qquad (\text{spec})
+$
+}
+\\
+\begin{minipage}{44mm}
+{\small
+\begin{lstlisting}[numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+int *C = new int(0);
+inc(){
+ int v, *p, *x;
+ x = new int; (*\label{inc:gc:alloc}*)
+ do {
+  p = C; (*\label{inc:gc:read}*)
+  v = *p; (*\label{inc:gc:deref}*)
+  *x = v+1; (*\label{inc:gc:store}*)
+ } while(!CAS(&C,c,x));  (*\label{inc:gc:cas}*)
+ return v;
+}
+\end{lstlisting}
+}
+\end{minipage}
+&
+\begin{minipage}{42mm}
+{\small
+\begin{lstlisting}[firstnumber=12,numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+int *C = new int(0);
+inc(){
+ int v, *p, *x;
+ x = new int();
+ do{
+  p = C;
+  v = *p;
+  *x = v+1;
+ } while(!CAS(&C,c,x)); 
+ free(c); (*\label{inc:bug:free}*)
+ return v;
+}
+\end{lstlisting}
+}
+\end{minipage}\\
+\qquad(a) & \qquad(b)\\
+% \end{center}
+% \caption{A shared counter. (a) a safe implementation. (b) an unsafe implementation.}
+% \label{fig:running}
+% \end{figure}
+% 
+% \begin{figure}[t]
+% \begin{center}
+% \begin{tabular}{ll}
+\begin{minipage}{44mm}
+{\small
+\begin{lstlisting}[firstnumber=24,numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+int *HP[N] = {0};
+int *C = new int(0);
+Set detached;
+
+int inc() {
+ int *x = new int;
+ int *p, *p2;
+ do {
+  do {
+   p = C; 
+   HP[tid()] = p(*$\rangle_{\textsf{HP}_t} \label{pc:Hazard:Inc:sethp}$*);
+   p2 = C;
+  } while (p != p2);
+  v = *p;
+  *x = v + 1;
+ } while(CAS(&C,p,x));
+ retire(p);
+ return v; 
+}
+\end{lstlisting}
+}
+\end{minipage}
+&
+\begin{minipage}{42mm}
+{\small
+\begin{lstlisting}[firstnumber=43,numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+void retire(int* p) {  
+ insert(detached,p);
+ if (nondet())
+  return;
+ Set used;
+ while (!isEmpty(detached)){
+  bool my = true;
+  int *n = pop(detached);    
+  for(int i=0;i<N && my;i++) 
+   if (HP[i] == n)
+    my = false;
+
+   if (my) 
+    free(n)
+   else    
+    insert(used,n);
+  }  
+  moveAll(detached,used);
+}
+\end{lstlisting}
+}
+\end{minipage}
+\\
+\qquad(c) & \qquad(d)
+\end{tabular}
+\end{center}
+\caption{A shared counter. (spec) a sequential specification. 
+(a) a correct implementation in a managed environment. 
+(b) a memory-unsafe implementation which also suffers from the ABA problem. 
+(c) a correct based implementation on hazard-pointers.}
+\label{fig:running}
+\end{figure}
+
+
+
+\subsection{Recap}

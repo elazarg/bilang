@@ -1,0 +1,81 @@
+\documentclass{llncs}
+
+
+
+\renewcommand{\baselinestretch}{0.955}
+
+
+
+
+\title{Verifying Concurrent Memory Reclamation\\ Algorithms with Grace}
+\author{Alexey Gotsman \and Noam Rinetzky \and Hongseok Yang}
+\institute{IMDEA Software Institute \and Tel-Aviv University \and University of Oxford}
+
+
+
+
+
+
+
+\newif\iflong 
+\longfalse % uncomment for short version
+%\longtrue % uncomment for long version
+
+\input{macros}
+
+\begin{document}
+
+\maketitle
+
+
+\input{intro}
+\input{running}
+\input{logic}
+\input{semantics}
+\input{grace}
+\input{rcu}
+\input{relwork}
+
+
+{\small
+\mypar{Acknowledgements. } We thank the following people for
+discussions and comments: 
+Richard Bornat,
+Sungkeun Cho, 
+Byron Cook,
+Wonchan Lee, 
+Paul McKenney, 
+Peter O'Hearn, 
+Matthew Parkinson, 
+Mooly Sagiv,
+Viktor Vafeiadis,
+Jonathan Walpole,
+Eran Yahav and
+Kwangkeun Yi.
+}
+
+\bibliographystyle{abbrv}
+\bibliography{biblio}
+
+\iflong
+
+\clearpage
+
+\appendix
+
+
+
+\input{app-formal}
+\input{app-hazard-dynamic}
+\input{app-lin}
+\input{epoch}
+\input{app-epoch}
+\input{app-soundness}
+%\input{app-proofs}
+%\input{epoch-alt}
+%\input{app-soundness-local}
+%\input{app-lin}
+
+\fi
+
+\end{document}

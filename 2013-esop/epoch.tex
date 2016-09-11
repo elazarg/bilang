@@ -1,0 +1,169 @@
+%!TEX root = ./recycling.tex
+
+\section{Reasoning about Epoch-based Reclamation}\label{app:epoch}
+
+\newcommand{\GE}{\texttt{GE}}
+\newcommand{\LE}{\texttt{LE}}
+\newcommand{\Elock}{\texttt{Elock}}
+
+\begin{figure}[t]
+\begin{tabular}{@{\qquad \qquad}l@{\qquad}|@{\qquad \qquad}l@{}}
+{\figfontsize
+\begin{lstlisting}[numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+int GE = 0;
+int LE[N] = {0};
+Set detached[N][3]
+  = {(*$\emptyset$*)};
+Lock Elock;
+
+int inc() {
+  int v, *s, *n;
+  n = new int;
+  LE[tid-1] = GE;(*\label{epoch:update}*)
+  do {
+    s = C;
+    v = *s;
+    *n = v+1;
+  } while
+    (!CAS(&C,s,n));
+  reclaim(s);
+  return v;
+}
+\end{lstlisting}}
+&
+{\figfontsize
+\begin{lstlisting}[firstnumber=20,numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+reclaim(int *s) {
+  insert((*\label{epoch:insert}*)
+    detached[tid-1][LE[tid-1]],s);
+  if (nondet()) return;
+  lock(Elock);(*\label{epoch:lock}*)
+  for (int i = 0; i < N; i++)(*\label{epoch:start-check}*)
+    if (GE != LE[i]) {
+      unlock(Elock);
+      return;
+    }(*\label{epoch:end-check}*)
+  for (int i = 0; i < N; i++)
+    while (!isEmpty(
+      detached[i][(GE+1)%3])) {
+        free(pop((*\label{epoch:reclaim}*)
+          detached[i][(GE+1)%3]));
+    }
+  GE = (GE+1)%3;(*\label{epoch:inc}*)
+  unlock(Elock);(*\label{epoch:unlock}*)
+  return; }
+\end{lstlisting}
+}
+\end{tabular}
+\caption{\small A shared counter with epoch-based reclamation}
+\label{fig:epoch}
+\end{figure}
+
+
+%Due to space constraints, we omit the formal proof (see
+%\tr{\ref{app:epoch}}{\nepoch}) and present only its main idea.
+
+\paragraph{Informal summary.}
+Figure~\ref{fig:epoch} presents an implementation of the running example using
+epoch-based reclamation~\cite{fraser-thesis}, which is in some respects more
+efficient than hazard pointers. 
+The algorithm uses a {\em global epoch} counter $\GE$, incremented after every
+round of reclamation. In fact, it is sufficient to keep track only of the three
+most recent epochs, so $\GE \in \{0, 1, 2\}$ and all arithmetic is done modulo
+$3$. Every thread maintains its local snapshot of the counter, called its {\em local
+  epoch}, in the corresponding entry of the $\LE$ array. At the beginning of
+every {\tt inc} operation, the local epoch is updated to the global one
+(line~\ref{epoch:update}), and it stays the same for the whole duration of {\tt
+  inc}. The following contract, included into the temporal invariant of the
+algorithm, is respected when reclaiming nodes:  
+\be \label{epoch-inv}\mbox{
+\begin{minipage}{10cm}
+  ``for all $t$ and $x$, if thread has stayed in the same epoch
+  \underline{since} it saw $\cc$ pointing to $x$, then $x$ is allocated.''
+\end{minipage}
+} \ee 
+The grace period for $t$ and $x$ thus starts when $t$
+sees $x$ pointed to by $\cc$ and lasts for as long as it does not update
+its local epoch. We now explain how {\tt reclaim} ensures that~(\ref{epoch-inv}) is
+preserved. 
+
+The algorithm batches deallocations using {\tt detached} sets for every thread
+{\em and epoch}: {\tt reclaim} stores the address of the detached node
+{\tt s} into the {\tt detached} set for the local epoch of the current thread
+(line~\ref{epoch:insert}). It can then decide to perform a round of reclamation,
+incrementing the global epoch $\GE$ at its end (line~\ref{epoch:inc}).  To avoid
+conflicts when several threads decide to reclaim, the corresponding code is
+protected by a lock (lines~\ref{epoch:lock} and~\ref{epoch:unlock}).
+
+The reclamation is only done {\em when all the threads have the same local epoch as
+the global one} (lines~\ref{epoch:start-check}--\ref{epoch:end-check}). Once the
+global epoch is incremented at line~\ref{epoch:inc}, every thread just needs to
+execute an {\tt inc} operation for this condition to hold. In the counter
+implementations using hazard pointers and RCU, the thread that detached a node
+was in charge of deallocating it. Here, in contrast, a thread that performs a
+round of reclamation clears the {\tt detached} sets of all threads {\em for the
+  epoch behind the current one by two}, i.e., $\GE \ominus 2 = \GE \oplus 1$
+($\oplus$ and $\ominus$ denote the operations modulo $3$). This clears the {\tt
+  detached} sets to be used by threads after $\GE$ is incremented at
+line~\ref{epoch:inc}. We note for the future that, since the global epoch is
+incremented only when all threads are in sync with it,
+\be \label{epoch-aux}\mbox{
+\begin{minipage}{10cm}
+  ``every thread is always either in the global epoch or one step behind it.''
+\end{minipage}
+} 
+\ee
+
+The check at lines~\ref{epoch:start-check}--\ref{epoch:end-check} and the fact
+that nodes are reclaimed from the epoch two steps behind ensure the preservation
+of~(\ref{epoch-inv}). Namely, assume that, at line~\ref{epoch:reclaim}, a thread
+is reclaiming a node $x$ from the {\tt detached} set of a thread $t$ for epoch
+$e \oplus 1$; then the current epochs of all threads and the global one are
+equal to $e$. To ensure that this is safe, we need to establish the negation of
+the `since' clause of~(\ref{epoch-inv}) for the node $x$ and all threads $t'$, i.e., 
+\be \label{epoch-neg}\mbox{
+\begin{minipage}{10cm}
+  ``for all $t'$, $\cc$ has not pointed to $x$ \underline{since} $t'$ was not in epoch $e$.''
+\end{minipage}
+} 
+\ee
+For  algorithms using hazard pointers and RCU we could 
+establish such a fact right in the {\tt reclaim} function:
+after checking that the hazard pointers do not point to $x$,
+or after executing $\sync$. However, here there is no
+obvious way to establish~(\ref{epoch-neg}) in {\tt
+  reclaim}. Instead, it has to be established earlier, but when? 
+
+The earliest we could try to establish~(\ref{epoch-neg}) is at the time when $x$
+is detached, as from that moment and until its deallocation, $\cc$ cannot point
+to it. We cannot establish~(\ref{epoch-neg}) right when detaching $x$: then the
+thread $t$ is at epoch $e \oplus 1$, and by~(\ref{epoch-aux}), we might well
+have other threads at epoch $e$ that have seen $x$. However,
+by~(\ref{epoch-aux}), the global epoch at this point can be either $e \oplus 1$
+or $e\oplus 2$, but not $e$. Hence, before $x$ is deallocated (at epoch $e$), the global epoch
+must be incremented from $e\oplus 2$ to $e$. It is at this point that we can
+establish~(\ref{epoch-neg}), as all the threads $t'$
+are at the epoch $e \oplus 2$, and $x$ is in a {\tt
+  detached} set and so cannot be pointed to by $\cc$. Thus, the following
+assertion becomes part of the temporal invariant:
+\be \label{epoch-inv2} \mbox{
+\begin{minipage}{10cm}
+  ``If the global epoch is $e$, and $x$ is in ${\tt detached}[t][e \oplus 1]$
+  for some $t$, then for all $t'$, $\cc$ has not pointed to $x$
+  \underline{since} $t'$ was not in epoch $e$.''
+\end{minipage}
+}\ee 
+The temporal invariant of the algorithm is the conjunction
+of~(\ref{epoch-inv}) and~(\ref{epoch-inv2}). Thus, the assertions describing
+the main protocol and the fact a reclaimer establishes before deallocating a
+node are of the same form as for the algorithms considered
+in \S\ref{sec:grace} and \S\ref{sec:rcu}. However, in this case, the latter
+assertion has to be carried around in the
+proof as part of the temporal invariant. Nevertheless, the resulting invariant is
+easy to establish and maintain \tra{\ref{app:epoch}}{\nepoch}.
+
+
+%%% Local Variables:
+%%% TeX-master: "recycling"
+%%% mode: latex
+%%% End:  

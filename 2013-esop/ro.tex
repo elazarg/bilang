@@ -1,0 +1,182 @@
+\subsection{Read-only permissions}
+
+We formalise the read-only counting permissions we used in
+Section~\ref{sec:hash} as the following separation algebra $\RAM_{\sf ro}$:
+$$
+\Loc = \{1, 2, \ldots\};
+\qquad\quad
+\Val = \mathbb{Z};
+\qquad\quad
+\RAM_{\sf ro} = \Loc \rightharpoonup_{\it fin} (\mathbb{Z} \times \Val).
+$$
+Like in Section~\ref{sec:exist}, the permission $0$ is the {\em full}
+permission, allowing a thread to read, write and deallocate the corresponding
+cell. Such a permission can be split into several {\em read-only} permissions
+and one {\em master} permission, keeping track of the number of read-only ones
+issued. Both read-only and master permissions guarantee that the cell is not
+going to be modified and give the right to read from it, but not write to it or
+dispose it. One read-only permission is represented in the model by $-1$, and
+several of them by negative integers; a master permission is represented by a
+positive integer.
+
+We first define a $*$ operation on permission-value
+pairs from $\mathbb{Z} \times \Val$:
+$$
+\begin{array}{c@{\quad}l}
+(-\pi_1, u) * (-\pi_2, u) = (-(\pi_1+\pi_2), u), & \mbox{if } \pi_1,\pi_2>0;
+\\
+(\pi_1, u) * (-\pi_2, u) = (-\pi_2, u) * (\pi_1, u) = (\pi_1-\pi_2, u),&
+\mbox{if } \pi_1,\pi_2>0, \pi_1 \ge \pi_2;
+\end{array}
+$$
+undefined in all other cases. We then define the $\sharp$ relation on
+$\RAM_{\sf ro}$ by
+$$
+\theta_0 \mathop{\sharp} \theta_1 \Longleftrightarrow
+\forall i \in \{0, 1\}.\, {\theta_i(x) \fdef} \Rightarrow 
+{\theta_{1-i}(x) \fundef} \vee {(\theta_i(x) * \theta_{1-i}(x)) \fdef}.
+$$
+Finally, we let
+\begin{multline*}
+\theta_0 * \theta_1 = \{(x, w) \mid 
+\exists i \in \{0, 1\}.\, {\theta_i(x) \fdef} \wedge{}\\
+(({\theta_{1-i}(x) \fundef} \wedge w = \theta_i(x)) \vee 
+({\theta_{1-i}(x) \fdef} \wedge w = \theta_i(x) * \theta_{1-i}(x)))
+\},
+\end{multline*}
+if $\theta_0 \mathrel{\sharp} \theta_1$; undefined otherwise. Thus, the unit
+element is the nowhere-defined function $[\,]$.
+
+To denote elements of $\RAM_{\sf ro}$, we extend the assertion language for
+predicates over states as follows:
+$
+p \;::= \; \ldots \mid E \xmapsto{G}_{\sf ro} F \mid E \xhookrightarrow{G}_{\sf ro} \_ 
+$. Here $E \xmapsto{0}_{\sf ro} F$ denotes a full permission, 
+$E \xmapsto{G}_{\sf ro} F$ for $G>0$, a master permission, and 
+$E \xhookrightarrow{G}_{\sf ro} \_ $, read-only ones:
+$$
+\begin{array}{lcl@{\qquad}l}
+ (\theta, \intp) \models E \xmapsto{G}_{\sf ro} F &\Longleftrightarrow &\theta =
+[\db{E}_{\intp} : (\db{G}_\intp, \db{F}_{\intp})],&\db{G}_\intp \ge 0;
+\\ 
+(\theta, \intp) \models E \xhookrightarrow{G}_{\sf ro} F 
+&\Longleftrightarrow & 
+\theta = [\db{E}_{\intp} : (-\db{G}_\intp, \db{F}_{\intp})],&\db{G}_\intp > 0;\\
+(\theta, \intp) \models E \xhookrightarrow{0}_{\sf ro} F &\Longleftrightarrow
+& \theta = [\,].
+\end{array}
+$$
+% We also use an iterated $*$ operation: $\bigast_{i=1}^n P_i = P_1 * \ldots *
+% P_n$, so that $\bigast_{i=1}^n E \hookrightarrow_{\sf e} \_$ represents $n$ existential
+% permissions for the cell at the address $E$.
+As in Section~\ref{sec:exist}, we use $E \mapsto F$ as syntactic sugar for $E
+\xmapsto{0}_{\sf ro} F$ and $E \hookrightarrow_{\sf ro} F$ for $E
+\xhookrightarrow{1}_{\sf ro} F$.  
+
+% Given the definition of $*$ on $\RAM_{\sf ro}$, we have the following
+% equivalences:
+% $$
+% \begin{array}{c}
+% E \xmapsto{0}_{\sf ro} F \Longleftrightarrow 
+% E \xmapsto{n}_{\sf ro} F * E \xhookrightarrow{n}_{\sf ro} F; \quad
+% E \xhookrightarrow{n}_{\sf ro} F * E \xhookrightarrow{n'}_{\sf ro} F
+% \Longleftrightarrow 
+% E \xhookrightarrow{n+n'}_{\sf ro} F;
+% \\[5pt]
+% E \xmapsto{0}_{\sf ro} F * E \xmapsto{0}_{\sf ro} F \Longleftrightarrow {\sf
+%   false};
+% \qquad
+% E \xmapsto{0}_{\sf ro} F * E \xhookrightarrow{n}_{\sf ro} F \Longleftrightarrow {\sf false};
+% \\[5pt]
+% E \xhookrightarrow{n}_{\sf ro} F * E \xhookrightarrow{n'}_{\sf ro} F' \wedge
+% F \not= F'
+% \Longleftrightarrow 
+% {\sf false};
+% \end{array}
+% $$
+% where $n, n'> 0$. 
+
+Transformers and axioms for primitive commands over $\RAM_{\sf ro}$ are defined
+as in Section~\ref{sec:exist2}, but using the relation $\leadsto$ in
+Figure~\ref{fig:transfer2}. Figure~\ref{fig:prim2} shows sample axioms for
+primitive commands.
+\begin{figure}[h]
+\centerline{
+$
+\begin{array}{l@{\ \ }l@{\quad}l@{\quad}l@{\quad}l}
+[X] = Y, &\theta[X : (0, \_)] &\leadsto& \theta[X: (0,Y)]
+\\{}
+[Y] = [X], &\theta[X : (\pi, u)][Y : (0, \_)] &\leadsto&
+\theta[X:(\pi, u)][Y:(0, u)]
+\\
+\new([X]), &\theta[X : (0, \_)] &\leadsto&
+\theta[X: (0, u)][u : (0, \_)]& \text{if}~{(\theta[X : \_])(u)\fundef}
+\\
+\delete([X]),&\theta[X : (0, u)][u : (0, \_)] &\leadsto&
+\theta[X:(0,u)]& \text{if}~{(\theta[X:\_])(u)\fundef}
+\\
+{\sf assume}([X]), &\theta[X : (\pi, u)] &\leadsto& \theta[X : (\pi, u)]
+&\text{if}~u\not=0
+\\
+{\sf assume}([X]), &\theta[X : (\pi, u)] &\not\leadsto&
+&\text{if}~u =0
+\\
+c, &\theta &\leadsto& \top
+&\text{otherwise}
+\end{array}
+$}
+\caption{\label{fig:transfer2}
+Transition relation for primitive commands over $\RAM_{\sf ro}$.
+$\top$ indicates that the command faults.
+$\not\leadsto$ is used to denote that the command does not fault, but gets stuck.
+}
+\end{figure}
+\begin{figure}[h]
+$$
+\begin{array}{c}
+\\
+\infer%[\textsc{Store}]
+{\{X \mapsto \_\}\, [X] = Y\, \{X \mapsto Y\}}{}
+\\[10pt]
+\infer%[\textsc{Load}_1]
+{\{X \xmapsto{n}_{\sf ro} u*
+Y \mapsto \_ \}\, [Y] = [X]\, 
+\{X \xmapsto{n}_{\sf ro} u *
+Y \mapsto u \}}{}
+\\[10pt]
+\infer%[\textsc{Load}_2]
+{\{X \hookrightarrow_{\sf ro} \_*
+Y \mapsto \_ \}\, 
+[Y] = [X]\, 
+\{X \hookrightarrow_{\sf ro} \_*
+Y \mapsto \_ \}}{}
+\\[10pt]
+\infer%[\textsc{New}]
+{\{X \mapsto \_ \}\, \new(X)\, \{\exists u.\, X \mapsto u*
+u \mapsto \_\}}{}
+\\[10pt]
+\infer%[\textsc{Delete}]
+{\{X \xmapsto{n}_{\sf e} u * u \mapsto \_\}\, \delete(X)\, \{
+X \xmapsto{n}_{\sf e} u\}}{}
+\\[10pt]
+\infer%[\textsc{Delete}]
+{\{X \hookrightarrow_{\sf ro} u * u \mapsto \_\}\, \delete(X)\, \{
+X \hookrightarrow_{\sf ro} u\}}{}
+\\[10pt] 
+\infer
+{\{X \xmapsto{n}_{\sf ro} u\}\, {\sf assume}([X])\, \{X \xmapsto{n}_{\sf ro} u
+  \wedge u \not= 0\}}{}
+\\[10pt] 
+\infer
+{\{X \hookrightarrow_{\sf ro} u\}\, {\sf assume}([X])\, \{X \hookrightarrow_{\sf ro} u
+  \wedge u \not= 0\}}{}
+\end{array}
+$$
+\caption{Instantiations of the {\sc Prim} axiom for the $\RAM_{\sf ro}$
+  algebra; $X$ and $Y$ are constants}
+\label{fig:prim2}
+\end{figure}
+
+%%% Local Variables:
+%%% TeX-master: "rcu"
+%%% End:  

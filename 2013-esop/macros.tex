@@ -1,0 +1,591 @@
+%!TEX root = ./recycling.tex
+%  
+% macros-math.tex
+
+
+%%%%%%%
+%% Math
+%%%%%%%
+
+\usepackage{paralist}
+\setdefaultleftmargin{10pt}{}{}{}{}{}
+
+\usepackage{color}
+\usepackage{amsmath}
+\usepackage{upgreek}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{listings}
+\usepackage{proof}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{qtree}
+
+\usepackage{wrapfig}
+\usepackage{enumitem}
+
+
+\newcommand{\Union}[1]{\bigcup_{#1}}
+\newcommand{\srcof}[1]{\mathit{src}(#1)}
+\newcommand{\trgof}[1]{\mathit{trg}(#1)}
+\newcommand{\domof}[1]{\mathit{dom}(#1)}
+\newcommand{\rngof}[1]{\mathit{rng}(#1)}
+
+\newcommand{\subsequence}[2]{#1\!\downharpoonright_{#2}}
+\newcommand{\restrict}[2]{#1\!\downharpoonright_{#2}}
+\newcommand{\proj}[2]{#1\!|_{#2}}
+\newcommand{\concat}[2]{#1\cdot#2}
+\newcommand{\emptysequence}{\varepsilon}
+
+\newcommand{\ordsymb}{\mathit{ord}}
+\newcommand{\ord}[2]{\ordsymb_{#1}(#2)}
+\newcommand{\invord}[2]{\ordsymb ^{-1}_{#1}(#2)}
+
+\newcommand{\leqleq}[3]{#1\!\leq\!#2\!\leq\!#3}
+\newcommand{\leqle}[3]{#1\!\leq\!#2\!<\!#3}
+
+
+
+%%%%%%%%
+%% Logic
+%%%%%%%%
+
+\newcommand{\satisfies}[1][]{\stackrel{#1}{\vDash}}
+\newcommand{\entails}{\vdash}
+
+%\newcommand{\implies}{\Rightarrow}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%% Theorem-like environments
+%%%%%%%%%%%%%%%%%%%%%%%
+
+%\newtheorem{theorem}{Theorem}[section]
+%\newtheorem{lemma}[theorem]{Lemma}
+%\newtheorem{proposition}[theorem]{Proposition}
+%\newtheorem{corollary}[theorem]{Corollary}
+
+\newtheorem{defin}[theorem]{Definition}
+
+
+\newenvironment{sketch}[1][Sketch]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+%\newenvironment{proof}[1][Proof]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+%\newenvironment{definition}[1][Definition]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+%\newenvironment{example}[1][Example]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+%\newenvironment{note}[1][Note]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+%\newenvironment{remark}[1][Remark]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+%\newcommand{\qed}{\nobreak \ifvmode \relax \else
+%      \ifdim\lastskip<1.5em \hskip-\lastskip
+%      \hskip1.5em plus0em minus0.5em \fi \nobreak
+%      \vrule height0.75em width0.5em depth0.25em\fi}
+
+%\newenvironment{proposition}{\begin{Proposition}}{\end{Proposition}}
+%\newenvironment{theorem}{\begin{theorem}}{\end{theorem}}
+%\newenvironment{proposition}{\begin{Proposition}}{\end{Proposition}}
+%\newenvironment{proposition}{\begin{Proposition}}{\end{Proposition}}
+
+%\newcounter{my_counter}
+%\newcounter{tmy_counter}
+%\newcommand{\MyRoman}[1]%
+%        {\setcounter{my_counter}{#1}\roman{my_counter}}
+%\newcommand{\PMyRoman}[1]%
+%        {\rm (\MyRoman{#1})}
+%\newtheorem{MyTheorem}{Theorem}[section]
+%\newenvironment{The}{%
+%                \begin{MyTheorem}}{\end{MyTheorem}}
+%\newenvironment{SThe}[1]%
+%{\par\noindent{\bf Theorem~\ref{#1}\/}\begin{em}}%
+%{\end{em}}
+%\newtheorem{Proposition}[MyTheorem]{Proposition}
+%\newenvironment{Pro}{%
+%                \begin{Proposition}}{\end{Proposition}}
+%\newenvironment{SPro}[1]%
+%{\par\noindent{\bf Proposition~\ref{Pro:#1}\/}\begin{em}}%
+%{\end{em}}
+%\newtheorem{Lemma}[MyTheorem]{Lemma}
+%\newenvironment{Lem}{%
+%                \begin{Lemma}}{\end{Lemma}}
+%\newenvironment{SLem}[1]%
+%{\par\noindent{\bf Lemma~\ref{Lem:#1}\/}\begin{em}}%
+%{\end{em}}
+%\newenvironment{Claim}[1]%
+%{\par\noindent\begin{rm}{\em Claim\/}:~#1}%
+%{\end{rm}}
+%\newenvironment{CProof}[1]{\par\noindent %
+%\begin{rm}{\em Proof of Claim\/}#1:}{\end{rm}}
+%\newtheorem{Corollary}[MyTheorem]{Corollary}
+%\newenvironment{Cor}{\begin{Corollary}}{\end{Corollary}}
+%\newtheorem{Conjecture}[MyTheorem]{Conjecture}
+%\newenvironment{Con}{\begin{Conjecture}}{\end{Conjecture}}
+%\newtheorem{Observation}[MyTheorem]{Observation}
+%\newenvironment{Obs}{%
+%                \begin{Observation}}{\end{Observation}}
+%\newtheorem{Definition}[MyTheorem]{Definition}
+%\newenvironment{Def}{\begin{Definition}}{\end{Definition}}
+%\newtheorem{Example}[MyTheorem]{Example}
+%\newenvironment{Exa}{\begin{Example}\begin{rm}}%
+%                        {\end{rm}\end{Example}}
+%\newenvironment{Ex}{\begin{quote}{\bf Example}.}%
+%                        {\end{quote}}
+%\newenvironment{Note}{\smallskip\noindent{\em Note\/}:}{}
+%\newenvironment{Remark}{\smallskip\noindent{\bf Remark\/}.}{}
+%\newenvironment{Proof}{\par\noindent %
+%{\em Proof:\/}\begin{rm}}{\end{rm}}
+%\newenvironment{ProofA}{%
+%\begin{rm}{\em Proof:\/}}{\end{rm}}
+%\newenvironment{ProofW}{\newline %
+%\begin{rm}{\em Proof:\/}}{\end{rm}}
+%\newenvironment{ProofIfA}{%
+%\begin{rm}{\em Proof of the if direction:\/}}{\end{rm}}
+%\newenvironment{ProofIf}{\newline %
+%\begin{rm}{\em Proof of the if direction:\/}}{\end{rm}}
+%\newenvironment{ProofOnlyIfA}{%
+%\begin{rm}{\em Proof of the only-if direction:\/}}{\end{rm}}
+%\newenvironment{ProofOnlyIf}{\newline %
+%\begin{rm}{\em Proof of the only-if direction:\/}}{\end{rm}}
+%\newenvironment{Sketch}{\par\noindent %
+%\begin{rm}{\em Sketch of Proof:\/}}{\end{rm}}
+%\newenvironment{Name}{\begin{bf}(}{)\end{bf}}
+%\newenvironment{Basis}{\newline {\em Basis\/}:}{}
+%\newenvironment{Hypothesis}{\newline {\em Induction hypothesis\/}:}{}
+%\newenvironment{Step}{\newline {\em Induction step\/}:}{}
+%\newenvironment{CSD}%
+%{\par\noindent{\rm Categories and Subject Descriptors\/}:}%
+%{}
+%\newenvironment{GT}%
+%{\par\noindent{\rm General Terms\/}:}%
+%{}
+%\newenvironment{AKW}%
+%{\par\noindent{\rm Additional Key Words\/}:}%
+%{}
+\clubpenalty=10000
+\widowpenalty = 10000
+
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}%
+                       {-12\p@ \@plus -3\p@ \@minus -3\p@}%
+                       {6\p@ \@plus 2\p@ \@minus 2\p@}%
+                       {\normalfont\large\bfseries\boldmath
+                        \rightskip=\z@ \@plus 8em\pretolerance=10000 }}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+                       {-12\p@ \@plus -3\p@ \@minus -3\p@}%
+                       {4\p@ \@plus 1\p@ \@minus 1\p@}%
+                      {\normalfont\normalsize\bfseries\boldmath
+                        \rightskip=\z@ \@plus 8em\pretolerance=10000 }}
+\def\@listI{\leftmargin\leftmargini
+            \parsep 0\p@ \@plus1\p@ \@minus\p@
+            \topsep 4\p@ \@plus2\p@ \@minus0\p@
+            \itemsep0\p@}
+\let\@listi\@listI
+\@listi
+\def\@listii {\leftmargin\leftmarginii
+              \labelwidth\leftmarginii
+              \advance\labelwidth-\labelsep
+              \topsep    0\p@ \@plus2\p@ \@minus\p@}
+\def\@listiii{\leftmargin\leftmarginiii
+              \labelwidth\leftmarginiii
+              \advance\labelwidth-\labelsep
+              \topsep    0\p@ \@plus\p@\@minus\p@
+              \parsep    \z@
+              \partopsep \p@ \@plus\z@ \@minus\p@}
+\renewcommand\footnotesize{\@setfontsize\footnotesize{8pt}{9.5pt}}
+\makeatother
+
+\sloppy
+
+
+\newcommand{\tr}[2]{\iflong{}\S#1\else{}\cite[\S#2]{ext}\fi}
+\newcommand{\tra}[2]{\iflong{}(\S#1)\else{}\cite[\S#2]{ext}\fi}
+\newcommand{\shortonly}[1]{\iflong{}\else{}#1\fi}
+%\newcommand{\longonly}[1]{\iflong{}#1\else{}\fi}
+\newcommand{\longonly}[1]{}
+\newcommand{\shortlong}[2]{\iflong{}#2\else{}#1\fi}
+
+\newcommand{\nformal}{A}
+\newcommand{\nhazard}{B}
+\newcommand{\nlin}{C}
+\newcommand{\nepoch}{D}
+\newcommand{\nsoundness}{E}
+\newcommand{\nrcu}{F}
+
+\newcommand{\Top}{\texttt{Top}}
+\newcommand{\stack}{\textsf{stack}}
+
+\renewcommand{\rmdefault}{ptm}
+
+% Space hacks:
+\let\figfontsize\footnotesize
+
+%% Figures:
+%\newcommand{\figurefontsize}{\footnotesize}
+
+
+% ---------------
+% ---------------
+\multlinegap=5pt
+\setlength{\jot}{0pt}
+\setlength{\textfloatsep}{10pt plus 1pt minus 1pt}
+\setlength{\floatsep}{10pt plus 1pt minus 1pt}
+\renewcommand\floatpagefraction{.9}
+\renewcommand\topfraction{.9}
+\renewcommand\bottomfraction{.9}
+\renewcommand\textfraction{.1}   
+% Itemizations
+% \setlength{\itemsep}{0pt}
+% \setlength{\parsep}{0pt}
+% \setlength{\topsep}{2pt plus 1pt minus 1pt}
+% \setlength{\parskip}{0pt}
+% \setlength{\partopsep}{0pt}
+% \newcommand{\pb}{\pagebreak\xspace}
+% \newcommand{\lb}{\linebreak\xspace}
+% \newcommand{\smallifsubmission}{\small}
+% \setcounter{totalnumber}{50}
+% \setcounter{topnumber}{50}
+% \setcounter{bottomnumber}{50}
+\clubpenalty=150
+\widowpenalty=0
+\displaywidowpenalty=50
+% % \setlength{\textfloatsep}{0.75\baselineskip} % make tables take up less space after the rule
+% ---------------
+%\setlength{\topmargin}{2cm}
+%\addtolength{\textheight}{1cm}
+
+% Abstract States
+\newcommand{\World}{\textsf{World}}
+\newcommand{\History}{\textsf{History}}
+\newcommand{\CState}{\textsf{CState}}
+%\newcommand{\Config}{\textsf{Config}}
+\newcommand{\Action}{\textsf{Action}}
+
+
+% Temporal logic
+\newcommand{\since}{\;\mathsf{since}\;}
+\newcommand{\sinceop}{\mathsf{since}}
+\newcommand{\pP}{\mathsf{P}\;}
+
+\newcommand{\extend}{\triangleleft}
+
+% Actions
+%\newcommand{\gr}{G}
+
+%Separatiin logic
+\newcommand{\foot}{\operatorname{foot}}
+
+
+
+% F_{\tid} pointers
+\newcommand{\RCU}{\textsf{RCU}}
+\newcommand{\HP}{\texttt{HP}}
+\newcommand{\HL}{\texttt{HL}}
+\newcommand{\THP}{\texttt{THP}}
+\newcommand{\hp}{\texttt{hp}}
+\newcommand{\chp}{\texttt{chp}}
+\newcommand{\cc}{\texttt{C}}
+\newcommand{\snapshot}{\mathit{snapshot}}
+\newcommand{\nthreads}{N} % We use n as a pointer...
+\newcommand{\detached}{D}
+\newcommand{\plist}{\texttt{plist}}
+\newcommand{\protects}{\texttt{protects}}
+\newcommand{\listp}{\texttt{list}}
+\newcommand{\rlist}{\texttt{detached}}
+\newcommand{\tmplist}{{\it in\_use}}
+\newcommand{\listpp}{\texttt{list2}}
+\newcommand{\idxx}{\texttt{idx2}}
+\newcommand{\idxxx}{\texttt{idx}}
+\newcommand{\lsize}{\texttt{L}}
+\newcommand{\rcu}{\texttt{rcu}}
+\newcommand{\tid}{\texttt{tid}}
+\newcommand{\ltid}{{\sf tid}}
+
+% Epoch
+\newcommand{\Tepoch}{\mathtt{Tepoch}}
+\newcommand{\Epoch}{\mathtt{Epoch}}
+
+\newcommand{\gep}{\mathtt{GEpoch}}
+\newcommand{\lep}{\mathtt{LEpoch}}
+
+% Old Stuff
+\newcommand{\dlf}[1]{\lfloor #1 \rfloor}
+
+% Semantics
+\newcommand{\src}{\operatorname{src}}
+\newcommand{\trg}{\operatorname{trg}}
+
+% Shared -> Parans
+\newcommand{\parans}[1]{(#1)}
+
+\newcommand{\mypar}[1]{\vspace{7pt}\noindent\textbf{#1}}
+
+% \newenvironment{property}[1][Property]{\begin{trivlist}
+% \item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+% Hazard pointers
+\newcommand{\DSI}{\mathcal{I}}
+\newcommand{\Node}{\mathcal{N}}
+\newcommand{\nodepi}[3]{#1 \mapsto_{#2} \_, \_}
+
+
+%\newtheorem{property}[theorem]{Property}
+
+\newcommand{\hy}[1]{
+\begin{center}
+\fbox{
+\begin{minipage}{3.1in}
+{\bf HY:} {\rm #1}
+\end{minipage}
+}
+\end{center}
+}
+
+\newcommand{\ag}[1]{
+\begin{center}
+\fbox{
+\begin{minipage}{3.1in}
+{\bf AG:} {\rm #1}
+\end{minipage}
+}
+\end{center}
+}
+
+\newcommand{\nr}[1]{
+\begin{center}
+\fbox{
+\begin{minipage}{3.1in}
+{\bf NR:} {\rm #1}
+\end{minipage}
+}
+\end{center}
+}
+\newcommand{\nrp}[1]{\marginpar{#1}}
+
+\newcommand{\nrm}[1]{\mbox{~\textbf{NR: #1}}~}
+
+
+% Authors 
+\newcommand{\TODO}[1][]{\textbf{TODO}}
+\newcommand{\todone}[1]{}%{#1}
+\newcommand{\ignore}[1]{}
+
+
+\newcommand{\nmyarrow}{\mathop{\,\,\not\!\!\longrightarrow}}
+\newcommand{\truef}{{\sf true}_\textrm{f}}
+\newcommand{\absret}{{\it absret}}
+\newcommand{\Found}{{\sf Found}}
+\newcommand{\NotFound}{{\sf NotFound}}
+\newcommand{\changed}{{\it changed}}
+\newcommand{\zipped}{{\it zipped}}
+\newcommand{\pp}{{\sf p}}
+\newcommand{\nn}{{\it nn}}
+%\newcommand{\proj}{{\sf proj}}
+\newcommand{\dbucket}{{\sf ls}_\textrm{refs, deleted}}
+\newcommand{\pdbucket}{{\sf ls}_\textrm{refs, del}}
+\newcommand{\pbucket}{{\sf ls}_\textrm{refs}}
+\newcommand{\nbucket}{{\sf nbucket}}
+\newcommand{\npbucket}{{\sf ls}_\textrm{refs}}
+\newcommand{\vkey}{{\it key}}
+\newcommand{\idx}{{\it idx}}
+\newcommand{\hash}{{\sf hash}}
+\newcommand{\abs}{\mathsf{Abs}}
+\newcommand{\sm}{{\sf m}}
+\newcommand{\se}{{\sf e}}
+\newcommand{\sro}{{\sf ro}}
+\newcommand{\block}{{\it block}}
+\newcommand{\vtable}{{\it table}}
+\newcommand{\tbl}{{\it tbl}}
+\newcommand{\vtablet}{{\tt table2}}
+\newcommand{\bucket}{{\sf ls}}
+\newcommand{\zbucket}{{\sf zbucket}}
+\newcommand{\key}{{\it key}}
+\newcommand{\diff}{\mathop{\backslash}}
+\newcommand{\power}{\mathcal{P}}
+\newcommand{\gr}{G_{\sf r}}
+\newcommand{\gw}{G_{\sf w}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\pr}{{\bf p}}
+\newcommand{\qr}{{\bf q}}
+\newcommand{\rr}{{\sf r}}
+\newcommand{\rrr}{{\bf r}}
+\newcommand{\ww}{{\sf w}}
+\newcommand{\wwrr}{{\sf wr}}
+\newcommand{\Loc}{{\sf Loc}}
+\newcommand{\dom}{{\sf dom}}
+\newcommand{\Val}{{\sf Val}}
+\newcommand{\Perm}{{\sf Perm}}
+\newcommand{\RAM}{{\sf RAM}}
+\newcommand{\safe}[1][\ltid]{{\sf TSafe}^{#1}}
+\newcommand{\gsafe}{{\sf Safe}}
+\newcommand{\bigast}{\mathop{\circledast}\limits}
+\newcommand{\PComm}{{\sf PComm}}
+\newcommand{\Prog}{{\sf Prog}}
+\newcommand{\cp}{\mathcal{P}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\rlock}{{\sf rcu\_enter}}
+\newcommand{\wlock}{{\sf wlock}}
+\newcommand{\runlock}{{\sf rcu\_exit}}
+\newcommand{\wunlock}{{\sf wunlock}}
+\newcommand{\racquire}{{\sf racq}}
+\newcommand{\wacquire}{{\sf wacq}}
+\newcommand{\rrelease}{{\sf rrel}}
+\newcommand{\wrelease}{{\sf wrel}}
+\newcommand{\access}{{\sf access}}
+\newcommand{\sync}{{\sf sync}}
+\newcommand{\wait}{{\sf wait}}
+\newcommand{\cskip}{{\sf skip}}
+\newcommand{\done}{{\sf done}}
+\newcommand{\atomic}{{\sf atomic}}
+\newcommand{\emp}{\mathsf{emp}}
+\newcommand{\true}{\mathsf{true}}
+\newcommand{\false}{\mathsf{false}}
+\newcommand{\ls}{\mathsf{ls}}
+\newcommand{\lsrest}{\mathsf{ls_\textrm{rest}}}
+\newcommand{\lsin}{\mathsf{ls_\textrm{in}}}
+\newcommand{\lsout}{\mathsf{ls_\textrm{out}}}
+\newcommand{\new}{{\sf new}}
+\newcommand{\delete}{{\sf delete}}
+%\newcommand{\shared}[1]{{\fboxsep=0pt\fbox{\ensuremath{\begin{array}{@{}l@{}}#1\end{array}}}}}
+\newcommand{\shared}[1]{{\fboxsep=1pt\fbox{\ensuremath{{\phantom{Q}\!\!\!\!\!}#1}}}}
+\newcommand{\shareds}[1]{{\fboxsep=1pt\fbox{\ensuremath{{\phantom{Q}\!\!\!\!\!}#1}}}}
+\newcommand{\shadow}[1]{\lfloor #1 \rfloor}
+\newcommand{\intp}{{\bf i}}
+\newcommand{\State}{{\sf State}}
+\newcommand{\Comm}{{\sf Comm}}
+\newcommand{\Config}{{\sf Config}}
+\newcommand{\TConfig}{{\sf TConfig}}
+\newcommand{\LInt}{{\sf LInt}}
+\newcommand{\LVar}{{\sf LVar}}
+\newcommand{\LVal}{{\sf LVal}}
+\newcommand{\LIVar}{{\sf LIVar}}
+\newcommand{\LSVar}{{\sf LSVar}}
+\newcommand{\ThreadID}{{\sf ThreadID}}
+\newcommand{\fdef}{\mathpunct{\downarrow}}
+\newcommand{\fundef}{\mathpunct{\uparrow}}
+\newcommand{\db}[1]{\llbracket #1 \rrbracket}
+\newcommand{\head}{{\tt head}}
+\newcommand{\curr}{{\it curr}}
+\newcommand{\prev}{{\it prev}}
+\newcommand{\node}{{\it node}}
+\newcommand{\freelist}{{\tt freelist}}
+\newcommand{\freels}{{\sf ls}_\textrm{free}}
+\newcommand{\fullls}{{\sf ls}_\textrm{full}}
+\newcommand{\ph}{\phantom{\{}}
+\newcommand{\inv}{J}
+\def\be{\begin{equation}}
+\def\ee{\end{equation}}
+
+\newcommand{\atom}{{\sf atom}}
+\newcommand{\delcust}{{\sf delCust}}
+
+\newcommand{\subpara}[1]{\noindent\emph{#1}}
+\newcommand{\sparagraph}[1]{\noindent\textbf{#1}}
+
+
+\lstset{
+	language=C,
+    aboveskip=0em,
+    belowskip=0em,
+	escapeinside={(*}{*)},
+    numbersep = 5pt,
+    columns=fullflexible,
+     basicstyle = \ttfamily
+}
+\lstdefinestyle{lnumbers}{
+	numbers=left,  
+    numbersep = 5pt,
+    aboveskip=0em,
+    belowskip=0em,
+    columns=fullflexible,
+	stepnumber=1, 
+	numberblanklines=false, 
+	numberstyle=\tiny,
+	basicstyle=\ttfamily, 
+	numbersep=3pt
+}
+\lstdefinestyle{nonumbers}{
+	numbers=none, 
+    aboveskip=0em,
+    belowskip=0em,
+    columns=fullflexible,
+	numberblanklines=false,
+	basicstyle=\ttfamily
+}
+
+
+% From rcu paper
+
+%%Source code stuff
+%\newcommand{\baselstset}{\lstset{
+%    columns=fullflexible,
+%%    aboveskip=0em,
+%%    belowskip=0em,
+%%    basicstyle=\ttfamily,
+%    basicstyle = \ttfamily,
+% %   keywordstyle=\bfseries,%\color{blue},
+%    mathescape=true,
+%    escapechar=\#,
+%    literate={@@}{\#\color{black}\#}0
+%             {@}{\#\color{green}\#}0
+%             {\\<nil>}{nil}3
+%             {/\\}{$\land$}1
+%             {\\/}{$\lor$}1
+%             {<=}{$\leq\ $}1
+%             {<<}{$\ll$}1
+%             {>>}{$\gg$}1
+%             {=>}{$\Rightarrow$}1
+%             {>=}{$\geq\ $}1
+%             {->^z}{$\stackrel{z}{\to}$}1
+%             {|->}{$\mapsto$}1
+%%             {-*}{$\wand$}1
+%%             {E}{$\exists$}1
+%             {_R}{$_R$}1
+%             {_2}{$_2$}1
+%             {_1}{$_1$}1
+%%             {:=}{=}1
+%             {\\iter\{0\}\{i\}\{n-1\}}{$\iter{0}{i}{n-1}$}2
+%             {\\iter\{1\}\{i\}\{n\}}{$\iter{1}{i}{n}$}2
+%             {\\iter\{0\}\{i\}\{n\}}{$\iter{0}{i}{n}$}2
+%             {\\iter\{0\}\{i\}\{29\}}{$\iter{0}{i}{29}$}2,
+%    commentstyle=\itshape,
+%%    keywordstyle=\ttfamily
+%}%
+%}
+%\newcommand{\AuxStyle}{\color{blue}}
+%\newcommand{\mylstset}{%
+%\baselstset%
+%\lstset{
+%    language=C,
+%    morekeywords={cons,null,allocate,dispose,then,do,else,await,atomic},
+%    moredelim=[is][\AuxStyle]{/a }{ a/}%,
+%%    morecomment=[s]{\{}{\}}
+%}}
+%\lstnewenvironment{source}{\mylstset}{}
+%\lstnewenvironment{sourcelineno}%
+%{\mylstset\lstset{numbers=left,numberstyle=\tiny,numbersep=5pt}}{}
+%
+%%
+
+
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+                       {-4\p@ \@plus -2\p@ \@minus -2\p@}%
+                       {-0.5em \@plus -0.22em \@minus -0.1em}%
+                       {\normalfont\normalsize\bfseries}}
+\makeatother
+
+\newcommand{\Sm}{{\sf Some}}
+\newcommand{\Nn}{{\sf None}}
+\newcommand{\Pre}{{\sf Pre}}
+\newcommand{\Post}{{\sf Post}}
+
+\newcommand{\dbp}[1]{\llparenthesis\hspace{1pt} #1 \hspace{1pt}\rrparenthesis}
+
+%%% Local Variables:
+%%% TeX-master: "recycling"
+%%% End:  

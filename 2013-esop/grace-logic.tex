@@ -1,0 +1,926 @@
+%!TEX root = ./recycling.tex
+
+
+\section{Grace Logic for Recycling Algorithms\label{sec:grace-logic}} 
+
+%\subsection{Permissions}\label{sec:ramr}
+% In our examples we use a particular instantiation of the abstract logic
+% presented in Section~\ref{sec:logic}, choosing our separation algebra $\State$ 
+% as an extension of the $\RAM$ model
+% with two kinds of permissions: $1$ and $\se$.
+% $$
+% \Loc = \{1, 2, \ldots\};
+% \quad 
+% \Val = \mathbb{Z};
+% \quad
+% \RAM_r 
+% = \Loc \rightharpoonup_{\it fin} \Val \times \{1,\se \}.
+% $$
+% We refer to the extended model as $\RAM_\se$,
+% to $1$ as a \emph{full} permission, to $\sm$ as a \emph{master} permission,
+% and to $\se$ as an \emph{existential} permission.
+% States from $\RAM_{\se}$ have allocated memory
+% locations annotated not only with their values in $\Val$, but with permissions,
+% which restrict the types of operations that a thread can perform on the given
+% location in the state. 
+%  
+% As we explained in Section~\ref{sec:informal}, 
+% in some recycling algorithms, threads removing elements from a shared data structure
+% can be viewed as taking out permissions from the shared state and thus taking 
+% responsibility for their deallocation in the future.
+% The threads leave an existential permission in the shared state allowing other threads to 
+% keep accessing the removed node as long as the grace period of the removed element did not end.
+% The partial permission is essentially the well-known read-only
+% permission~\cite{boyland,permission} but cannot be split any further. 
+%  
+% 
+% The {\em full} permission ($1$) allows a thread to
+% read, write and deallocate the corresponding cell. A full permission can be
+% split into a {\em master} permission ($\sm$) and an {\em existential} permission ($\se$) which can be used by different threads. 
+% A partial  permission guarantees that the that the cell is not going to be 
+% deallocated {\em or modified} and
+% also gives the right to read it.
+%  
+% To denote elements of $\RAM_{\se}$, we extend the assertion
+% language for predicates over states given in Section~\ref{sec:logic}
+% Let $E, F$ range over expressions over logical
+% variables (such expressions are enough for our purposes).
+% Our  assertion language includes two new atomic assertions
+% $E \mapsto F$ and $E \mapsto_{\se} F$, 
+% which denotes states with the only
+% allocated cell at the address $E$ containing $F$, with the full permission ($1$) 
+% or a \emph{partial} permission ($\se$), respectively:
+% $$
+% \begin{array}{lcl}
+% \theta,\intp \models E \mapsto F 
+% & 
+% \iff 
+% & 
+% \theta = [\db{E}_{\intp} : (\db{F}_{\intp},1)]
+% \\
+% \theta,\intp \models E \mapsto_{\sm} F, 
+% &
+% \iff 
+% & 
+% \theta = [\db{E}_{\intp} : (\db{F}_{\intp},\sm)]
+% ~\text{, and}\\
+% \theta,\intp \models E \mapsto_{\se} F 
+% & 
+% \iff
+% & 
+% \theta = {[}\db{E}_{\intp} : (\db{F}_{\intp},\se)]\,.
+% \end{array}
+% $$
+% where $\db{E}_{\intp}$ denotes the value of the expression $E$ with respect to
+% the interpretation $\intp$.
+% 
+% 
+% For a structure taking two adjacent memory cells, we write $E \mapsto
+% F, F'$ for $E \mapsto F * (E+\textit{off}) \mapsto F'$, where {\it off} is the
+% offset of the second field in the structure. We use the same notation for other
+% kinds predicates introduced above.
+
+
+
+
+% \ag{m + e = 1. m + m, e + e - undefined.
+% check with examples what m and e should allow (and whether e should
+% really be r)}
+
+
+
+
+
+% Yet another derivation
+% 
+% \begin{figure*}
+% $$
+%   \infer
+%     {
+%     \emptyset,G,\true \vdash 
+%     \{p * l \land \shared{p_s} \land (\shared{g} \since \shareds{r}) \Rightarrow \shareds{c}\} \,
+%     \atomic_a\ \{\, C\,\} \,
+%     \{ q  \land \shared{q_s} \land (\shared{g} \since \shareds{r}) \Rightarrow \shareds{c} \}
+%     }
+% {
+% \begin{array}{l}
+% a = (l \mid p_s \leadsto q_s) \in G
+% \\[2pt]
+% foot(p_s) \subseteq foot(q_s)
+% \\
+% c = x \mapsto_{\se} \_ * \true
+% \\
+% \emptyset,\emptyset,\true \vdash 
+% \{ p * l * (p_s \land  c) \}
+% \, C \,
+% \{ q * (q_s \land  ((g \land r) \Rightarrow c))) \}
+% \end{array}
+% }
+% $$
+% 
+% $$
+%   \infer
+%     {
+%     \emptyset,G,\true \vdash 
+%     \{p * l \land \shared{p_s} \land ((\shared{m} \since \shareds{n}) \land (\shared{g} \since \shareds{r}) )  \Rightarrow \shareds{c}\} \,
+%     \atomic_a\ \{\, C\,\} \,
+%     \{ q  \land \shared{q_s} \land ((\shared{m} \since \shareds{n}) \land (\shared{g} \since \shareds{r}) \Rightarrow \shareds{c} \}
+%     }
+% {
+% \begin{array}{l}
+% a = (l \mid p_s \leadsto q_s) \in G
+% \\[2pt]
+% (m \since n) \implies \neg ( g \since c )
+% \\[2pt]
+% \emptyset,\emptyset,\true \vdash 
+% \{ p * l * ((p_s \land  (\neg g \lor (g \land \neg r))) \land m) \}
+% \, C \,
+% \{ q * ((q_s \land  ((g \land r) \Rightarrow c)) \land m)\}
+% \end{array}
+% }
+% $$
+% 
+% 
+% \caption{Derived shared rules used in our proofs (2)}
+% \end{figure*}
+% 
+% %%%%%%%
+
+
+
+
+
+\subsection{Specialised Proof Rules}
+In our proofs, we only use a limited number of tautologies involving $\sinceop$ 
+and a particular form of a temporal invariant. We use these tautologies to 
+derive special proof rules, which are useful for establishing assertions involving $\sinceop$, 
+carrying them over atomic commands, or proving the preservation of an invariant.
+We now derive a specialised proof rule for establishing invariants $\Upsilon$ of the form.
+
+We use Tautology~\ref{T:NegSinceExtend} in the derivation of the first  proof obligation
+of the \textsc{Shared-I} rule and Tautology~\ref{T:NegSinceExtend} in the proof of the second obligation.
+(See Figure~\ref{fig:SharedIDerivation}.)
+
+
+%\subsubsection{Derived Share rule}
+
+\todone{
+\ag{clean up derivation. Use infer. Add derivation - explain derivation.}
+\ag{Tautologies - in proofs + in derivation - write down. explain important ones.}
+\ag{Actually, we can have separate derivations for preserving (r since
+  s) and the invariant. They can then be combined using the
+  conjunction rule. This will simplify presentation. TODO: split the
+  derivations accordingly.}
+\ag{Note: In the \texttt{Inc} In the case of the hazard pointers when we use the second premise of the 
+derived rule for shared we do another case split on top of $u \land \neg v$
+depending whether  the hazard pointer  points to $x$ or not.
+\[
+\begin{array}{c}
+\neg u \\
+u \land \neg v \leftarrow \text{Inc}
+\end{array}
+\]
+}}
+
+
+
+\begin{figure}
+$$
+\infer
+{
+\begin{array}{l}
+\emptyset,G,\true \vdash 
+\{p \land \shared{p_s} \land 
+((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c})\} 
+\\[2pt]
+\phantom{\emptyset,G,\true \vdash  {}}
+\atomic_a\ \{\, C\,\}\,    \{ q  \land \shared{q_s} \land 
+((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c}) \}
+\end{array}
+}
+{
+\begin{array}{@{}l@{}}
+p \Rightarrow l * \true
+\qquad
+p_s \Rightarrow p_s'
+\qquad
+q_s \Rightarrow q_s'
+\qquad
+a = (l \mid p'_s \leadsto q'_s) \in G 
+\\[2pt]
+\emptyset,\emptyset,\true \vdash 
+\{ p * (p_s \land  \neg (o \land r)) \} 
+\, C \,
+\{ q * (q_s \land  (o \land r \Rightarrow c)) \}
+\\[2pt]
+\emptyset,\emptyset,\true \vdash 
+\{ p * (p_s  \land  o \land c) \} 
+\, C\,
+\{ q * (q_s \land  (o \Rightarrow c)) \}
+\end{array}
+}
+$$
+\hfill \textsc{Shared-I}
+
+$$
+  \infer
+    {
+\begin{array}{l}
+    \emptyset,G,\true \vdash 
+    \{p \land \shared{p_s} \land (\shared{o} \since \shareds{r})\} \,
+    \\[2pt]
+\phantom{ \emptyset,G,\true \vdash {}}
+    \qquad\quad
+    \atomic_a\ \{\, C\,\} \,
+    \{ q  \land \shared{q_s} \land (\shared{o} \since \shareds{r}) \}
+\end{array}
+    }
+{
+\begin{array}{l}
+p \Rightarrow l * \true
+\qquad
+p_s \Rightarrow p_s'
+\qquad
+q_s \Rightarrow q_s'
+\qquad
+a = (l \mid p'_s \leadsto q'_s) \in G 
+\\[2pt]
+\emptyset,\emptyset,\true \vdash 
+\{ p * (p_s \land  o) \}
+\, C \,
+\{ q * (q_s \land  o) \}
+\end{array}
+}
+$$
+\hfill \textsc{Shared-S}
+\caption{\label{fig:SharedSI}Rules used in the proofs}
+\end{figure}
+
+
+\begin{figure*}
+\[
+\begin{array}{c}
+\infer[\textsc{Shared, Conseq}]
+{
+\emptyset,G,\true \vdash 
+\{p  \land \shared{p_s} \land\neg(\shared{o} \since \shared{r}) \} \,
+\atomic_a\ \{\, C\,\} \,
+\{ q \land \shared{q_s}  \land ((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c} ) \}    
+}
+{
+\begin{array}{c}
+p \Rightarrow l * \true
+\qquad
+p_s \Rightarrow p'_s
+\qquad
+q_s \Rightarrow q'_s
+\qquad
+a = (l \mid p'_s \leadsto q'_s) \in G 
+\\[2pt]
+(p  \land \shared{p_s} \land \neg(\shared{o} \since \shared{r})) 
+\Rightarrow 
+(p  \land \neg(\shared{o} \since \shared{r}) \land 
+\shared{
+ p_s 
+ \land 
+ (o  \Rightarrow \neg r)
+})
+\\[2pt]
+\emptyset,\emptyset,\true \vdash 
+\{ p * (p_s \land  \neg(o  \land r)) \}
+\, C \,
+\{ q * (q_s \land  (o \land r \Rightarrow c)) \}
+\\[2pt]
+(q \land (
+(\neg(\shared{o} \since \shared{r}) \wedge 
+\shared{p_s \land (o  \Rightarrow \neg r)})
+\extend 
+\shared{q_s \land  (o \land r \Rightarrow c)}))
+\Rightarrow 
+(q \land \shared{q_s} \land  ((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c}))
+\end{array}
+}
+%
+\\[4ex]
+%
+\infer[\textsc{Shared, Conseq}]
+{
+\emptyset,G,\true \vdash 
+\{p   \land \shared{p_s} \land (\shared{o} \since \shared{r}) \land  \shareds{c} \} \,
+\atomic_a\ \{\, C\,\} \,
+\{ q  \land \shared{q_s} \land ((\shared{o} \since \shared{r}) \Rightarrow \shareds{c})  \}    
+}
+{
+\begin{array}{c}
+p \Rightarrow l * \true
+\qquad
+p_s \Rightarrow p'_s
+\qquad
+q_s \Rightarrow q'_s
+\qquad
+a = (l \mid p'_s \leadsto q'_s)
+\in G
+\\[2pt]
+(p  \land \shared{p_s} \land (\shared{o} \since \shared{r}) \land \shareds{c})
+\Rightarrow 
+(p  \land 
+\shared{
+ p_s 
+ \land 
+ o
+\land
+ c
+})
+\\[2pt]
+\emptyset,\emptyset,\true \vdash 
+\{ p  * (p_s \land  o \land c) \}
+\, C \,
+\{ q * (q_s \land  (o \Rightarrow c)) \}
+\\[2pt]
+(q \wedge 
+(\shared{p_s \land o \land c} 
+\extend 
+\shared{q_s \land (o \Rightarrow c)}))
+\Rightarrow 
+(q \wedge \shared{q_s} \land ((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c}))
+\end{array}
+}
+%
+\\[4ex]
+%
+  \infer[\textsc{Conseq}]
+    {
+    \emptyset,G,\true \vdash 
+    \{p  \land \shared{p_s} \land ((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c})\} \,
+    \atomic_a\ \{\, C\,\} \,
+    \{ q  \land \shared{q_s} \land ((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c}) \}
+    }
+    { % \land (\shared{o} \since \shared{n})
+    \infer[\textsc{Disj}]
+    {
+    \begin{array}{c}  
+    \emptyset,G,\true \vdash 
+    \{p  \land \shared{p_s} \land (\neg(\shared{o} \since \shared{r}) \lor ((\shared{o} \since \shared{r}) \land \shared{c}))\} 
+    \, \atomic_a\ \{\, C\,\} \,
+    \{ q \land \shared{q_s} \land ((\shared{o} \since \shareds{r}) \Rightarrow \shareds{c})  \}    
+    \end{array}
+    }
+    {
+    \begin{array}{c}  
+    \emptyset,G,\true \vdash 
+    \{p \land \shared{p_s}  \land \neg(\shared{o} \since \shared{r}) \} 
+    \,\atomic_a\ \{\,C\,\}\,
+    \{ q \land \shared{q_s} \land ((\shared{o} \since
+    \shareds{r}) \Rightarrow \shareds{c})  \}    
+    \\[2pt]
+    \emptyset,G,\true \vdash 
+    \{p  \land \shared{p_s} \land ((\shared{o} \since \shareds{r}) \land \shareds{c})\} 
+    \,\atomic_a\ \{\,C\,\}\,
+    \{ q \land \shared{q_s} \land  ((\shared{o} \since \shared{r}) \Rightarrow \shareds{c}) \}    
+    \end{array}
+   }
+   }
+\end{array}
+\]
+\caption{\label{fig:SharedIDerivation}Derivation of {\sc Shared-I}}
+\end{figure*}
+
+% tautologies:
+% $\shareds{u} \since \shareds{v} \implies \shareds{u}$
+% 
+% $ \shareds{w \lor \neg u}
+% \implies
+% (\shareds{u} \since \shareds{v} \implies \shareds{w})$
+% 
+% $ (\shareds{r} \since \shareds{s}) 
+% \extend
+% \shareds{r}
+% \implies
+% (\shareds{r} \since \shareds{s})$
+
+
+
+
+
+
+%%%%%%%%%%%%
+% \[
+% \begin{array}{c}
+%   \begin{array}{l}
+%     l \mid p_s \leadsto q_s \in G
+%     \\
+%     p * l \land \shared{p_s} \land \shareds{w} 
+%     \land (\shared{r} \since \shared{s}) 
+%     \implies
+%     p * l      
+%     \land (\shared{r} \since \shared{s} )
+%     \land (\shared{p_s \land w \land r} ) 
+%     \\
+%     \begin{array}{l}
+%     \emptyset,\emptyset,\true \vdash\{p*l *(p_s 
+%     \land 
+%     w \land r) \}
+%     \\
+%     \qquad  C 
+%     \\
+%     \{q * 
+%     (q_s
+%     \land 
+%     (w \lor \neg u) 
+%     \land 
+%     r) \}
+%     \end{array} 
+%      \\ 
+%      q \land (\shareds{r} \since \shareds{s}) \extend \shareds{q_s \land (w \lor \neg u) \land r}
+%      \implies \mbox{}\\
+%      \qquad
+%      q \land \shareds{q_s} \land (\shared{u} \since \shareds{v} \implies \shareds{w}) \land (\shareds{r} \since \shareds{s})
+%     \end{array}\\
+%   \hline
+%   \begin{array}{l}
+%   \{p*l \land \shareds{p_s} 
+%   \land 
+%   \shareds{w} 
+%   \land (\shared{r} \since \shared{s}) \}
+%   \\
+%   \qquad \,\langle\, C \,\rangle\,
+%   \\
+%   \{q \land \shareds{q_s} 
+%   \land 
+%   (\shared{u} \since \shareds{v} \implies \shareds{w}) 
+%   \land (\shared{r} \since \shared{s}) \}
+%   \end{array}
+% \end{array}
+% \]
+
+% \subsection{Derived Shared Rule}
+% For the special case where the invariant has the form 
+% \[
+% \Upsilon = (\tau_A \since \tau_B) \implies \tau_C\,,
+% \]
+% the rule $\textsc{Shared'}$, shown below, can be  
+% derived from the general $\textsc{Shared}$ rule.
+% \[
+% \begin{array}{c}
+% %
+% \infer[\textsc{Shared'}]{
+% R, G, ((\tau_A \since \tau_B) \implies \tau_C) \vdash 
+% \{P \}
+% \, \langle c \rangle\, 
+% \{ Q \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% }{
+% \begin{array}{c}  
+% % \Upsilon = (\tau_A \since \tau_B) \implies \tau_C
+% % \\[2pt]
+% % \\
+% % R, G, \Upsilon \vdash \mbox{}\\[1pt]
+% % \qquad
+% % \{P\wedge \neg \tau_C\}
+% % \, \langle c \rangle\, 
+% % \{Q \wedge (\tau_C \lor \neg \tau_A \lor \neg \tau_B)\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% % \\[2pt]
+% l \mid p_s \leadsto q_s \in G
+% \\
+% P \wedge \neg \tau_C \wedge \neg (\tau_A \since \tau_B) \implies  p * l \wedge \tau \wedge \shared{p_s}
+% \\
+% f_c(\db{p * l * p_s}) \sqsubseteq \db{q * q_s}
+% \\
+% q \wedge (\tau \extend \shared{q_s})
+% \Rightarrow  
+% \shareds{\tau_C \lor \neg \tau_A \lor \neg \tau_B} \land Q
+% \\
+% \\
+% % R, G, \Upsilon \vdash \mbox{}\\[1pt]
+% % \qquad
+% % \{P\wedge \tau_C \wedge \neg (\tau_A \since \tau_B)\}
+% % \, \langle c \rangle\, 
+% % \{Q \wedge (\tau_C \lor \neg \tau_A \lor \neg \tau_B)\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% % \\[2pt]
+% %\\
+% l' \mid p'_s \leadsto q'_s \in G
+% \\
+% P \wedge \tau_C \wedge (\tau_A \since \tau_B) \implies  p' * l' \wedge \tau' \wedge \shared{p'_s}
+% \\
+% f_c(\db{p' * l' * p'_s}) \sqsubseteq \db{q' * q'_s}
+% \\
+% q' \wedge (\tau' \extend \shared{q'_s})
+% \Rightarrow  
+% \shareds{\tau_C \lor \neg \tau_A \lor \neg \tau_B} \land Q
+% \\
+% \\
+% % R, G, \Upsilon \vdash \mbox{}\\[1pt]
+% % \qquad
+% % \{P\wedge \tau_C \wedge (\tau_A \since \tau_B)\}
+% % \, \langle c \rangle\, 
+% % \{Q \wedge (\tau_C \lor (\neg \tau_A \land \neg \tau_B))\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% % \\
+% % \\
+% l'' \mid p''_s \leadsto q''_s \in G
+% \\
+% P \wedge \tau_C \wedge \neg (\tau_A \since \tau_B) \implies  p'' * l'' \wedge \tau'' \wedge \shared{p''_s}
+% \\
+% f_c(\db{p'' * l'' * p''_s}) \sqsubseteq \db{q'' * q''_s}
+% \\
+% q'' \wedge (\tau'' \extend \shared{q''_s})
+% \Rightarrow  
+% \shareds{\tau_C \lor (\neg \tau_A \land \neg \tau_B)} \land Q
+% \end{array}
+% }
+% %  
+% \end{array}
+% \]
+% To derive the rule, we first apply the disjunction rule to 
+% perform a three-way case analysis.
+% \[
+% \begin{array}{c}
+% %
+% \infer[\textsc{Disj}]{
+% R, G, ((\tau_A \since \tau_B) \implies \tau_C) \vdash 
+% \{P \}
+% \, \langle c \rangle\, 
+% \{ Q \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% }{
+% \begin{array}{l}  
+% R, G, ((\tau_A \since \tau_B) \implies \tau_C) \vdash \mbox{}\\[1pt]
+% \qquad
+% \{P\wedge \neg \tau_C\}
+% \, \langle c \rangle\, 
+% \{Q \wedge (\tau_C \lor \neg \tau_A \lor \neg \tau_B)\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% \\[2pt]
+% R, G, ((\tau_A \since \tau_B) \implies \tau_C) \vdash \mbox{}\\[1pt]
+% \qquad
+% \{P\wedge \tau_C \wedge \neg (\tau_A \since \tau_B)\}
+% \, \langle c \rangle\, 
+% \{Q \wedge (\tau_C \lor \neg \tau_A \lor \neg \tau_B)\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% \\[2pt]
+% R, G, ((\tau_A \since \tau_B) \implies \tau_C) \vdash \mbox{}\\[1pt]
+% \qquad
+% \{P\wedge \tau_C \wedge (\tau_A \since \tau_B)\}
+% \, \langle c \rangle\, 
+% \{Q \wedge (\tau_C \lor (\neg \tau_A \land \neg \tau_B)\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% \end{array}
+% }
+% %  
+% \end{array}
+% \]
+% \begin{description}
+% \item[Case 1:]
+% Assume that the invariant hold at the pre-state, but 
+% $\tau_C$ does not.
+% This implies that $\tau_A \since \tau_B$ does not hold in the pre-state either.
+% Thus, to reestablish the invariant at the post-state we need either to establish $\tau_C$
+% or show that $\tau_A \since \tau_B$ does not hold.
+% To show the latter we use the tautology
+% \[
+% \neg (\tau_A \since \tau_B) \extend (\neg  \tau_A \lor \neg \tau_B)
+% \]
+% and the assumption.
+% \item[Case 2:]
+% Assume that the invariant as well $\tau_C$ hold at the pre-state.
+% There can be two sub cases: either $\tau_A \since \tau_B$ holds at the pre-state or not.
+% In this case, we assume the latter. Thus, the reasoning in done as in the first case.
+% \item[Case 3:]
+% Assume that the invariant as well $\tau_C$ and $\tau_A \since \tau_B$ hold at the pre-state.
+% To reestablish the invariant at the post-state we need either to establish $\tau_C$
+% or show that $\tau_A \since \tau_B$ does not hold.
+% To show the latter we use the tautology
+% \[
+% (\neg  \tau_A \land \neg \tau_B) \implies \neg (\tau_A \since \tau_B)\,.
+% \]
+% \end{description}
+% 
+% 
+% \subsection{Derived Shared Rule}
+% \nr{Under Construction}
+% For the special case where the invariant has the form 
+% \[
+% \Upsilon = \forall x.\,(\exists t.\, \shareds{p(x,t)*\true} \since \shareds{x \mapsto \_*\true}) \implies \shareds{x \mapsto_e \_*\true}\,,
+% \]
+% and $\foot(p(x,t)) = \foot(p(x,t'))$ for all $t,t'$,
+% the rule $\textsc{Shared''}$, shown below, can be  
+% derived from rule $\textsc{Shared'}$ rule.
+% \[
+% \begin{array}{c}
+% %
+% \infer[\textsc{Shared''}]{
+% R, G, \Upsilon \vdash 
+% \{P \}
+% \, \langle c \rangle\, 
+% \{ Q \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% }{
+% \begin{array}{c}  
+% l \mid p_s \leadsto q_s \in G
+% \\
+% P  \implies  p * l \wedge \tau \wedge \shared{p_s}
+% \\
+% f_c(\db{p * l * p_s}) \sqsubseteq \db{q * q_s}
+% \\
+% \foot(p_s) \subseteq \foot(q_s)
+% \\
+% q \wedge (\tau \extend \shared{q_s})
+% \Rightarrow  
+% Q
+% % \\
+% % \\
+% % % R, G, \Upsilon \vdash \mbox{}\\[1pt]
+% % % \qquad
+% % % \{P\wedge \tau_C \wedge \neg (\tau_A \since \tau_B)\}
+% % % \, \langle c \rangle\, 
+% % % \{Q \wedge (\tau_C \lor \neg \tau_A \lor \neg \tau_B)\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% % % \\[2pt]
+% % %\\
+% % l' \mid p'_s \leadsto q'_s \in G
+% % \\
+% % P \wedge \tau_C \wedge (\tau_A \since \tau_B) \implies  p' * l' \wedge \tau' \wedge \shared{p'_s}
+% % \\
+% % f_c(\db{p' * l' * p'_s}) \sqsubseteq \db{q' * q'_s}
+% % \\
+% % q' \wedge (\tau' \extend \shared{q'_s})
+% % \Rightarrow  
+% % \shareds{\tau_C \lor \neg \tau_A \lor \neg \tau_B} \land Q
+% % \\
+% % \\
+% % % R, G, \Upsilon \vdash \mbox{}\\[1pt]
+% % % \qquad
+% % % \{P\wedge \tau_C \wedge (\tau_A \since \tau_B)\}
+% % % \, \langle c \rangle\, 
+% % % \{Q \wedge (\tau_C \lor (\neg \tau_A \land \neg \tau_B))\} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% % % \\
+% % % \\
+% % l'' \mid p''_s \leadsto q''_s \in G
+% % \\
+% % P \wedge \tau_C \wedge \neg (\tau_A \since \tau_B) \implies  p'' * l'' \wedge \tau'' \wedge \shared{p''_s}
+% % \\
+% % f_c(\db{p'' * l'' * p''_s}) \sqsubseteq \db{q'' * q''_s}
+% % \\
+% % q'' \wedge (\tau'' \extend \shared{q''_s})
+% % \Rightarrow  
+% % \shareds{\tau_C \lor (\neg \tau_A \land \neg \tau_B)} \land Q
+% \end{array}
+% }
+% %  
+% \end{array}
+% \]
+% 
+% 
+% Another possible rule is 
+% \[
+% \begin{array}{c}
+% %
+% \infer[\textsc{Shared''}]{
+% R, G, \Upsilon \vdash 
+% \{P \}
+% \, \langle c \rangle\, 
+% \{ Q \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% }{
+% \begin{array}{c}  
+% x\mapsto_m\_ \mid X*x\mapsto_e\_ \leadsto X \in G
+% \\
+% P  \implies  p * x\mapsto_m\_  \wedge \tau \wedge \shared{p_s * c\mapsto_e\_}
+% \\
+% f_c(\db{p * x\mapsto_m\_  * p_s * x \mapsto_e \_}) \sqsubseteq \db{q * x \mapsto \_ * p_s}
+% \\
+% q \wedge (\tau \extend \shared{p_s})
+% \Rightarrow  
+% Q
+% \end{array}
+% }
+% \end{array}
+% \]
+% 
+% \subsection{Derived  Rules}
+
+% \sparagraph{Since introduction.}
+% For an atomic command that does not modify the 
+% shared state, we use the following tautology to establish 
+% that $A \since B$ holds.
+% \[
+% (A \wedge B) \implies (A \since B) 
+% \]
+% The derived rule says that if before the command we were able to
+% establish $\shareds{A}$ (and, in addition, some other information $\tau$ regarding the history of the shared state)
+% and that the execution of the command maintains $\shareds{A}$ \emph{and} establishes {\shareds{B}
+% then $\shareds{A} \since \shareds{B}$ (and $\tau$) holds after the command.
+% \[
+% \infer[\textsc{Since-Intro}]{
+% R, G, \Upsilon \vdash 
+% \{p \wedge \tau \wedge \shareds{A} \}\, 
+% \langle c \rangle\, 
+% \{ q \wedge \tau \wedge   \shareds{A} \since \shareds{B} \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% }{
+% \begin{array}{l}
+% %l \mid p_s \leadsto q_s \in G\\
+% \tau \wedge \shared{A}  \Rightarrow \shared{p_s}\\
+% f_c(\db{p * p_s}) \sqsubseteq \db{q * (A \land B)}
+% \\
+% \end{array}
+% }
+% \]
+% The soundness of the rule  comes from the following two observations.
+% First, $\tau \wedge \shared{A}$ were stable before the command.
+% The command did not change the state, and as we assume the invariant to be closed for stuttering
+% (recall that we assume ${\sf Id}$ is always in $R \cap G$) then ...
+% \nr{say something on stability} 
+% Also, from the semantics of \emph{since} we get that 
+% \[
+% \text{if}~A~\text{is stable}\,\implies\,A~\since B~\text{is stable}\,.
+% \]
+
+\nr{explain why we use permissions. Why not fixed partitioning.}
+\nr{We may want to have special formulae for \emph{single-writer -multi-reader always exist  cells}}
+% \[
+% \infer[\textsc{Since-Intro'}]{
+% R, G, \Upsilon \vdash 
+% \{p \wedge \tau \wedge \shareds{A} \}\, 
+% \langle c \rangle\, 
+% \{Q \wedge   (\shareds{A} \since \shareds{B}) \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% }{
+% \begin{array}{l}
+% l \mid p_s \leadsto q_s \in G\\
+% (l * p) \land \tau \wedge \shared{A}  \Rightarrow \shared{p_s}
+% \\
+% f_c(\db{l * p * p_s}) \sqsubseteq \db{q * (q_s \land A \land B)}
+% \\
+% q \wedge ((\tau \land \shareds{A}) \extend \shared{q_s  \land A \land B})
+% \Rightarrow  \Upsilon \land Q
+% \end{array}
+% }
+% \]
+
+
+% \sparagraph{Invariant introduction.}
+% \[
+% \infer[\textsc{Inv-Intro}]{
+% \begin{array}{l}
+% R, G, \forall x.\,\forall t\,. \shareds{A(x,t)}\implies \shareds{C(x,t)}\vdash \mbox{}\\
+% \qquad\qquad\qquad\qquad\{P \}\, 
+% C \, 
+% \{Q \wedge  \shareds{A(e,e')} \wedge  \shareds{C(e,e')}) \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% \end{array}
+% }{
+% \begin{array}{l}
+% R, G, \forall x.\,\forall t\,. \shareds{A(x,t)}\implies \shareds{C(x,t)}\vdash \mbox{}\\
+% \qquad\qquad\qquad\qquad\{P \}\, 
+% C \, 
+% \{Q \wedge  \shareds{A(e,e')}) \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% \end{array}
+% }
+% \]
+
+
+% \sparagraph{Master Stability.}
+% \[
+% \infer[\textsc{Master-Stability}]{
+% \begin{array}{l}
+% R, G, \Upsilon \{P \}\, 
+% C \, 
+% \{Q \wedge  \shareds{A(e,e')} \wedge  \shareds{C(e,e')}) \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% \end{array}
+% }{
+% \begin{array}{l}
+% R, G, \forall x.\,\forall t\,. \shareds{A(x,t)}\implies \shareds{C(x,t)}\vdash \mbox{}\\
+% \qquad\qquad\qquad\qquad\{P \}\, 
+% C \, 
+% \{Q \wedge  \shareds{A(e,e')}) \} %Q \{q \wedge (\tau \extend \shared{q_s})\}
+% \end{array}
+% }
+% \]
+
+
+\subsection{Syntactic Stabilisation}
+We use the following tautologies to establish stability involving $\sinceop$.
+\[
+\begin{array}{l}
+  A~\text{is stable} \implies A \since B ~\text{is stable}
+\end{array}
+\]
+
+
+% \sparagraph{Invariant utilisation.}
+% 
+\subsection{Invariant Preservation}
+In our proofs, we use invariants of the form $(A \since B) \implies C$.
+We show the preservation of the invariant using the following rule, 
+which is derived from the  {\sc Shared} rule in the abstract logic.
+The rule is derived by using the {\sc Disjunction} rule to allow for a 
+case analysis regarding whether the invariant holds because  $C$ holds
+or $(A \since B)$ does not hold.
+Note that from 
+% 
+% \ignore{
+% $$
+% \begin{array}{c}
+%   \infer[\textsc{Shared'}]{
+%   R, G, (A \since B) \implies C \vdash \{P\}\, \langle c \rangle\,\{Q\}
+%   }{
+%   \begin{array}{l}
+%   P \implies p \wedge \tau 
+%   \\
+%   \tau \implies \shareds{p_s}
+%   \\
+%   \shareds{p_s} \leadsto \shareds{q_s} \in G
+%   \\
+%   f_c(\db{p * p_s}) \sqsubseteq \db{l * q_s}
+%   \\
+%   (l \wedge \tau \extend \shared{p_s}) \extend \shared{q_s} 
+%   \implies Q \wedge I
+%   \end{array}
+%   }
+% \end{array}
+% $$
+% 
+% $$
+% \begin{array}{c}
+%   \infer[\textsc{Shared}]{
+%   R, G, I \vdash \{P\}\, \langle c \rangle\,\{Q\}
+%   }{
+%   \begin{array}{l}
+%   P \implies (p * l_p) \wedge (\tau \extend \shared{p_s})
+%   \\
+%   l_p \mid \shareds{p_s} \leadsto \shareds{q_s} \in G
+%   \\
+%   f_c(\db{p * l_p * p_s}) \sqsubseteq \db{l * q_s}
+%   \\
+%   (l \wedge \tau \extend \shared{p_s}) \extend \shared{q_s} 
+%   \implies Q \wedge I
+%   \end{array}
+%   }
+% \end{array}
+% $$
+% 
+% $$
+% \begin{array}{c}
+%   \infer[\textsc{Shared}]{
+%   R, G, I \vdash \{P\}\, \langle c \rangle\,\{Q\}
+%   }{
+%   \begin{array}{l}
+%   I \implies I_1 \lor I_2\\
+%   \end{array}
+%   }
+% \end{array}
+% $$
+% }
+% 
+% 
+% 
+% \subsection{Messy (Logic instantiation)}
+% 
+% \ag{
+% We use only a limited number of tautologies involving $\since$. We can first
+% present a general logic, and then use the tautologies below to get derived rules
+% specialised for the particular forms of temporal invariants, etc. that we use.
+% }
+% 
+% $(A \wedge B) \Rightarrow (A \since B)$
+% 
+% $A \since B$ is stable if so is $A$
+% 
+% $(A \since B) \circ A \Rightarrow (A \since B)$
+% 
+% $\dlf{A \since B} \Rightarrow A$
+% 
+% $\neg(A \since B) \circ \neg B \Rightarrow \neg(A \since B)$
+% 
+% NB: We might need to use consistency with the local state when we check the
+% satisfaction of $I$ in the Shared rule. We might also need to tighten the
+% interpretation of assertions so that it checks the consistency of the local and
+% the shared state.
+% 
+% We can use a rule derived from Shared and specialised to the form of the
+% temporal invariant $(A \since B)\Rightarrow C$.
+% 
+% $$
+% \infer{
+% \{((A \since B) \Rightarrow C ) \wedge P\}\, \langle c \rangle\,
+% \{((A \since B) \Rightarrow C) \wedge Q\}
+% }{
+% \begin{array}{c}
+% \{A \wedge C \wedge P\}\, c\, \{((A \wedge C) \vee \neg(A \wedge B)) \wedge Q\}
+% \\[3pt]
+% \{(\neg B \vee (B \wedge \neg A)) \wedge P\}\, c\, 
+% \{\neg B \vee B \wedge \neg A \vee A \wedge B \wedge C) \wedge Q\}
+% \end{array}
+% }
+% %
+% $$
+% 
+% So, you can either preserve the validity of the since clause and $C$ or
+% invalidate it. Might also split this rule into several ones, for different cases.
+% 
+% May be the disjunctions $\neg B \vee (B \wedge \neg A)$ are not needed; a
+% stronger one would do, e.g., $\neg B$.
+
+Note that it's too imprecise to apply the Shared rule straight on the
+implication $(A \since B) \Rightarrow C$: you'll lose correlation with the next
+state and the history. So, first you need to make a case split on whether the
+since clause is true using the disjunction rule. Note that the assertions that
+you get (like, the since clause) aren't stable in general (they are if we're in
+the reclaimer, but not in the reader). So, we need to formulate the stability
+constraints carefully to check the stability only before applying the
+disjunction rule and after.
+
+
+
+%%% Local Variables:
+%%% TeX-master: "recycling"
+%%% End:  

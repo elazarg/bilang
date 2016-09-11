@@ -1,0 +1,478 @@
+%!TEX root = ./recycling.tex
+
+\newcommand{\myhp}{{\sf myhp}}
+\newcommand{\HPL}{\texttt{HPL}}
+\newcommand{\lsh}{{\sf lsh}}
+\newcommand{\hpr}{{\sf hpr}}
+\newcommand{\snapshotlist}{{\sf snapshot}}
+\newcommand{\img}{{\it img}}
+\newcommand{\detach}{{\it detached}}
+
+\section{Proofs of an Optimised Hazard Pointer Implementation
+\label{sec:ProofsHazard}}
+
+In Figures~\ref{fig:DynHazardStackAssn}--\ref{fig:HazardSet}, we give a proof of
+memory safety of a non-blocking stack algorithm using hazard pointers. The
+implementation of hazard pointers in this algorithm is optimised or extended in
+several ways:
+\begin{itemize}
+\item Hazard pointers are dynamically allocated, which supports dynamic thread
+  creation.
+\item The \texttt{reclaim} function scans the hazard pointer list only once.
+  This optimisation is done in practice to ensure a bound on the number of
+  non-reclaimed memory cells.
+\item For efficiency, the {\tt detached} set is implemented as a list whose
+  links are stored in the detached nodes themselves.
+\end{itemize}
+Note that the proof of {\tt reclaim} and the actions involving hazard pointers
+do not mention the stack data structures. Thus this part of the proof is not
+specific to the stack algorithm. This is an improvement on the proof of
+\S\ref{sec:grace} that we omitted there so as not to complicate presentation.
+
+
+% on the example of a non-blocking stack with several optimisations of hazard
+% pointers used in practice~\cite{hazard}: e.g., the pointers are dynamically
+% allocated, \texttt{reclaim} scans the hazard list only once, and the {\tt
+%   detached} sets are represented by lists with links stored inside the detached
+% elements themselves. 
+
+% We also give a proof of \texttt{reclaim} which scans the hazard pointer array only once.
+% This optimisation is done in practice to ensure a bound on the number of non-reclaimed memory cells.
+% The main change in the proof is that it establishes  
+% that the counter does not point to \emph{any} node in the detached set since 
+% \emph{any} hazard pointer was read. 
+% The proof of retire is applicable for any data structure where the notion of 
+% an ``element reachable from the roots of the data structure''~\cite{maged} \nrm{Check this is the quote}
+% is formalised by having the full permission for its memory cells in the shared state.
+% (For example, the cell containing the value of the counter is the only one reachable from the counter and has its full permission in the shared state.)
+% The proof hinges on the inconsistency of having the master permission for the cells of the elements in the the master permission an, it is not specific to a stack or a counter.
+% Finally, inspired by action \textsf{Write} which allows the thread holding the master permission of a cell to change it wills, 
+% we provide a (provably correct) implementation of the set of detached set as a singly linked list whose nodes use the cell of the detached elements themselves.
+% We believe that we are the first to suggest this optimisation. 
+
+
+% \nr{We have a proof for stack, for snapshots, and for generic snapshot. 
+% I have two more in mind.}
+
+
+
+% \nr{More optimisation: Dynamic allocation of Hazard pointers.  }
+
+% \nr{Proof of stack pop: Stability of the past.}
+% \nr{Linearizability with in/out markers}
+
+
+% We give  a proof for the \texttt{pop()} procedure of a 
+% stack with Hazard pointers in Figure~\ref{fig:HazardPop}.
+% The temporal invariant and some shorthands used in the proof appear in Figure~\ref{fig:HazardStackAssn}.
+% The actions and rely/guarantee conditions are given in Figure~\ref{fig:HazardStackRG}.
+% The proof is similar to the proof of the counter algorithm with hazard pointers.
+% The main two differences are:
+% Before setting the hazard pointer, 
+% the algorithm checks whether \texttt{Top} was \texttt{NULL} when it was read.
+% If so, it returns that the stack is empty.
+% This is an optimisation: This case indicates that the stack is empty, and thus there is no need to dereference a cell. 
+% Hence there is no need to set a hazard pointer.  
+% The second difference is that after successfully setting the hazard pointer,
+% the proof uses the information that  \texttt{Top} was not \texttt{NULL} at the time it was read
+% and infers, using the state invariant and the inductive definition, 
+% that it must point to a Node in the  shared memory. 
+% The assertion is stable because it makes claim about a past state, and no action by the environment can change the past.
+
+
+
+% In Figure~\ref{fig:RetireList} we give a proof of the \texttt{retire()} procedure 
+% for arbitrary data structures.
+% Also, here \texttt{retire()} scans the global hazard pointer array only once.
+% The main idea of the proof is that having the master permission for a cell $x$ in the local 
+% state of a thread is inconsistent with the counter pointing to it.
+% The proof is generalised to handle arbitrary data structures assuming detached nodes are represented as consecutive memory areas.
+% The main idea of the proof is similar to that of the counter special case:
+% Predicate $\Node{x}{1}{i}$  requires the full permission for the $i$ consecutive memory cells starting at $x$.
+% Thus, it  is inconsistent to have it hold in the shared state while 
+% holding the master permissions of these cells in the thread's local state.
+% Another optimisation that we make is to implement the detached set as a list whose links are stored in the detached nodes themselves.
+% (See Figure~\ref{fig:HazardSet}.)
+
+% \sparagraph{pop.}
+% The proof outline for \texttt{pop()} appears in Figure~\ref{fig:DynHazardPop}.
+% In the call to 
+% \texttt{retire()} we frame
+% $ h \neq 0 \implies \shareds{\myhp(h,\ltid,p) * \true}$.
+
+% The assertion $\shareds{\exists z,N.\, P \subseteq N \land \HPL \mapsto z * \lsh_N(z)}$ 
+% is used to ensure that the traversal of the hazard list does not violate memory safety.
+% The assertion is stable because the hazard list can only grow.
+
+% \sparagraph{retire.}
+% The proof outline for \texttt{retire()} appears in Figure~\ref{fig:DynRetireList}.
+% The proof is for arbitrary algorithms where the notion of 
+% a cell being ``in the data structure'' is encoded by having the full permission for
+% the cell in the shared state.
+% $V=\{\texttt{used},\texttt{my},\texttt{n},\texttt{p},\texttt{n},\texttt{h}\}$.
+% The only actions \texttt{retire()} is allowed to execute are $\textsf{Id}$, $\textsf{Write}$ and $\textsf{Take}$.
+% The detached set is implemented using a linked list, where the links are stored in the first cell of a detached node).
+% We use $\nodepi{x}{p}{i} = x \mapsto_p \_ * \ldots * x + i-1 \mapsto_p \_ $ as a shorthand for an assertion denoting 
+% having  permission $p$ for $i$ consecutive cells starting at address $p$.
+
+% The reclaimer establishes two $\since$ clauses to preserve the invariant.
+% One is for the hazard pointers that were reachable from the head of the list at the moment it read them
+% (Line~\ref{pc:RetireGen:postreadhpl}).
+
+% The algorithm uses an abstract list to store the values of the hazard pointers it read.
+% The list is the thread's local memory and has the standard \texttt{insert()},
+% \texttt{get()}, which gets the element at position $i$, \texttt{size()}, and \texttt{destroy()}  operations.  
+% The implementation of the list is standard, and elided.
+
+
+\begin{figure*}[t]
+\[
+\begin{array}{rcl}
+%  H 
+%  & \iff &
+%  \bigast\nolimits_{t=0}^{\nthreads} \HP[t] \mapsto \_      
+%  \\[2pt]
+  \stack(x) 
+  & \iff &
+  (\emp \land x = 0) \lor (\exists y,v.\, x \mapsto y,v * \stack(y))
+  \\[2pt]
+%  \Upsilon^s_{\textsf{HP}} 
+%  & \iff &   
+%  \shared{H * \exists y.\, \Top \mapsto y * \stack(y) * \true_{\se}} \land  
+%  \mbox{}
+%  \\[2pt]
+%  & & 
+%  \forall x, t.\, ((\shareds{\HP[t] \mapsto x * \true} 
+%  \since \shareds{\Top \mapsto x * x \mapsto \_ * \true}) \Rightarrow  
+%  \shareds{x \mapsto_\se \_,\_ * \true})
+%
+\lsh_A(z) &\iff &
+(A = \emptyset \land z = 0) \lor (z \in A \land \exists z'.\,  z \mapsto \_,\_,z'  * \lsh_{A\setminus\{z\}}(z'))
+\\[2pt]
+  H 
+  & \iff &
+  \exists z,A.\, \HPL \mapsto z * \lsh_A(z) 
+  \\[2pt]
+%
+I & \iff & \shareds{H * \exists y.\, \Top \mapsto y * \stack(y) * \true_{\se}}
+\\[2pt]
+\myhp(h,t,x)
+  & \iff & 
+  \shareds{\exists z,A.\,h \in A \land \HPL  \mapsto z * \lsh_A(z) * \true} 
+                         \land 
+                         \shareds{h \mapsto x,t,\_ * \true}
+%   \\[2pt]
+% %
+% \myhp(h,t,x)
+%   & \iff & 
+%   h \mapsto x,t,\_
+  \\[2pt]
+D(x,A) &\iff &
+(A = \emptyset \land x = 0) \lor (x \in A \land \exists x'.\,  x \mapsto x',\_
+* D(x', A\setminus\{x\}))
+\\[2pt]
+ \Upsilon_{\textsf{DHP}} 
+  & \iff &   
+ \forall h,x.\, \big(\myhp(h,\_,x) \since \shareds{\Top \mapsto x * x \mapsto
+   \_ * \true} \big) \Rightarrow \shareds{x \mapsto_\se \_,\_ * \true}
+\end{array}
+\]
+\smallskip
+\be
+\HPL \mapsto z * X
+\ \leadsto \ 
+\HPL \mapsto y * y \mapsto \_, t, z * X 
+\tag{$\textsf{DHP}_\ltid$}
+\ee
+\be
+\HPL \mapsto y *  (\lsh_A(y) \land (h\mapsto\_,t,z * Y)) * X 
+\ \leadsto \ 
+\HPL \mapsto y *  (\lsh_A(y) \land (h\mapsto\_,t,z * Y)) * X 
+\tag{$\textsf{WHP}_\ltid$} 
+\ee
+\be
+  X
+  \leadsto
+  X
+  \tag{$\textsf{Id}$}
+\ee
+%\be
+%\HP[t] \mapsto \_ * X
+%\ \leadsto \ 
+%\HP[t] \mapsto \_ * X
+%\tag{$\textsf{HP}_t$}
+%\ee
+\be
+\Top \mapsto x * X
+\ \leadsto \
+\Top \mapsto z * z \mapsto x,v * X
+\tag{$\textsf{Push}$}
+\ee
+\be
+\Top \mapsto x * x \mapsto y,v * X
+ \leadsto \ 
+\Top \mapsto y * x \mapsto_\se y,v * X
+\tag{$\textsf{Pop}$}
+\ee
+\be
+x \mapsto_\sm \_,\_ \ \mid\ 
+x \mapsto_\se \_,\_ * X
+\ \leadsto\ 
+X
+\tag{$\textsf{Take}$}
+\ee
+\be
+x \mapsto_\se \_,\_ * X
+\ \leadsto\ 
+x \mapsto_\se \_,\_ * X
+\tag{$\textsf{Write}$}
+\ee
+$$
+G_\ltid = \{\textsf{DHP}_\ltid,\textsf{WHP}_\ltid, \textsf{Push}, \textsf{Pop}, \textsf{Take}, \textsf{Id}, \textsf{Write}\}; \quad
+R_\ltid = \bigcup\nolimits_{t \not= \ltid} G_{t}
+$$
+
+\caption{\small Assertions,
+actions, and rely/guarantee conditions used in
+  the proof of the stack with an optimised hazard pointer implementation}  
+\label{fig:DynHazardStackAssn}
+\end{figure*}
+%
+%
+%\begin{figure*}
+%\be
+%\HPL \mapsto z * \lsh_A(z) * X
+%\ \leadsto \ 
+%\HPL \mapsto y * \_, t, z * \lsh_A(z) * X 
+%\tag{$\textsf{DHP}_t$}
+%\ee
+%\caption{\label{fig:DynHazardStackRG}The actions and rely/guarantee conditions used in
+%  the proof of the stack algorithm with dynamic allocation of  hazard pointers}
+%\end{figure*}
+%
+
+
+
+
+\begin{figure}[p]
+{\figfontsize
+\begin{lstlisting}[numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+struct Node { Node *next;
+                int val; };
+Node *Top = 0;
+struct HazardNode { Node *p;
+                      HazardNode *next;  
+                      TID tid; };
+HazardNode *HPL = 0;
+ThreadLocal HazardNode *h = 0; 
+ThreadLocal Node* detached = (*$\{\emptyset\}$*);
+
+int pop() {
+  int v; Node *x, *p, *p2;  
+
+  (*$\{ V \Vdash F_{\ltid} \land (h \neq 0 \implies \myhp(h,\ltid,\_)) \land I \}$ \label{pc:DynHazard:pop:pre}*) 
+  if (h == 0) {
+    h = new HazardNode();
+    h->tid = tid();
+    do {
+      HazardNode *o = HPL;
+      h->next = o;
+    } while (!CAS(*$_{\textsf{DHP}_{\ltid}, \textsf{Id}}$*)(&HPL,o,h);
+  }
+  (*$\{ V \Vdash F_{\ltid} \land \myhp(h,\ltid,\_) \land I
+  \}$ \label{pc:DynHazard:pop:stateinvpostalloc}*) 
+
+  do {
+    (*$\{V \Vdash F_{\ltid} \land  \myhp(h,\ltid,\_) \land I\}$*)
+    do {
+      (*$\{V \Vdash  F_{\ltid} \land  \myhp(h,\ltid,\_) \land  I\}$*)
+      (*$\langle$*)p = Top(*$\rangle_{\sf Id}  \label{pc:DynHazard:pop:readp} $*); 
+      (*$\{V \Vdash F_{\ltid} \land  \myhp(h,\ltid,\_) \land  I\}$*)  
+      if (p == NULL) return EMPTY;         
+      (*$\{V \Vdash p \neq 0 \land F_{\ltid} \land  \myhp(h,\ltid,\_) \land 
+      		I\}$*)  
+      (*$\langle$*)myhp->p = p(*$\rangle_{\textsf{WHP}_\ltid} \label{pc:DynHazard:pop:sethp}$*);
+      (*$\{V \Vdash p \neq 0 \land  F_{\ltid} \land   \shareds{\myhp(h,\ltid,p) * \true} \land  I \}$*) 
+      (*$\langle$*)p2 = Top(*$\rangle_{\sf Id} \label{pc:DynHazard:pop:readpp}$*);
+      (*$\{V \Vdash p \neq 0 \land  F_{\ltid} \land  I 
+      \land (\shareds{\myhp(h,\ltid,p) * \true} \since {}$*)
+      (*$\ph\shareds{\Top \mapsto {\it p2}  * \stack(\mathit{p2}) * \true_{\se}})\}$*)
+    } while (p != p2); (*\label{pc:DynHazard:pop:test}*)
+    (*$\{V \Vdash p \neq 0 \land  F_{\ltid} \land I \land 
+        (\shareds{\myhp(h,\ltid,p) * \true} \since {}$*)
+    (*$\ph \shareds{\Top \mapsto p  *
+          \stack(p) * \true_{\se}}) \wedge \shareds{p \mapsto_\se \_,\_ * \true}\}$*)
+    (*$\langle$*)n = p->next;(*$\rangle_{\sf Id}$*); (*\label{pc:DynHazard:pop:access}*)
+    (*$\{V \Vdash \exists x,y.\,  p \neq 0 \land  F_{\ltid} \land \shareds{H *  \Top \mapsto y * \stack(y) * \true_{\se}} \land \mbox{}$*)
+    (*$ \ph
+         (\shareds{\myhp(h,\ltid,p) * \true} \since \shareds{\Top \mapsto p  * \stack(p) * \true_{\se}}) \land  \mbox{} $*)
+    (*$  \ph
+          \shareds{p \mapsto_\se x,\_ * \true \land (y = p \implies n = x)}  \}$*)   
+  } while (!CAS(*$_{\textsf{Pop}, \textsf{Id}}$*)(&Top, p, n)(*\label{pc:DynHazard:pop:CAS}*));
+  (*$\{V \Vdash  p \mapsto_\sm \_,\_ *   F_{\ltid} \land I \land \shareds{p \mapsto_\se \_,\_ * \true } \} $*)
+  v = p->val;
+  (*$\{V \Vdash p \mapsto_\sm \_,\_  *   F_{\ltid} \land I \land  
+         \myhp(h,\ltid,\_) \land {}$*)
+  (*$\ph \shareds{p \mapsto_\se \_,\_ * \true } \} $*)          
+  reclaim(p);
+  (*$\{V \Vdash F_{\ltid} \land \myhp(h,\ltid,\_) \land  I    \} $*)
+  return v; 
+}
+\end{lstlisting}
+}
+\caption{\small Proof outline for {\tt pop} for a non-blocking stack with an optimised
+  hazard pointer implementation.  Here
+$V$ is $x$, $p$, $p2$, $n$, $v$, $o$, $h$, $c$, $S$, ${\it used}$.
+\label{fig:DynHazardPop}
+}
+\end{figure}
+ 
+ 
+ 
+%%%%%%
+%: retire 
+
+\begin{figure*}[t]
+{\figfontsize
+\begin{lstlisting}[numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+void reclaim(int* p) {  
+  (*$\begin{array}{@{}l@{}}  
+   \{V \Vdash  \nodepi{p}{\sm}{i} * \detached(\detach,\_)  \land \shareds{\nodepi{p}{\se}{i} * \true} \land 
+   I \}
+ \end{array}$*) 
+  insert(&detached,p); (*\label{pc:RetireGen:insert}*)
+  (*$\begin{array}{@{}l@{}}
+   \{V \Vdash  \detached(\detach,\_) \land  I\}
+  \end{array}$*) 
+  if (nondet()) return;
+  (*$\begin{array}{@{}l@{}} 
+   \{V \Vdash  \exists A.\, \detached(\detach,A) \land  
+   I \land \forall x \in A.\, \neg\,\shared{\nodepi{x}{1}{i} * \true}\}
+ \end{array}$
+   \label{pc:RetireGen:prereadhpl}*)     
+  (*$\langle$*)HazardNode *c = HPL(*$\rangle_{\textsf{Id}}$*);
+  (*$\begin{array}{@{}l@{}} 
+   \{V \Vdash  \exists A,P.\, \detached(\detach,A) \land I \land  
+    \forall x \in A.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since
+    \shareds{\exists c.\, \HPL \mapsto c * \lsh_P(c) * \true} \land \mbox{} \\
+    \ph \shareds{\exists z,N.\, P \subseteq N \land \HPL \mapsto z * \lsh_N(z)}\}
+ \end{array}$\label{pc:RetireGen:postreadhpl}*)     
+  Set *S = (*$\emptyset$*);
+  (*$\begin{array}{@{}l@{}} 
+   \{V \Vdash  \exists A,P.\, \detached(\detach,A) \land  
+   I \land \forall x \in A.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{\exists c.\, \HPL \mapsto c * \lsh_P(c) * \true} \land  \mbox{} \\
+   \ph \shareds{\exists z,N.\, P \subseteq N \land \HPL \mapsto z * \lsh_N(z)}\}
+ \end{array}$
+   \label{pc:RetireGen:precopy}*)     
+  while (c != NULL) {
+    (*$\langle$*)Node *p = c->p(*$\rangle_{\textsf{Id}}$*);  
+    insert(S,p);
+    (*$\langle$*)c = c->next(*$\rangle_{\textsf{Id}}$*);       
+  }
+  (*$\begin{array}{@{}l@{}} 
+   \{V \Vdash  \exists A,P.\, \detached(\detach,A) \land  
+   I \land (\forall x \in A.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{\exists c.\, \HPL \mapsto c * \lsh_P(c) * \true} )\land  \mbox{} \\
+   \ph (\forall p \in P.\, \exists  v \in S .\, \forall x \in A.\,
+   (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{p \mapsto v *
+     \true}) \}
+ \end{array}$
+   \label{pc:RetireGen:post copy}*)     
+  Node *used = 0;
+  while (!isEmpty(&detached)) {
+    (*$\begin{array}{@{}l@{}} 
+     \{V \Vdash  \exists A,P,n.\, \detached(\detach,A)  * A \neq \emptyset*
+     D(\textit{used},\_)  \land \mbox{}\\ 
+     \ph  I \land (\forall x \in A.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{\exists c.\, \HPL \mapsto c * \lsh_P(c) * \true} )\land  \mbox{} \\
+\ph  (\forall p \in P.\, \exists v \in S .\, \forall x \in A.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{p \mapsto v * \true}) \}
+     \end{array}$
+     \label{pc:RetireGen:precheck}*)     
+    Node *n = popd(&detached); 
+    if (!member(S,n)) {
+      (*$\begin{array}{@{}l@{}} 
+     \{V \Vdash  \exists A,P.\,  \detached(\detach,A)  * D(\textit{used},\_)  * 
+     		(\nodepi{n}{\sm}{i} \land \shareds{\nodepi{n}{\se}{i} * \true})  \land \mbox{}\\
+     \ph  I \land (\forall x \in A \cup \{ n \}.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{\exists c.\, \HPL \mapsto c * \lsh_P(c) * \true} )\land  \mbox{} \\
+     \ph  (\forall p \in P.\, \exists v \in S .\, \forall x \in A.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{p \mapsto v * \true}) \land \mbox{}\\
+     \ph  (\forall p \in P.\, (\neg\,\shared{\nodepi{n}{1}{i} * \true}) \since \neg\shareds{p \mapsto n * \true}) \}
+     \end{array}$
+     \label{pc:RetireGen:precfree}*)     
+      (*$\langle$ ; $\rangle_{\textsf{Take}}$ \label{pc:RetireGen:take}*)
+      (*$\begin{array}{@{}l@{}} 
+     \{V \Vdash  \exists A,P.\, * \detached(\detach,A)  * D(\textit{used},\_)  * 
+     		\nodepi{n}{1}{i}  \land \mbox{}\\
+\ph I \land (\forall x \in A .\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{\exists c.\, \HPL \mapsto c * \lsh_P(c) * \true} )\land  \mbox{} \\
+\ph  (\forall p \in P.\, \exists v \in S .\, \forall x \in A.\, (\neg\,\shared{\nodepi{x}{1}{i} * \true}) \since \shareds{p \mapsto v * \true})  \}
+     \end{array}$
+     \label{pc:RetireGen:postfree}*)     
+      free(n);
+    } else 
+      insert(&used, n);
+  }  
+  (*$\begin{array}{@{}l@{}} 
+     \{V \Vdash  \detached(\detach,\emptyset)  *  D(\textit{used},\_)    
+     		   \land     I  \}
+     \end{array}$
+     \label{pc:RetireGen:precheck2}*)     
+  moveAll(&detached, &used);   
+  (*$\begin{array}{@{}l@{}} 
+     \{V \Vdash  \detached(\detach,\_)  *  D(\textit{used},\emptyset)   
+     		   \land   I  \}
+     \end{array}$
+     \label{pc:RetireGen:end}*)     
+}
+\end{lstlisting}
+}
+\caption{\label{fig:DynRetireList} \small Proof outline for {\tt reclaim} for a
+  non-blocking stack with an optimised hazard pointer implementation.
+Here $V$ is $x$, $p$, $p2$, $n$, $v$, $o$, $h$, $c$, $S$, ${\it used}$.
+}
+\end{figure*}
+
+\begin{figure}[t]
+{\figfontsize
+\begin{lstlisting}[numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+(*$\{s \mapsto x * \detached(x,A) * p \mapsto_m \_,\_ \land \shareds{p\mapsto_e \_,\_ * \true}  \} $*)
+insert(s,p) {
+  (*$\{\exists A.\, s \mapsto x * D(x,A)  * p \mapsto_m \_,\_ \land \shareds{p\mapsto_e \_,\_ * \true}  \} $*)
+  (*$\langle$*)*p = x(*$\rangle_{\textsf{Write}}$*);
+  (*$\{\exists x.\, s \mapsto x * D(x,A)  * p \mapsto_m x,\_ \land \shareds{p\mapsto_e x,\_ * \true}  \} $*)
+  *s = p;
+  (*$\{s \mapsto p * D(x,A)  * p \mapsto_m x,\_ \land \shareds{p\mapsto_e x,\_ * \true}  \} $*)
+}
+(*$\{s \mapsto p * \detached(p,A \uplus \{ p \}) \}$*)
+
+(*$\{s \mapsto x * \detached(x,A)\} $*)
+isEmpty(s) {
+  (*$\{s \mapsto x * D(x,A) \} $*)
+  return *s == NULL;
+  (*$\{s \mapsto x * D(x,A) \land (isEmpty \iff (x = 0))  \} $*)
+}
+(*$\{ s \mapsto x * \detached(x,A) \land (isEmpty \iff A = \emptyset) \}$*)
+
+(*$\{s \mapsto x * \detached(x,A) \wedge A \neq \emptyset\} $*)
+popd(s) {
+  (*$\{\exists y.\, s \mapsto x *  x \mapsto_m y,\_ \land \shareds{x\mapsto_e y,\_ * \true} * D(y, A \setminus \{ x\})  \} $*)
+  Node p = *s;
+  *s = s->next;
+  (*$\{\exists y.\, s \mapsto y *  p \mapsto_m y,\_ \land \shareds{p\mapsto_e y,\_ * \true} * D(y, A \setminus \{ x\})  \} $*)
+  return p;
+}
+(*$\{\exists y.\, s \mapsto y *  popd  \mapsto_m \_,\_ \land \shareds{popd\mapsto_e \_,\_ * \true} * D(y, A \setminus \{ x\}) \}$*)
+
+(*$\{t \mapsto 0 * s \mapsto y * \detached(y,A)\} $*)
+moveAll(t,s) {
+  (*$\{t \mapsto 0 * s \mapsto y * D(y,A) \} $*)
+  *t = *s;
+  *s = 0;
+  (*$\{s \mapsto 0 * t \mapsto y * D(y,A) \} $*)
+}
+(*$\{s \mapsto 0  * t \mapsto y * \detached(y,A)\} $*)
+\end{lstlisting}
+}
+\caption{\label{fig:HazardSet}\small The implementation of the linked list of
+  detached nodes used in the stack with an optimised hazard pointer implementation}
+\end{figure}
+
+%%% Local Variables:
+%%% TeX-master: "recycling"
+%%% End:  

@@ -1,0 +1,335 @@
+%!TEX root = ./recycling.tex
+
+\subsection{Hazard Pointers}\label{sec:proofs-hazard}
+
+
+In the following we give a proof of the Hazard Pointer algorithm 
+based on preservation of a temporal invariant.
+
+% Stuff everything into actions - then actions have to be over traces, and it gets
+% very complicated. Instead, we use invariants or Richard's idea of stable
+% assertions as relies/guarantees.
+% 
+% ``I will be the one to remove it'' can be formulated using custodian states, or
+% permissions, or temporal formulas. Uniform approaches vs a combination better
+% suited for the algorithms.
+% 
+% Don't pitch it from the point of view of a temporal logic plus separation
+% logic. Exhibiting similarities between algorithms, really nice proofs.
+
+
+\begin{figure*}
+\be 
+HP =  \bigast_{i=0}^\nthreads \HP[i] \mapsto \_  
+\tag{$\textsf{HP}$}
+\ee 
+\be 
+I_C = \cc \mapsto y * y \mapsto \_ * \true ~~ \text{or} ~~ 
+   I_C = \cc \mapsto y * y \mapsto \_ * 
+         \exists G.\, (\bigast_{x\in G}c \mapsto_e) \land \forall x\in G.\,  (x \mapsto_e \_ * \true) \since (C = x *\true)
+\tag{$\textsf{C}$}
+\ee 
+\be 
+H_{S} = 
+    (\bigast_{i\in S} \HP[i] \mapsto \_)
+\tag{$\textsf{HP}_S$}
+\ee 
+\be 
+I_P = \forall x.\, \forall t \in \{1,\ldots,\nthreads\}.\,
+((\HP[t] \mapsto x * \true) \since (\cc \mapsto x * \true)) 
+\implies x \mapsto_e \_* \true
+\tag{$\textsf{Recyc}_P$}
+\ee 
+\be 
+\begin{array}{c}
+I_P' = \forall x.\, \forall t \in \{1,\ldots,\nthreads\}.\,
+\protects(t,x) \implies x \mapsto_e \_ * \true \\
+\protects(t,x) = 
+(\HP[t] \mapsto x * \true) \since ((\cc \mapsto x * \true) \lor \exists 0 \leq i < t.\, \protects(i,x))
+\tag{$\textsf{Recyc}_P$}
+\end{array}
+\ee 
+\be 
+I_F = \forall x.\, \forall t \in \{1,\ldots,\nthreads\}.\,
+(\src \land 
+(\cc \neq x * \true) \since (\src \land \cc \mapsto x * \true)))
+\implies x \mapsto_e \_* \true
+\tag{$\textsf{Recyc}_F$}
+\ee 
+\be
+\tid = t \mid \HP[t] \mapsto \_ \leadsto \HP[t] \mapsto \_
+\tag{$\textsf{HP}_t$}
+\ee
+\be
+\cc \mapsto x * x \mapsto \_ \leadsto 
+\cc \mapsto y * y \mapsto \_ * x \mapsto_e \_
+\tag{$\textsf{Inc}$}
+\ee
+\be
+y \mapsto_m \_ \mid
+\cc \mapsto x * x \mapsto \_ * y \mapsto_e \_
+\leadsto
+\cc \mapsto x * x \mapsto \_
+\tag{$\textsf{Take}$}
+\ee
+\be
+x \mapsto \_
+\leadsto
+\emp
+\tag{$\textsf{Take2}$}
+\ee
+\be
+\emp
+\leadsto
+\emp
+\tag{$\textsf{Id}$}
+\ee
+\be
+\begin{array}{c}
+F_t = 0 \leq \idx[t] < \lsize  \land 
+(\bigast_{i=0}^{\idx[t]-1} \listp[t][i] \mapsto x * x \mapsto_m \_ * \shared{x
+  \mapsto_e \_ * \true}) * {}
+(\bigast_{i=\idx[t]}^{\lsize-1} \listp[t][i] \mapsto \_) * 
+(\bigast_{i=0}^{\lsize-1} \listpp[t][i] \mapsto \_)
+\end{array}
+\tag{\textsf{Free}}
+\ee
+\be
+\begin{array}{l}
+F_t = 0 \leq \idx < \lsize  *   \detached(\listp)\\
+\quad \detached(x) = (x = 0 \land \emp) \lor (x \mapsto y,z * \detached(z) * y \mapsto_m \_ * \shared{y \mapsto_e \_ * \true})
+\end{array}
+\tag{\textsf{Free}}
+\ee
+\be 
+\chp(h,i) = (h = 0 * i = 0 * \emp) \lor (0 < i * \exists p.\, h \mapsto p, z * \plist(z,i-1) \land (\true \since (\HP[i-1] \mapsto p * \true) )) 
+\tag{$\textsf{PLIST}$}
+\ee 
+The inductive definition does not record the order in which things are read, i.e., that HP[i] is is read before HP[j] for $i < j$. 
+This is important for proving that protection can move in hazard 
+pointers.
+\be 
+I = I_P * I_C 
+\tag{$\textsf{I}$}
+\ee 
+
+% \be
+% \begin{array}{c}
+% F_{\tid} = 
+% (\bigast_{i=0}^{\idx[t]} \listp[t][i] \mapsto x * x \mapsto_m \_ * \shared{x
+%   \mapsto_e \_ * \true}) * {}
+% (\bigast_{i=\idx[t]}^{\lsize} \listp[t][i] \mapsto \_) * 
+% (\bigast_{i=0}^{\lsize} \listpp[t][i] \mapsto \_)
+% \end{array}
+% \tag{\textsf{Free}}
+% \ee
+
+\be
+G_t = \{\textsf{HP}_t, \textsf{Inc}, \textsf{Take}, \textsf{Id}\}
+\tag{$\textsf{G}$}
+\ee
+\end{figure*}
+
+
+
+\begin{figure*}
+{\small
+\begin{lstlisting}[style=nonumbers,language=C,escapeinside={(*}{*)}]
+int *HP[NTHREADS] = {0};
+int *C = new int(0);
+int *list[NTHREADS][LSIZE];
+int idx[NTHREADS] = {0};
+int* list2[NTHREADS][LSIZE] = {0};
+
+(*$\{ \emp \}$*)
+int inc() {
+  (*$\{ I \vdash F_{\tid} * \shareds{H_{\{0 \leq i \leq \nthreads\}} * \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} \}$*) // Module Invariant
+  int *x = new int;
+  int *p, *p2;
+  int v;
+  (*$\{I \vdash x \mapsto \_ * F_{\tid} * (\shareds{H_{\{0 \leq i \leq \nthreads\}} * \exists y.\, \cc \mapsto y * y \mapsto \_ * \true})\}$*)
+  do {
+    (*$\{I \vdash x \mapsto \_ *  F_{\tid} *(\shareds{H_{\{0 \leq i \leq \nthreads\}} * \exists y.\, \cc \mapsto y * y \mapsto \_ * \true})\}$*)
+    do {
+      (*$\{I \vdash  x \mapsto \_ *  F_{\tid} * (\shareds{H_{\{0 \leq i \leq \nthreads\}} * \exists y.\, \cc \mapsto y * y \mapsto \_ * \true})\}$*)
+      (*$\langle$*)p = C;(*$\rangle_{\sf Id}$*)
+      (*$\{I \vdash \exists X.\, \pp = X * x \mapsto \_ * F_{\tid} * 
+               (\shareds{H_{\{0 \leq i \leq \nthreads\}} * \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} 
+                \land 
+                \shareds{\true \since \cc = X * \true}))\}$*) // since-stabilization
+      (*$\{I \vdash x \mapsto \_ * F_{\tid} * 
+               (\shareds{H_{\{0 \leq i \leq \nthreads\}} * \exists y.\, \cc \mapsto y * y \mapsto \_ * \true})\}$*) // weakening - we need
+      (*$\langle$*)HP[tid()] = p;(*$\rangle_{\textsf{HP}_t}$*)
+      (*$\{I \vdash \exists X.\, \pp = X * x \mapsto \_ * F_{\tid} * 
+               (\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                \exists y.\, \cc \mapsto y * y \mapsto \_ * \true}$*) 
+                       (*$ {} \land \shareds{\true \since \cc = X * \true})\}$*) // own
+      (*$\langle$*)p2 = C(*$\rangle_{\sf Id}$*);
+// \verb|A /\ B => A since B|
+      (*$\{I \vdash \exists X,Y.\, \pp = X * {\tt p2} = Y * x \mapsto \_ * F_{\tid} * 
+                      \Big(\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                       \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} $*)             
+             (*$ {} \land \shareds{(\HP[\tid] \mapsto X * \true) \since ((\cc = Y * \HP[\tid] \mapsto X *  \true) \land (\true \since (\cc = X * \true)))} \Big)\}$*)
+// check stability using (A stable => A since B stable)
+    } while (p != p2);
+// include the invariant into the assertion; then MP
+// Then check the stability: this uses the fact that stability takes I into 
+// account: if I = A => B and A is stable, then B is stable
+    (*$\{I \vdash \exists X,Y.\, X = Y * \pp = X * {\tt p2} = Y * x \mapsto \_ * F_{\tid} * 
+                     \Big(\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                      \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} $*) // stability             
+            (*$ {} \land \shareds{(\HP[\tid] \mapsto X * \true) \since ((\cc = Y * \HP[\tid] \mapsto X *  \true) \land (\true \since (\cc = X * \true)))} \Big)\}$*)
+    (*$\{I \vdash \exists X.\,  \pp = X  * x \mapsto \_ * F_{\tid} * 
+                            \Big(\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                            \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} $*)    
+                          (*$ {} \land \shareds{(\HP[\tid] \mapsto X * \true) \since (\cc = X * \HP[\tid] \mapsto X *  \true)} \Big)\}$*) // weakening
+    (*$\{I \vdash \exists X.\,  \pp = X * x \mapsto \_ * F_{\tid} * 
+                            \Big(\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                            \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} $*)    
+                      (*$ {} \land \shareds{X \mapsto_e \_ * \true * (\HP[\tid] \mapsto X * \true) \since (\cc = X * \HP[\tid] \mapsto X *  \true)} \Big)\}$*) // MP Inv
+    (*$\langle$*)v = *p;(*$\rangle_{\sf Id}$*)
+    (*$\{I \vdash \exists X,V.\,  \pp = X * x \mapsto \_ * F_{\tid} * 
+                            \Big(\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                            \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} $*)    
+                      (*$ {} \land \shareds{X \mapsto_e V * \true * (\HP[\tid] \mapsto X * \true) \since (\cc = X * \HP[\tid] \mapsto X *  \true)} \Big)\}$*) // Stability of value
+    *x = v+1;
+    (*$\{I \vdash \exists X,V.\,  \pp = X * x \mapsto V+1 * F_{\tid} * 
+                            \Big(\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                            \exists y.\, \cc \mapsto y * y \mapsto \_ * \true} $*)    
+                      (*$ {} \land \shareds{X \mapsto_e V * \true * (\HP[\tid] \mapsto X * \true) \since (\cc = X * \HP[\tid] \mapsto X *  \true)} \Big)\}$*) // Stability of value
+  } while ((*$\langle$*)CAS(&C, p, x)(*$\rangle_{\textsf{Inc}}$*));
+  (*$\{I \vdash \exists X,V.\,  \pp = X * X \mapsto_m V * F_{\tid} * 
+                          \Big(\shareds{H_{\{0 \leq i < \nthreads  \mid i \neq \tid \}}  * \HP[\tid] \mapsto X *
+                          \exists y.\, y \neq X * \cc \mapsto y * y \mapsto \_ * \true} $*)    
+                    (*$ {} \land \shareds{X \mapsto_e V * \true * (\HP[\tid] \mapsto X * \true) \since (\cc = X * \HP[\tid] \mapsto X *  \true)} \Big)\}$*) // Stability of value
+  (*$\{I \vdash \exists X,V.\,  \pp = X * X \mapsto_m V * F_{\tid} * 
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}}  *  
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_ * X \mapsto_e V * \true})\} $*)   // weakening + reclaimer stability 
+  retire(p);
+  (*$\{I \vdash F_{\tid} * \shareds{H_{\{0 \leq i < \nthreads\}}  *
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+  return v; // do we prove linearizability?
+}
+\end{lstlisting}
+}
+\end{figure*}
+
+\begin{figure*}
+{\small
+
+When you check the hazard pointer not pointing to it: \verb|A /\ B => A since B|
+
+Then check stability: l * box(A since B) if l*box(A); 
+A is stable because local state
+and shared state have to be consistent
+
+\begin{lstlisting}[style=nonumbers,language=C,escapeinside={(*}{*)}]
+(*$\{I \vdash \exists X,V.\,  \pp = X * X \mapsto_m V * F_{\tid} * 
+                        (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                        \exists y.\,   \cc \mapsto y * y \mapsto \_ * X \mapsto_e V * \true})\} $*)   
+void retire(int* p) {  
+  (*$\{I \vdash \exists X,V,x.\,  0 \leq \idx < \lsize  * \pp = X * X \mapsto_m V *  \detached(\listp) *
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_ * X \mapsto_e V * \true})\} $*)
+  list = new Node(p,list);
+  (*$\{I \vdash \exists X,V,x.\,  0 \leq \idx < \lsize  * \pp = X *  \listp \mapsto X,x * X \mapsto_m V * \shareds{X \mapsto_e V * \true}  * \detached(x) *
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)  
+  (*$\{I \vdash \exists X.\,  0 \leq \idx < \lsize  * \detached(\listp) *
+                                                  (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                                                  \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*) // weakening  
+  idx++;
+  (*$\{I \vdash  0 \leq \idx \leq \lsize  *  \detached(\listp) *
+                           (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                           \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+  if (idx != LSIZE) {
+    (*$\{I \vdash  0 \leq \idx < \lsize *  \detached(\listp) *
+                 (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                 \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)  
+    (*$\{I \vdash F_{\tid} * (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                 \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*) // weakening  
+    return;
+  }
+  (*$\{I \vdash \exists z.\,  \idx = \lsize * \detached(\listp) *
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+  idx = 0;
+  Node *list2 = null;
+  Node *plist = null;
+  (*$\{I \vdash \idx = 0 * \plist = 0 * \listpp = 0 *  \detached(\listp) *
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+  for (i=0; i < NTHREADS; i++) {
+    (*$\{I \vdash  0 \leq {\sf i} <  \nthreads * \chp(\plist,i) * %\idxx = 0 * \listpp = 0 *  \listp \mapsto z * \detached(z) *
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+    (*$\langle$*)p = HP[i];(*$\rangle_{\sf Id}$*) 
+    (*$\{I \vdash \exists H, z,h.\,  0 \leq {\sf i} <  \nthreads * \chp(\plist,i) * \pp = H * %\idxx = 0 * \listpp = 0 *  \listp \mapsto z * \detached(z) *
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true}) \land \shareds{\true \since (\HP[i] \mapsto H * \true)}\} $*)       
+    plist = new Node(p,plist);                       
+    (*$\{I \vdash \exists H, h.\,  0 \leq {\sf i} <  \nthreads * \plist\mapsto H,h * \chp(h,i)  * \pp = H * $*)
+                          (*$(\shareds{H_{\{0 \leq i < \nthreads  \}}  *
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true}) \land \shareds{\true \since (\HP[i] \mapsto H * \true)}\} $*)   // stability    
+    (*$\{I \vdash  0 \leq {\sf i} <  \nthreads * \chp(\plist,i+1) * %\idxx = 0 * \listpp = 0 *  \listp \mapsto z * \detached(z) *
+                          (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                          \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true}) \} $*)   // weakening    
+  }
+  (*$\{I \vdash   \chp(\plist,\nthreads)   * \idxxx = 0 * \listpp = 0 *  \detached(\listp) *
+                        (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                        \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true}) \} $*)   // frame    
+  while (detached != null) {
+    (*$\{I \vdash \chp(\plist,\nthreads) * 0 \leq \idxxx \leq \nthreads * \detached(\listpp) *  \listp \mapsto p,n * \detached(n) *
+                            (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                            \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+    int* d = detached->p;
+    Node* n = detached;
+    list = list->n;
+    Node* hp = plist;
+    (*$\{I \vdash \hp = \plist * \chp(\plist,\nthreads) * 0 \leq \idxxx \leq \nthreads *  
+                            {\sf n} \mapsto {\sf d},\listp *
+                            \exists X,V.\, {\sf d} = X * X \mapsto_m V * \shareds{X\mapsto_e V * \true} * $*)
+                            (*$\detached(\listpp) *  \detached(\listp) * 
+                            (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                            \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+
+    while(hp != null)
+    (*$\{I \vdash \hp = \plist * \chp(\plist,\nthreads) * 0 \leq \idxxx \leq \nthreads *  
+                            {\sf n} \mapsto {\sf d},\listp *
+                            \exists X,V.\, {\sf d} = X * X \mapsto_m V * \shareds{X\mapsto_e V * \true} * $*)
+                            (*$\detached(\listpp) *  \detached(\listp) * 
+                            (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+                            \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+      if (r == hp->p)  
+       break;
+      else
+       hp = hp->next; 
+       
+    (*$\{I \vdash \chp(\plist,\nthreads) * 0 \leq \idxxx \leq \nthreads * \detached(\listpp) *  
+              {\sf n} \mapsto {\sf d},\listp *
+              \exists X,V.\, {\sf d} = X * X \mapsto_m V * \shareds{X\mapsto_e V * \true} * 
+              \detached(\listp) * 
+              (\shareds{H_{\{0 \leq i < \nthreads  \}} * 
+              \exists y.\,   \cc \mapsto y * y \mapsto \_  * \true})\} $*)   
+
+      
+    if (hp == null) {
+      free(r);
+      free(n);
+    }  
+    else {
+      n->next = list2;
+      list2 = n;
+      idx++;
+    }
+  }
+}
+\end{lstlisting}
+}
+\end{figure*}
+
+We also need to check that all the actions, even ones of the reader, preserve
+the invariant, using the derived rules below. Need to see how complicated it is
+to spell it out.
+
+

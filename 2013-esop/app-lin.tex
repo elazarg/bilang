@@ -1,0 +1,119 @@
+\section{Proving Linearizability\label{app:lin}}
+
+In this section we show how the proof of the counter from \S\ref{sec:grace} can
+be adjusted to establish its linearizability following the approach
+in~\cite{rgsep}. We prove linearizability with respect to the following atomic
+specification:
+\begin{flushleft}
+\begin{lstlisting}
+  int A = 0;
+
+  int abstract_inc() {
+    int a;
+    (*$\langle$*) a = A; A = a+1 (*$\rangle$*);
+    return a;
+  }
+\end{lstlisting}
+\end{flushleft}
+Following Vafeiadis~\cite{rgsep}, we embed the cell {\tt A} storing the abstract
+state of the counter into the code of the algorithm. The above
+\verb|abstract_inc| method is then executed at a single linearization point
+inside the implementation {\tt inc}, which is a successful CAS.
+
+We use the same actions as in the proof of memory safety, except {\sf Inc} is
+redefined to change the abstract value of the counter:
+\begin{multline*}
+\cc \mapsto x * x \mapsto k * A \mapsto k * X
+\ \leadsto {}\\
+\cc \mapsto y * y \mapsto k+1 *A \mapsto k+1 *  x \mapsto_\se \_ * X
+\tag{$\textsf{Inc}$}
+\end{multline*}
+The $I$ predicate, describing the layout of the shared state, now includes the
+abstract state as well:
+$$
+I \Leftrightarrow \shareds{H * \exists y, k.\, \cc \mapsto y * y \mapsto k 
+* A \mapsto k *  \true_\se}
+$$
+All other assertions are used without changes.  The proof outline for {\tt inc}
+is given in Figure~\ref{fig:lin:Inc}; the proof of {\tt retire} in
+Figure~\ref{fig:Retire} does not change. We write $\texttt{CAS'}_{a,
+  b}\texttt{(addr,v1,v2)}$ for
+\begin{flushleft}
+\begin{lstlisting}[language=C,escapeinside={/*}{*/}]
+  if (nondet()) {
+    /*$\langle$*/assume(*addr == v1); *addr = v2; 
+      Res = abstract_inc() /*$\rangle_{a}$*/; return 1;
+  } else { /*$\langle$*/assume(*addr != v1)/*$\rangle_{b}$*/; return 0; }
+\end{lstlisting}
+\end{flushleft}
+
+The key assertion in the proof is the one in lines~\ref{pc:Hazardl:Inc:value}
+and~\ref{pc:Hazardl:Inc:before-cas}. As we already noted in \S\ref{sec:grace},
+the conjunct $\shareds{s \mapsto_\se \_ * \true}$ ensures that the node pointed
+to by {\tt s} cannot be reallocated until the CAS in
+line~\ref{pc:Hazardl:Inc:CAS}, and thus, the ABA problem does not occur. More
+formally, the assertion in lines~\ref{pc:Hazardl:Inc:value}
+and~\ref{pc:Hazardl:Inc:before-cas} is stable, because the environment cannot
+execute an {\sf Inc} action inserting $s$ while $s \mapsto_\se \_$ is in the
+shared state: $s \mapsto \_ * s \mapsto_\se \_$ is inconsistent. This ensures
+that, when the CAS in line~\ref{pc:Hazardl:Inc:CAS} succeeds, the abstract value
+{\tt A} is equal to {\tt v}. This allows us to establish in the postcondition
+that the abstract return value, given by {\tt Res}, is equal to the concrete
+one, given by {\tt v}, which entails linearizability.
+\begin{figure}[t]
+{\figfontsize
+\begin{lstlisting}[numbers=left, numberstyle=\tiny,language=C,escapeinside={(*}{*)}]
+int *C = new int(0), *HP[N] = {0}; Set detached[N] = {(*$\emptyset$*)};
+int A = 0;
+
+int inc() {
+  int v, *n, *s, *s2, Res;
+  (*$\{ V \Vdash F_{\ltid} \land I \}$ \label{pc:Hazardl:Inc:stateinv}*) 
+  n = new int; 
+  do {
+    (*$\{V \Vdash n \mapsto \_ *  F_{\ltid} \land I\}$*)
+    do {
+      (*$\{V \Vdash  n \mapsto \_ *  F_{\ltid} \land I \}$*)
+      (*$\langle$*)s = C(*$\rangle_{\sf Id}  \label{pc:Hazardl:Inc:readp} $*);
+      (*$\{V \Vdash n \mapsto \_ * F_{\ltid} \land 
+               I\}$*)  
+      (*$\langle$*)HP[tid-1] = s(*$\rangle_{\textsf{HP}_\ltid} \label{pc:Hazardl:Inc:sethp}$*);
+      (*$\{V \Vdash n \mapsto \_ * F_{\ltid} \land I \land \shareds{\HP[\ltid-1] \mapsto s * \true} \}$*) 
+      (*$\langle$*)s2 = C(*$\rangle_{\sf Id} \label{pc:Hazardl:Inc:readpp}$*);
+      (*$\{V \Vdash n \mapsto \_ * F_{\ltid} \land I \land (\shareds{\HP[\ltid-1] \mapsto s * \true} \since \shareds{\cc
+        \mapsto {\it s2} * {\it s2} \mapsto \_ * \true})\}$*)
+    } while (s != s2); (*\label{pc:Hazardl:Inc:test}*)
+    (*$\{V \Vdash n \mapsto \_ * F_{\ltid} \land I \land \shareds{s \mapsto_\se
+      \_ * \true} \land {}$*)
+    (*$\ph (\shareds{\HP[\ltid-1] \mapsto s * \true} \since \shareds{\cc \mapsto
+      s * s \mapsto \_ * \true})$ \label{pc:Hazardl:Inc:Deref}*)
+    (*$\langle$*)v = *s(*$\rangle_{\sf Id}$*); (*\label{pc:Hazardl:Inc:access}*)
+    (*$\{V \Vdash n \mapsto \_ * F_{\ltid} \land \shareds{s \mapsto_\se   \_ * \true} \land{}$*)
+    (*$\ph \shareds{ H * \exists y, k.\, \cc \mapsto y * y \mapsto k *
+  A \mapsto k *  \true_\se \wedge (y = s \Rightarrow k = v)}  $*)
+    (*$\ph {} \wedge (\shareds{\HP[\ltid-1] \mapsto s * \true} \since \shareds{\cc \mapsto
+      s * s \mapsto \_ * \true})$ \label{pc:Hazardl:Inc:value}*)
+    *n = v+1;
+    (*$\{V \Vdash n \mapsto v+1 * F_{\ltid} \land \shareds{s \mapsto_\se   \_ * \true} \land{}$*)
+    (*$\ph \shareds{ H * \exists y, k.\, \cc \mapsto y * y \mapsto k *
+  A \mapsto k *  \true_\se \wedge (y = s \Rightarrow k = v)}  $*)
+    (*$\ph {} \wedge (\shareds{\HP[\ltid-1] \mapsto s * \true} \since \shareds{\cc \mapsto
+      s * s \mapsto \_ * \true})$ \label{pc:Hazardl:Inc:before-cas}*)
+  } while (!CAS'(*$_{\textsf{Inc}, \textsf{Id}}$*)(&C, s, n)(*\label{pc:Hazardl:Inc:CAS}*));
+  (*$\{V \Vdash v = {\it Res} \wedge s \mapsto_\sm \_ * F_{\ltid} \land I \land \shareds{s \mapsto_\se \_ * \true}
+\label{after-cas2}\}$*)
+  reclaim(s);
+  (*$\{V \Vdash v = {\it Res} \wedge F_{\ltid} \wedge I\} $*)   
+  return v; }
+\end{lstlisting}
+}
+\caption{\label{fig:lin:Inc} \small Proof outline for the linearizability of {\tt
+    inc} with hazard pointers.  Here $V$ is $v$, $n$, $s$, ${\it s2}$, ${\it
+    my}$, ${\it in\_use}$, $i$, ${\it Res}$.}
+\end{figure}
+
+
+
+%%% Local Variables:
+%%% TeX-master: "recycling"
+%%% End:  
