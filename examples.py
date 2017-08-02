@@ -45,7 +45,7 @@ else:
     pay(Less, 100)
 
 #[Example: Auction without payment and timeouts]
-join Bidders...     # Bidders is an array of length > 0
+Bidders = join_many('Bidder')  # Bidders is an array of length > 0
 max = 0
 Bidder = NOBODY
 for bid in receive(int) @ Bidders: # performed lazily
@@ -56,7 +56,7 @@ for bid in receive(int) @ Bidders: # performed lazily
 declare("${B.name} has won")
 
 #[Example: Blind auction without payment and timeouts]
-join Bidders...     # Bidders is an array of length > 0
+Bidders = join_many('Bidder')
 max = 0
 Bidder = NOBODY
 for bid in receive_independent(int) @ Bidders:   # should be performed lazily, on the reveal
