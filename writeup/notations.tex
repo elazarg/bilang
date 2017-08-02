@@ -1,0 +1,24 @@
+%!TEX root = ./main.tex 
+
+\section{Notations}\label{Se:Notations}
+
+We write $\_$ to denote an immaterial value, which is implicitly existentially quantified, 
+and $\bot$ to denote the undefined value.
+%a function which is not defined anywhere.
+We denote the \emph{size} (number of elements) of a set $A$ by $|A|$.
+We write $f: A \to B$ and $f: A \partialto B$ to denote a \emph{total}, respectively, \emph{partial}, function from $A$ to $B$. We denote the \emph{domain of definition} and \emph{range} of a function $f:A \partialto  B$ by $\dom(f)$ and $\range(f)$, respectively,
+i.e., $\dom(f) = \{a \in A \mid f(a) \neq \bot \}$ and $\range(f)=\{b \in B \mid \exists a.\, f(a)=b\}$.
+% (Note that   $\dom(f) \subseteq A$ and $\range(f)\subseteq B$.)
+% We denote the \emph{domain (of definition)} and \emph{range} of a (partial) function $f:A \partialto  B$ by
+% $\dom(f) \subseteq A$ and $\range(f)\subseteq B$.
+We write $f:A \partialto_{\mathit{fin}} B$ to denote that $f$ has a finite  domain.
+We denote the set of natural numbers (including zero) by $\mathbb{N}$. We  write
+$\{m..n\}$,   for some $m,n \in \mathbb{N}$, to denote the set of integers $\{ i \in \mathbb{N} \mid m \leq i \land i \leq n\}$. 
+A \emph{sequence $\pi=a_1,\ldots,a_n$ over a set $A$} is  a function  $\pi:\{1..n\} \to A $, from $\{1..n\}$, for some $n \in \mathbb{N}$, to $A$. 
+We denote the \emph{length} of $\pi$ by $|\pi|=|\dom(\pi)|$, and its $i$th element, 
+for $i\in \{1..|\pi|\}$, by $\pi(i)$.
+We denote the \emph{empty sequence} by $\epsilon$, and the concatenation of sequences $\pi_1$ and $\pi_2$ by % juxtoposition 
+$\pi_1 \cdot \pi_2$.  
+We denote the set of sequences over a set $A$ by $\overline{A}$.
+% We use $\overline{\cdot}$ to denote sequences. 
+% All sequences are indexed starting from $1$.

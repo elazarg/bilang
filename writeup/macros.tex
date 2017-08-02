@@ -1,0 +1,381 @@
+%!TEX root=./main.tex
+
+\newcommand{\ignore}[1]{}
+\newcommand{\TBD}{\framebox{\textbf{TBD}}}
+
+\newcommand{\nrtodo}[1]{\color{red}\textbf{[NR:~#1]}\color{black}}
+\newcommand{\noam}[1]{\todo[inline]{NR: #1}}
+\newcommand{\shelly}[1]{\todo[inline]{SG: #1}}
+\newcommand{\yoni}[1]{\todo[inline]{YZ: #1}}
+\newcommand{\shellyold}[1]{}
+\newcommand{\red}[1]{\color{red}#1\color{black}}
+\newcommand{\blue}[1]{\color{blue}#1\color{black}}
+\newcommand{\purple}[1]{\color{purple}#1\color{black}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\semfunc}[1][]{\llbracket #1 \rrbracket}
+\newcommand{\emptymap}[0]{()}
+\newcommand{\tbd}[1]{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%  Math  %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+\newcommand{\@@eqLikeDef}[3]{%
+    \ensuremath{\overset{\mathclap{\text{\scalebox{#1}{#2}}}}{#3}}%
+}
+\newcommand*{\@eqLikeDef}[2]{
+    \mathchoice
+        {% \displaystyle
+            \@@eqLikeDef{0.7}{#1}{#2}
+        }
+        {% \textstyle
+            \@@eqLikeDef{0.7}{#1}{#2}
+        }
+        {% \scriptstyle
+            \@@eqLikeDef{0.6}{#1}{#2}
+        }
+        {% \scriptscriptstyle
+            \@@eqLikeDef{0.5}{#1}{#2}
+        }
+}
+
+\newcommand*{\eqdef}{\@eqLikeDef{def}{=}}
+\makeatother
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\PDA}{\text{PDA}}
+% Standard macros
+\newcommand{\B}[1]{\langle #1 \rangle}
+\newcommand{\ST}[1]{(#1)}
+\newcommand{\SET}[1]{\{#1\}}
+\newcommand{\partialto}{\rightharpoonup}
+\newcommand{\totalto}{\to}
+\newcommand{\undefunc}{\bot}
+\newcommand{\dom}{\operatorname{dom}}
+\newcommand{\range}{\operatorname{range}}
+\newcommand{\goesto}[1][]{\stackrel{#1}{\rightsquigarrow}}
+\newcommand{\neggoesto}[1][]{\stackrel{#1}{\nrightsquigarrow}}
+
+\newcommand{\res}{\mathit{res}}
+\newcommand{\ret}{\code{ret}}
+\newcommand{\inarg}{\code{arg}}
+%\newcommand{\ret}{\mathit{ret}}
+\newcommand{\formal}[1]{\operatorname{formal}(o)}
+
+
+
+\newcommand{\PCmd}{\syn{PCmd}}
+\newcommand{\Cmd}{\syn{Cmd}}
+\newcommand{\Contract}{\syn{Contract}}
+\newcommand{\Mthd}{\syn{Mthd}}
+
+% Instructions
+\newcommand{\SAssign}[2]{#1 \coloneqq  #2}
+\newcommand{\SFault}{\code{fault}}
+\newcommand{\SAssume}[1]{\code{assume}(#1)}
+\newcommand{\SAssert}[1]{\code{assert}(#1)}
+\newcommand{\SSkip}[0]{\code{skip}}
+\newcommand{\SSLoad}[2]{\code{#1 := S[#2]}}
+\newcommand{\SSStore}[2]{\code{S[#1] := #2}}
+\newcommand{\SMLoad}[2]{\code{#1 := M[#2]}}
+\newcommand{\SMStore}[2]{\code{M[#1] := #2}}
+\newcommand{\SCall}[4]{{#1 \coloneqq #2.#3 (#4)}}
+\newcommand{\SCallC}[3]{{#1 \coloneqq #2(#3)}}
+\newcommand{\SCallCO}[2]{{#1(#2)}}
+\newcommand{\SReturn}[0]{\code{return}}
+\newcommand{\SReturnV}{\code{return}}
+% \newcommand{\SEnterV}[1]{\code{enter(#1)}}
+\newcommand{\SEnterV}{\code{enter}}%\,(\inarg)}}
+\newcommand{\SMethodDecl}[4]{{\Method \,\, #1(#2) : #3 \,\, #4}}
+\newcommand{\cdone}{\code{done}}
+
+% Map instructions
+\newcommand{\SInsert}[3]{\code{insert(#1,#2,#3)}}
+\newcommand{\SGet}[2]{\code{get(#1,#2)}}
+\newcommand{\SRemove}[2]{\code{remove(#1,#2)}}
+
+
+\newcommand{\PLname}{\ensuremath{\mathbf{SMAC}}}
+
+% % Syntax
+% \newcommand{\ObjectDecl}[0]{\code{ObjectDecl}}
+% \newcommand{\RecordDef}[4]{\Record \,\, #1 \,\, \{ \Int \,\, #2, \Bool \,\, #3, \Object \,\, #4\}}
+% \newcommand{\RecordDecl}[0]{\code{RecordDecl}}
+% \newcommand{\FieldDecl}[0]{\code{FieldDecl}}
+% \newcommand{\FieldDef}[2]{#1 \,\, \field{#2}}
+% \newcommand{\MethodDecl}[0]{\code{MethodDecl}}
+% \newcommand{\MethodDef}[5]{\SMethodDecl{#1}{#2}{#3}{#4}\{ #5 \}}
+
+% % Client syntax
+% \newcommand{\CSExecute}[3]{\code{Execute #1,#2,#3}}
+% \newcommand{\CSTransfer}[2]{\code{Transfer #1,#2}}
+
+% \newcommand{\CSNew}[5]{\code{#5 = new}\{#1 #2 ; #3 ; #4\}}
+% \newcommand{\CSInvoke}[3]{#1.#2(#3)}
+% \newcommand{\defaultCSNew}[0]{\CSNew{\overline{\code{T}}}{\overline{\,\,\field{f}}}{\method{init}}{\overline{\method{m}}}{o}}
+% \newcommand{\defaultCSInvoke}[0]{\CSInvoke{\var{o}}{\method{m}}{\overline{\code{constant}}}}
+
+% \newcommand{\CSNewO}[5]{\code{new}(\B{#1 \,#2 \,; \,\,#3\,;\,\, #4}, #5)}
+% \newcommand{\defaultCSNewO}[0]{\CSNewO{\overline{\code{T}}}{\overline{\,\,\field{f}}}{\method{init}}{\overline{\method{m}}}{o}}
+
+
+% Exprssions
+% \newcommand{\EVar}[1]{\code{#1}}
+
+% Syntactic domains
+\newcommand{\syn}[1]{\mathsf{#1}}
+\newcommand{\Var}[0]{\syn{LVar}}
+\newcommand{\Inst}[0]{\code{Inst}}
+% \newcommand{\Action}[0]{\code{Action}}
+\newcommand{\Field}[0]{\syn{OVar}}
+\newcommand{\Int}[0]{\code{Int}}
+\newcommand{\Bool}[0]{\code{Bool}}
+\newcommand{\Object}{\sem{Obj}}
+% \newcommand{\Record}[0]{\code{Record}}
+% \newcommand{\Map}[2]{\code{Map<#1,#2>}}
+% \newcommand{\Bexp}[0]{\code{Bexp}}
+% \newcommand{\Aexp}[0]{\code{Aexp}}
+% \newcommand{\Method}[0]{\code{Method}}
+\newcommand{\field}[1]{\code{\uppercase{#1}}}
+\newcommand{\var}[1]{\code{\lowercase{#1}}}
+\newcommand{\this}[0]{\code{this}}
+% \newcommand{\method}[1]{\code{\lowercase{#1}}}
+
+% Semantic domains
+\newcommand{\semtrue}[0]{\it{true}}
+\newcommand{\semfalse}[0]{\it{false}}
+% \newcommand{\Caddress}[0]{O}
+% \newcommand{\PC}[0]{PC}
+% \newcommand{\Loc}[0]{Loc}
+% \newcommand{\Usr}[0]{Usr}
+% \newcommand{\Prog}[0]{Prog}
+
+% \newcommand{\World}[0]{\mathcal{W}}
+% \newcommand{\ProgPoint}[0]{K}
+
+% \newcommand{\SelStack}{\it{Stack}}
+% \newcommand{\SelObject}{\it{This}}
+% \newcommand{\SelCmd}{\it{Cmd}}
+% \newcommand{\SelStore}{\it{Stor}}
+% % \newcommand{\MutG}[0]{G}
+% % \newcommand{\MutL}[0]{L}
+% \newcommand{\SelEnv}{\it{Env}}
+% \newcommand{\State}[0]{EState}
+\newcommand{\SelStack}{\Stk}
+\newcommand{\SelObject}{\objectid}
+\newcommand{\SelCmd}{C}
+\newcommand{\SelStore}{\store}
+% \newcommand{\MutG}[0]{G}
+% \newcommand{\MutL}[0]{L}
+\newcommand{\SelEnv}{\reg}
+
+
+
+
+
+% Semantic Domains - new
+% \newcommand{\CState}[0]{\Sigma}
+% \newcommand{\OState}[0]{S}
+% \newcommand{\Heap}[0]{\mathcal{H}}
+\newcommand{\Reg}[0]{\mathcal{E}}
+% \newcommand{\CFG}[0]{CFG}
+% \newcommand{\Code}[0]{\mathcal{C}}
+% \newcommand{\DomObject}[0]{\mathcal{O}}
+% \newcommand{\PrimitiveValue}[0]{PrimitiveVal}
+\newcommand{\sem}[1]{\mathbf{#1}}
+\newcommand{\Val}{\sem{Val}}
+\newcommand{\Stack}{\sem{Stack}}
+\newcommand{\Store}{\sem{Store}}
+\newcommand{\Frame}{\sem{Frame}}
+\newcommand{\State}{\sem{State}}
+
+\DeclareFontFamily{U} {MnSymbolA}{}
+\DeclareFontShape{U}{MnSymbolA}{m}{n}{
+  <-6> MnSymbolA5
+  <6-7> MnSymbolA6
+  <7-8> MnSymbolA7
+  <8-9> MnSymbolA8
+  <9-10> MnSymbolA9
+  <10-12> MnSymbolA10
+  <12-> MnSymbolA12}{}
+\DeclareFontShape{U}{MnSymbolA}{b}{n}{
+  <-6> MnSymbolA-Bold5
+  <6-7> MnSymbolA-Bold6
+  <7-8> MnSymbolA-Bold7
+  <8-9> MnSymbolA-Bold8
+  <9-10> MnSymbolA-Bold9
+  <10-12> MnSymbolA-Bold10
+  <12-> MnSymbolA-Bold12}{}
+
+\DeclareFontFamily{U}  {MnSymbolB}{}
+\DeclareFontShape{U}{MnSymbolB}{m}{n}{
+    <-6>  MnSymbolB5
+   <6-7>  MnSymbolB6
+   <7-8>  MnSymbolB7
+   <8-9>  MnSymbolB8
+   <9-10> MnSymbolB9
+  <10-12> MnSymbolB10
+  <12->   MnSymbolB12}{}
+\DeclareFontShape{U}{MnSymbolB}{b}{n}{
+    <-6>  MnSymbolB-Bold5
+   <6-7>  MnSymbolB-Bold6
+   <7-8>  MnSymbolB-Bold7
+   <8-9>  MnSymbolB-Bold8
+   <9-10> MnSymbolB-Bold9
+  <10-12> MnSymbolB-Bold10
+  <12->   MnSymbolB-Bold12}{}
+
+\DeclareSymbolFont{MnSyA} {U} {MnSymbolA}{m}{n}
+\DeclareSymbolFont{MnSyB}         {U}  {MnSymbolB}{m}{n}
+
+\DeclareMathSymbol{\rcirclearrowright}{\mathrel}{MnSyA}{248}
+\DeclareMathSymbol{\nrcirclearrowright}{\mathrel}{MnSyB}{248}
+\DeclareMathSymbol{\leftrightarrows}{\mathrel}{MnSyA}{152}
+\DeclareMathSymbol{\nleftrightarrows}{\mathrel}{MnSyB}{152}
+
+% \newcommand{\callback}[2][]{\lefttorightarrow{#2}}
+\newcommand{\callback}[2][]{{#1}\!\rcirclearrowright{#2}}
+\newcommand{\ncallback}[2][]{{#1}\!\nrcirclearrowright{#2}}
+\newcommand{\callbackU}[1][]{\rcirclearrowright{\!#1}}
+\newcommand{\ncallbackU}[1][]{\nrcirclearrowright{\!#1}}
+\newcommand{\callbackfree}[1]{\ncallbackU{#1}}
+
+% \newcommand{\callback}[2][]{\stackrel{\circlearrowright}{#2}}
+
+% \newcommand{\callback}[2][]{\stackrel{\stackrel{#1}{\curvearrowright}}{#2}}
+% \newcommand{\callback}[2][]{\operatorname{cb}_{#1}(#2)}
+% \newcommand{\callback}[2][]{\stackrel{{\scriptscriptstyle\curvearrowright #1}}{#2}}
+
+% \newcommand{\callback}[2][]{\stackrel{#1}{\widearc{#2}}}
+
+
+
+% From Noam's
+% \newcommand{\CStore}{\mathcal{S}}
+% \newcommand{\OCode}{\mathcal{C}}
+\newcommand{\ocode}{\kappa}
+% \newcommand{\oheap}{\operatorname{heap}}
+\newcommand{\ObjVar}{\Psi}
+\newcommand{\oovar}{\operatorname{\psi}}
+
+% Elements of semantic domains - new
+% \newcommand{\cstate}[0]{\sigma}
+% \newcommand{\ostate}[0]{s}
+\newcommand{\objectid}{o}
+% \newcommand{\pc}[0]{pc}
+\newcommand{\cmd}[0]{c}
+\newcommand{\seq}[1]{\overline{#1}}
+\newcommand{\Stk}[0]{\Gamma}
+\newcommand{\stk}[0]{\gamma}
+\newcommand{\topstk}{\operatorname{top}}
+\newcommand{\reg}[0]{\rho}
+\newcommand{\defostatenostack}[4]{\langle \frame{#1}{#2}{#3}, #4 \rangle}
+\newcommand{\defostatestack}[5]{\langle \frame{#1}{#2}{#3}\cdot #4, #5 \rangle}
+\newcommand{\defostate}[4]{\defostatestack{#1}{#2}{#3}{\Stk}{#4}}
+\newcommand{\ostatedefaultactive}{\defostate{\objectid}{\cmd}{\reg}{\store}}
+\newcommand{\ostatedefault}{\langle \Stk,\store \rangle}
+\newcommand{\errorstate}{\lightning}
+\newcommand{\current}{\mathit{this}}
+\newcommand{\stack}{\mathit{Stack}}
+\newcommand{\store}{\sigma}
+\newcommand{\MCmd}{\operatorname{c}}
+\newcommand{\Tr}{\mathit{Tr}}
+\newcommand{\ETr}{\hat{\mathit{Tr}}}
+\newcommand{\execdepth}{\it{Depth}}
+\newcommand{\Run}{\it{Run}}
+\newcommand{\Complete}{\it{Complete}}
+\newcommand{\inv}{\it{I}}
+
+% % Actions
+% \newcommand{\ENTERshort}[0]{ENTER}
+% \newcommand{\ENTER}[3]{ENTER\,\,#1.#2(#3)}
+% \newcommand{\EXIT}[0]{EXIT}
+% \newcommand{\THROW}[0]{THROW}
+
+% Elements of semantic domains
+% \newcommand{\defBstate}[2]{\langle #1, #2 \rangle}
+% \newcommand{\defstate}[4]{\langle #1, #2, #3, #4 \rangle}
+% \newcommand{\id}[0]{a}
+% \newcommand{\usr}[0]{u}
+% \newcommand{\prog}[0]{c}
+% \newcommand{\heap}[0]{h}
+% \newcommand{\mem}[0]{m}
+% \newcommand{\bal}[0]{b}
+% \newcommand{\stor}[0]{\psi}
+\renewcommand{\state}{s}
+\renewcommand{\frame}[3]{\ST{#1,\,#2,\,#3}}
+
+% Rules of small-step semantics
+\newcommand{\semsmallsteprule}[4]{\langle Code(#1), #2 \rangle \Rightarrow^{#3} #4}
+
+% Rules of big-step semantics
+\newcommand{\semrule}[3]{\frac{#1}{#2} & \textsc{#3} \\ \quad \\}
+
+% Execution & Derivation trees
+\newcommand{\src}{\operatorname{src}}
+\newcommand{\trg}{\operatorname{trg}}
+% \newcommand{\first}{\mathit{First}}
+% \newcommand{\last}{\mathit{Last}}
+\newcommand{\tree}[0]{\mathcal{T}}
+\newcommand{\exec}[0]{\pi}
+\newcommand{\Exec}[0]{\Pi}
+\newcommand{\Leaves}[0]{Leaves}
+\newcommand{\Conflict}{\it{Conflict}}
+\newcommand{\CBE}[2]{#1\ensuremath{\prec_{\it{CBE}}}#2}
+\newcommand{\CBEtc}[2]{#1\ensuremath{\prec^*_{\it{CBE}}}#2}
+\newcommand{\cep}{\varphi}
+\newcommand{\transition}{\tau}
+\newcommand{\trid}{\iota}
+\newcommand{\TRIDDOM}{I}
+\newcommand{\event}{e}
+\newcommand{\trace}{T}
+\newcommand{\action}{a}
+
+
+\newcommand{\TrID}[1]{\iota(#1)}
+\newcommand{\subexec}{\sqsubseteq}
+\newcommand{\projectedsubexec}[1]{\sqsubseteq_{#1}}
+\newcommand{\proj}[1]{|_{#1}}
+\newcommand{\fseq}[0]{\simeq_{FS}}
+\newcommand{\ceq}[0]{\simeq_{C}}
+\newcommand{\stkdeq}[2]{\ensuremath{\it{StkDeq(#1,#2)}}}
+\newcommand{\cbunnest}[1]{\ensuremath{\it{CBUnnest(#1)}}}
+\newcommand{\AllocObjects}[1]{\operatorname{Obj}(#1)}
+
+
+
+% Theorems
+\newcommand{\ECF}{\textsc{ECF}}
+\newcommand{\SECF}[1][]{\textsc{staECF}#1}
+\newcommand{\DECF}[1][]{\textsc{dynECF}#1}
+\newcommand{\FSECF}{\textsc{ECF}\subFS}
+\newcommand{\CECF}{\textsc{ECF}\subC}
+\newcommand{\CF}{\textsc{CF}}
+\newcommand{\subC}{\textsubscript{\textsc{c}}}
+\newcommand{\subFS}{\textsubscript{\textsc{fs}}}
+
+% \newcommand{\FSECF}{\ensuremath{\mathit{FS-ECF}}}
+% \newcommand{\CECF}{\ensuremath{\mathit{C-ECF}}}
+% \newcommand{\CF}{\ensuremath{\mathit{CF}}}
+
+
+% Dynamic verification - instrumentation
+\newcommand{\segment}[0]{t}
+% \newcommand{\trace}[0]{\tau}
+\newcommand{\exectree}{\mathcal{T}}
+\newcommand{\forest}{\mathcal{F}}
+\newcommand{\readset}[1]{R\ifthenelse{\equal{#1}{}}{}{(#1)}}
+\newcommand{\writeset}[1]{W\ifthenelse{\equal{#1}{}}{}{(#1)}}
+\newcommand{\depth}[1]{D\ifthenelse{\equal{#1}{}}{}{(#1)}}
+\newcommand{\depthNoArg}{D}
+\newcommand{\indexInCall}[1]{i\ifthenelse{\equal{#1}{}}{}{(#1)}}
+\newcommand{\indexInExec}[1]{Idx\ifthenelse{\equal{#1}{}}{}{(#1)}}
+\newcommand{\indexInExecNoArg}{Idx}
+\newcommand{\prefix}[1]{\it{prefix}(#1)}
+\newcommand{\suffix}[1]{\it{suffix}(#1)}
+\newcommand{\Commute}[2]{#1\ensuremath{\leftrightarrows}#2}
+\newcommand{\nCommute}[2]{#1\ensuremath{\nleftrightarrows}#2}
+\newcommand{\hb}[2]{#1\ensuremath{\prec_{\it{Inv}}}#2}

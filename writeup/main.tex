@@ -1,0 +1,151 @@
+%% For double-blind review submission
+\documentclass[acmsmall,review,anonymous]{acmart}\settopmatter{printfolios=true}
+%% For single-blind review submission
+%\documentclass[acmlarge,review]{acmart}\settopmatter{printfolios=true}
+%% For final camera-ready submission
+%\documentclass[acmlarge]{acmart}\settopmatter{}
+
+%% Note: Authors migrating a paper from PACMPL format to traditional
+%% SIGPLAN proceedings format should change 'acmlarge' to
+%% 'sigplan,10pt'.
+
+
+\usepackage{booktabs}
+\usepackage{subcaption} 
+\usepackage{alltt}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{stmaryrd}
+\usepackage{amsfonts}
+\usepackage[all]{xy}
+\usepackage{listings}
+\usepackage{mathtools}
+\usepackage{paralist}
+\usepackage[T1]{fontenc}
+\usepackage{extarrows}
+\usepackage[noend,noline]{algorithm2e}
+\usepackage{arydshln}
+\usepackage{centernot}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{cleveref} % Must be loaded as last package
+\usepackage[nodayofweek]{datetime}
+\usepackage{todonotes}
+
+
+
+%\usepackage[caption=false]{subfig}
+% \usepackage[hidelinks]{hyperref}
+% \usepackage{hyperref}
+% \usepackage[super]{nth}
+% \usepackage{makeidx}  % allows for indexgeneration
+% \usepackage{cite}
+%\usepackage{boisik}
+%\usepackage{mathabx}
+% \usepackage{fdsymbol}
+% \usepackage{MnSymbol}
+%\usepackage{fourier}
+% \usepackage{MnSymbol} % for \powerset
+% \usepackage{thm-restate}
+
+
+\input{macros}
+
+\newtheorem{remark}{Remark}[section]
+
+\makeatletter\if@ACM@journal\makeatother
+%% Journal information (used by PACMPL format)
+%% Supplied to authors by publisher for camera-ready submission
+\acmJournal{PACMPL}
+\acmVolume{1}
+\acmNumber{1}
+\acmArticle{1}
+\acmYear{2017}
+\acmMonth{1}
+\acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\startPage{1}
+\else\makeatother
+%% Conference information (used by SIGPLAN proceedings format)
+%% Supplied to authors by publisher for camera-ready submission
+\acmConference[PLDI'18]{ACM SIGPLAN Conference on Programming Language Design and Implementation}{\today}{\currenttime}
+% \acmConference[PL'17]{ACM SIGPLAN Conference on Programming Languages}{January 01--03, 2017}{New York, NY, USA}
+\acmYear{2018}
+\acmISBN{978-x-xxxx-xxxx-x/YY/MM}
+\acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\startPage{1}
+\fi
+
+
+%% Copyright information
+%% Supplied to authors (based on authors' rights management selection;
+%% see authors.acm.org) by publisher for camera-ready submission
+\setcopyright{none}             %% For review submission
+%\setcopyright{acmcopyright}
+%\setcopyright{acmlicensed}
+%\setcopyright{rightsretained}
+%\copyrightyear{2017}           %% If different from \acmYear
+
+
+%% Bibliography style
+\bibliographystyle{ACM-Reference-Format}
+%% Citation style
+%% Note: author/year citations are required for papers published as an
+%% issue of PACMPL.
+\citestyle{acmauthoryear}   %% For author/year citations
+
+
+\input{abstract}
+
+\begin{document}
+
+\input{acm-title-info}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Abstract
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Paper
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{notations}
+
+
+% \input{reentrancy}
+% \input{dfa}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Acknowledgments 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \begin{acks}  
+% We would like to thank the teams at Validity Labs and Ambisafe that assisted us in analyzing their contracts, and to Validity Labs for referring us to the web Oyente tool. 
+% \end{acks}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Bibliography
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+\bibliography{biblio}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+\appendix
+
+% \input{notations}
+
+%\input{sem-formal}
+
+\end{document}
