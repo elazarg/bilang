@@ -1,20 +1,19 @@
 #[Example: joint declaration]
 (A, B) = join('A', 'B')
-declare("${A.name} and ${B.name} are getting married")
+declare("${A.id} and ${B.id} are getting married")
 
 #[Example: puzzle]
 A = join('A')
 q = receive[int] @ A
 # (The above could be performed locally)
 B = join('Solver')
-mn = receive[(int, int)] @ B
-m, n = mn
+m, n = receive[int] @ B  # doing it in 2 statements leads to ambiguity about where to backtrack
 require(m * n == q)
 declare("${B.name} solved the problem!")
 
 #[Example: trusted simultaneous game]
 Even, Odd = join('Even', 'Odd')
-x, y = receive[bool] @ (Even, Odd)
+x, y = receive[bool] @ (Even, Odd)  # We could call the variable Even.x to be explicit
 if x == y:
     declare("${Even.name} won")
 else:
