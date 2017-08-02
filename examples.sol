@@ -31,24 +31,28 @@ contract JointDeclaration is StateMachine {
     event Declare(string, address, address);
     uint Role_A = 0;
     uint Role_B = 1;
-    address[2] private address_of;
+    address A;
+    address B;
 
     function stmt_0_join(uint as_role, uint _step_count) step(_step_count) state(0) {
         // Note that a conforming client could execute this function accidentally due to a race condition.
         // This is why we use revert()
         require(as_role == Role_A || as_role == Role_B);
-        if (address_of[as_role] != 0x0) revert();
+        // "Role_A" is the title, "A" is the variable. Here it's the same, but not always.
+        if (as_role == Role_A && A != 0x0) revert();
+        if (as_role == Role_B && B != 0x0) revert();
 
-        // Just a thought: putting tx.origin here will give us only external accounts
-        // Or we can require(msg.sender == tx.origin)
-        address_of[as_role] = msg.sender;
+        if (as_role == Role_A)
+            A = msg.sender;
+        if (as_role == Role_B)
+            B = msg.sender;
 
-        if (address_of[Role_A] != 0x0 && address_of[Role_B] != 0x0)
+        if (A != 0x0 && B != 0x0)
             stmt_index++;
     }
 
     function stmt_1_declare(uint _step_count) step(_step_count) state(1) {
-        Declare("${} and ${} are getting married", address_of[Role_A], address_of[Role_B]);
+        Declare("${} and ${} are getting married", A, B);
     }
 
     function end() state(2) {
@@ -58,10 +62,11 @@ contract JointDeclaration is StateMachine {
 
 //[Example: puzzle]
 contract Puzzle is StateMachine {
-    event Declare(string, address, address);
+    event Declare(string, address);
     uint Role_A = 0;
     uint Role_Solver = 1;
-    address[2] private address_of;
+    address A;
+    address Solver;
 
     int q; address q__sender;
     int m; address m__sender;
@@ -69,30 +74,30 @@ contract Puzzle is StateMachine {
 
     function stmt_0_join(uint as_role, uint _step_count) step(_step_count) state(0) {
         require(as_role == Role_A);
-        if (address_of[as_role] != 0x0) revert();
-        address_of[as_role] = msg.sender;
+        if (as_role == Role_A && A != 0x0) revert();
+        A = msg.sender;
 
-        if (address_of[Role_A] != 0x0)
+        if (A != 0x0)
             stmt_index++;
     }
 
     function stmt_1_receive(int _q, uint _step_count) step(_step_count) state(1) {
-        require(address_of[Role_A] == msg.sender);
+        require(msg.sender == A);
         q = _q;
         q__sender = msg.sender;
     }
 
     function stmt_2_join(uint as_role, uint _step_count) step(_step_count) state(2) {
         require(as_role == Role_Solver);
-        if (address_of[as_role] != 0x0) revert();
-        address_of[as_role] = msg.sender;
+        if (Solver != 0x0) revert();
+        Solver = msg.sender;
 
-        if (address_of[Role_Solver] != 0x0)
+        if (Solver != 0x0)
             stmt_index++;
     }
 
     function stmt_3_receive(int val0, int val1, uint _step_count) step(_step_count) state(3) {
-        if (address_of[Role_Solver] == msg.sender) {
+        if (Solver == msg.sender) {
             m = val0; m__sender = msg.sender;
             n = val1; n__sender = msg.sender;
         } else {
@@ -113,7 +118,7 @@ contract Puzzle is StateMachine {
     }
 
     function stmt_5_declare(uint _step_count) step(_step_count) state(5) {
-        Declare("${} solved the problem!", address_of[Role_Solver]);
+        Declare("${} solved the problem!", Solver);
     }
 
     function end() {
@@ -122,12 +127,14 @@ contract Puzzle is StateMachine {
     }
 }
 
-#[Example: puzzle with payment]
-contract Puzzle is StateMachine {
+//[Example: puzzle with payment]
+contract PuzzlePayment is StateMachine {
     event Declare(string, address, address);
     uint Role_A = 0;
     uint Role_Solver = 1;
-    address[2] private address_of;
+    address A; uint __A_amount;
+    address Solver; uint __Solver_amount;
+    
     uint[2] private amount_of;
 
     int q; address q__sender;
@@ -136,32 +143,31 @@ contract Puzzle is StateMachine {
 
     function stmt_0_join(uint as_role, uint _step_count) step(_step_count) state(0) payable {
         require(as_role == Role_A);
-        if (address_of[as_role] != 0x0) revert();
-        require(msg.amount == 50);
-        address_of[as_role] = msg.sender;
-        amount_of[as_role] = msg.amount;
+        require(msg.value == 50);
+        if (as_role == Role_A && A != 0x0) revert();
+        A = msg.sender;
 
-        if (address_of[Role_A] != 0x0)
+        if (A != 0x0)
             stmt_index++;
     }
 
     function stmt_1_receive(int _q, uint _step_count) step(_step_count) state(1) {
-        require(address_of[Role_A] == msg.sender);
+        require(msg.sender == A);
         q = _q;
         q__sender = msg.sender;
     }
 
     function stmt_2_join(uint as_role, uint _step_count) step(_step_count) state(2) {
         require(as_role == Role_Solver);
-        if (address_of[as_role] != 0x0) revert();
-        address_of[as_role] = msg.sender;
+        if (Solver != 0x0) revert();
+        Solver = msg.sender;
 
-        if (address_of[Role_Solver] != 0x0)
+        if (Solver != 0x0)
             stmt_index++;
     }
 
     function stmt_3_receive(int val0, int val1, uint _step_count) step(_step_count) state(3) {
-        if (address_of[Role_Solver] == msg.sender) {
+        if (Solver == msg.sender) {
             m = val0; m__sender = msg.sender;
             n = val1; n__sender = msg.sender;
         } else {
@@ -177,12 +183,12 @@ contract Puzzle is StateMachine {
             // cleanup is not technically required here
             m = 0; m__sender = 0x0;
             n = 0; n__sender = 0x0;
-            stmt_index = 2; // will be ++'ed
+            stmt_index = 3;
         }
     }
 
     function stmt_5_pay(uint _step_count) step(_step_count) state(5) {
-        transfer(address_of[Role_Solver], amount_of[as_role]);
+        //transfer(Solver, __A_amount);
     }
 
     function end() {
@@ -196,28 +202,29 @@ contract TrustedSimultaneousGame is StateMachine {
     event Declare(string, address);
     uint Role_Even = 0;
     uint Role_Odd = 1;
-    address[2] private address_of;
+    address Even;
+    address Odd;
 
     bool x; address x__sender;
     bool y; address y__sender;
 
     function stmt_0_join(uint as_role, uint _step_count) state(0) step(_step_count) {
-        if (stmt_index != 0) revert();
-        
-        require(as_role == Role_Even || as_role == Role_Odd);
-        if (address_of[as_role] != 0x0) revert();
+        if (as_role == Role_Even && Even != 0x0) revert();
+        if (as_role == Role_Odd && Odd != 0x0) revert();
 
-        address_of[as_role] = msg.sender;
+        if (as_role == Role_Even)
+            Even = msg.sender;
+        if (as_role == Role_Odd)
+            Odd = msg.sender;
 
-        if (address_of[Role_Even] != 0x0 && address_of[Role_Odd] != 0x0)
+        if (Even != 0x0 && Odd != 0x0)
             stmt_index++;
     }
 
     function stmt_1_receive(bool val, uint _step_count) state(1) step(_step_count) {
-        require(address_of[Role_Even] == msg.sender);
-        if (address_of[Role_Even] == msg.sender) {
+        if (msg.sender == Even) {
             x = val; x__sender = msg.sender;
-        } else if (address_of[Role_Odd] == msg.sender) {
+        } else if (msg.sender == Odd) {
             y = val; y__sender = msg.sender;
         } else {
             require(false);
@@ -225,8 +232,8 @@ contract TrustedSimultaneousGame is StateMachine {
     }
 
     function stmt_2_declare(uint _step_count) state(2) step(_step_count) {
-        Winner = (x == y) ? Role_Even : Role_Odd;
-        Declare("${} won", address_of[Winner]);
+        address Winner = (x == y) ? Even : Odd;
+        Declare("${} won", Winner);
     }
 
     function end() state(2) {
@@ -238,62 +245,57 @@ contract TrustedSimultaneousGame is StateMachine {
 //[Example: simultaneous game with payment]
 
 //[Example: Auction without payment; combined]
-Owner = join('Owner')
-max = 0
-Bidder = NOBODY
-while True:
-    NewBidder = join('Bidder', may_replace=Bidder)
-    if NewBidder == Owner:
-        break
-    require(Bidder.money > max)
-    transfer(Bidder.money, Bidder)
-    Bidder = NewBidder
-
-declare("${Bidder.name} has won")
-
-contract TrustedSimultaneousGame is StateMachine {
+contract AuctionPayment is StateMachine {
     event Declare(string, address);
     uint Role_Owner = 0;
     uint Role_Bidder = 1;
     address[2] private address_of;
 
+    address Owner = 0x0;
     address Bidder = 0x0;
     address NewBidder = 0x0;
-    uint max; addres __max_owner;
+    uint max; address __max_owner;
 
     function stmt_0_join(uint as_role, uint _step_count) state(0) step(_step_count) {
-        if (stmt_index != 0) revert();
-        
         require(as_role == Role_Owner);
-        if (address_of[as_role] != 0x0) revert();
+        if (Owner != 0x0) revert();
+        Owner = msg.sender;
 
-        address_of[as_role] = msg.sender;
-
-        if (address_of[Role_Owner] != 0x0)
+        if (Owner != 0x0)
             stmt_index++;
-
         max = 0;
         Bidder = 0x0;
     }
 
-    function stmt_1_join(uint as_role, uint _step_count) state(0) step(_step_count) {
+    function stmt_1_join(uint as_role, uint _step_count) state(0) step(_step_count) payable {
         if (stmt_index != 0) revert();
         
         require(as_role == Role_Bidder);
-        if (address_of[as_role] != Bidder) revert();
+        // "may_replace=Bidder"
+        if (NewBidder != Bidder) revert();
+        NewBidder = msg.sender;
 
-        address_of[as_role] = msg.sender;
-
-        if (address_of[Role_Owner] != 0x0)
+        if (NewBidder == Owner) {
+            // keep last Bidder
+            stmt_index = 3;
+            return;
+        }
+        require(msg.value > max);
+        
+        if (NewBidder != 0x0)
             stmt_index++;
-
-        max = 0;
-        Bidder = NOBODY;
     }
 
-    function stmt_2_declare(uint _step_count) state(2) step(_step_count) {
-        Winner = (x == y) ? Role_Even : Role_Odd;
-        Declare("${} won", address_of[Winner]);
+    function stmt_2_transfer(uint _step_count) state(2) step(_step_count) {
+        //LazySend(max, Bidder);
+    }
+
+    function stmt_3_assign(uint _step_count) state(3) step(_step_count) {
+        Bidder = NewBidder;
+    }
+
+    function stmt_4_declare(uint _step_count) state(4) step(_step_count) {
+        Declare("${} won", Bidder);
     }
 
     function end() state(2) {
