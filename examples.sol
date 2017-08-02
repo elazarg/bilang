@@ -112,6 +112,79 @@ contract Puzzle is StateMachine {
         }
     }
 
+    function stmt_5_declare(uint _step_count) step(_step_count) state(5) {
+        Declare("${} solved the problem!", address_of[Role_Solver]);
+    }
+
+    function end() {
+        require(stmt_index == 6);
+        selfdestruct(msg.sender);
+    }
+}
+
+#[Example: puzzle with payment]
+contract Puzzle is StateMachine {
+    event Declare(string, address, address);
+    uint Role_A = 0;
+    uint Role_Solver = 1;
+    address[2] private address_of;
+    uint[2] private amount_of;
+
+    int q; address q__sender;
+    int m; address m__sender;
+    int n; address n__sender;
+
+    function stmt_0_join(uint as_role, uint _step_count) step(_step_count) state(0) payable {
+        require(as_role == Role_A);
+        if (address_of[as_role] != 0x0) revert();
+        require(msg.amount == 50);
+        address_of[as_role] = msg.sender;
+        amount_of[as_role] = msg.amount;
+
+        if (address_of[Role_A] != 0x0)
+            stmt_index++;
+    }
+
+    function stmt_1_receive(int _q, uint _step_count) step(_step_count) state(1) {
+        require(address_of[Role_A] == msg.sender);
+        q = _q;
+        q__sender = msg.sender;
+    }
+
+    function stmt_2_join(uint as_role, uint _step_count) step(_step_count) state(2) {
+        require(as_role == Role_Solver);
+        if (address_of[as_role] != 0x0) revert();
+        address_of[as_role] = msg.sender;
+
+        if (address_of[Role_Solver] != 0x0)
+            stmt_index++;
+    }
+
+    function stmt_3_receive(int val0, int val1, uint _step_count) step(_step_count) state(3) {
+        if (address_of[Role_Solver] == msg.sender) {
+            m = val0; m__sender = msg.sender;
+            n = val1; n__sender = msg.sender;
+        } else {
+            require(false);
+        }
+    }
+
+    function stmt_4_require(uint _step_count) step(_step_count) state_non_inc(4) {
+        // Can easily be unified with stmt_3_receive
+        if (m != 1 && n != 1 && m * n == q) {
+            stmt_index++;
+        } else {
+            // cleanup is not technically required here
+            m = 0; m__sender = 0x0;
+            n = 0; n__sender = 0x0;
+            stmt_index = 2; // will be ++'ed
+        }
+    }
+
+    function stmt_5_pay(uint _step_count) step(_step_count) state(5) {
+        transfer(address_of[Role_Solver], amount_of[as_role]);
+    }
+
     function end() {
         require(stmt_index == 5);
         selfdestruct(msg.sender);
@@ -128,7 +201,7 @@ contract TrustedSimultaneousGame is StateMachine {
     bool x; address x__sender;
     bool y; address y__sender;
 
-    function stmt_0_join(uint as_role, uint _step_count) step(_step_count) {
+    function stmt_0_join(uint as_role, uint _step_count) state(0) step(_step_count) {
         if (stmt_index != 0) revert();
         
         require(as_role == Role_Even || as_role == Role_Odd);
@@ -151,12 +224,76 @@ contract TrustedSimultaneousGame is StateMachine {
         }
     }
 
-    function stmt_1_declare(uint _step_count) state(2) step(_step_count) {
-        if (x == y) {
-            Declare("${} won", address_of[Role_Even]);
-        } else {
-            Declare("${} won", address_of[Role_Odd]);
-        }
+    function stmt_2_declare(uint _step_count) state(2) step(_step_count) {
+        Winner = (x == y) ? Role_Even : Role_Odd;
+        Declare("${} won", address_of[Winner]);
+    }
+
+    function end() state(2) {
+        selfdestruct(msg.sender);
+    }
+}
+
+//[Example: simultaneous game] -- commitment etc.
+//[Example: simultaneous game with payment]
+
+//[Example: Auction without payment; combined]
+Owner = join('Owner')
+max = 0
+Bidder = NOBODY
+while True:
+    NewBidder = join('Bidder', may_replace=Bidder)
+    if NewBidder == Owner:
+        break
+    require(Bidder.money > max)
+    transfer(Bidder.money, Bidder)
+    Bidder = NewBidder
+
+declare("${Bidder.name} has won")
+
+contract TrustedSimultaneousGame is StateMachine {
+    event Declare(string, address);
+    uint Role_Owner = 0;
+    uint Role_Bidder = 1;
+    address[2] private address_of;
+
+    address Bidder = 0x0;
+    address NewBidder = 0x0;
+    uint max; addres __max_owner;
+
+    function stmt_0_join(uint as_role, uint _step_count) state(0) step(_step_count) {
+        if (stmt_index != 0) revert();
+        
+        require(as_role == Role_Owner);
+        if (address_of[as_role] != 0x0) revert();
+
+        address_of[as_role] = msg.sender;
+
+        if (address_of[Role_Owner] != 0x0)
+            stmt_index++;
+
+        max = 0;
+        Bidder = 0x0;
+    }
+
+    function stmt_1_join(uint as_role, uint _step_count) state(0) step(_step_count) {
+        if (stmt_index != 0) revert();
+        
+        require(as_role == Role_Bidder);
+        if (address_of[as_role] != Bidder) revert();
+
+        address_of[as_role] = msg.sender;
+
+        if (address_of[Role_Owner] != 0x0)
+            stmt_index++;
+
+        max = 0;
+        Bidder = NOBODY;
+    }
+
+    function stmt_2_declare(uint _step_count) state(2) step(_step_count) {
+        Winner = (x == y) ? Role_Even : Role_Odd;
+        Declare("${} won", address_of[Winner]);
     }
 
     function end() state(2) {
