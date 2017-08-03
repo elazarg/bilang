@@ -1,106 +1,137 @@
 #[Example: joint declaration]
-(A, B) = join('A'), join('B')
+class A: ...
+class B: ...
+(a, b) = yield {A, B}
 declare("${A.id} and ${B.id} are getting married")
 
 #[Example: puzzle]
-A = join('A')
-q = receive[int] @ A
-# (The above could be performed locally)
-B = join('Solver')
-m, n = receive[int] @ B  # doing it in 2 statements leads to ambiguity about where to backtrack
-require(m != 1 && n != 1 && m * n == q)
-declare("${Solver.name} solved the problem!")
+class A:
+    q: int
+a = yield A
+
+class S:
+    m: int; require(m != 1)
+    n: int; require(n != 1)
+    require(m * n == a.q)
+s = yield S
+
+declare("${s} solved the problem!")
 
 #[Example: puzzle with payment]
-A = join('A', money=50)
-q = receive[int] @ A
-B = join('Solver')
-m, n = receive[int] @ B  # doing it in 2 statements leads to ambiguity about where to backtrack
-require(m != 1 && n != 1 && m * n == q)
-pay(B, A.money)
+class A:
+    amount: money
+    q: int
+a = yield S
+
+class Solver:
+    m: int; require(m != 1)
+    n: int; require(n != 1)
+    require(m * n == a.q)
+s = yield S
+pay(s, a.amount)
 
 #[Example: trusted simultaneous game]
-Even, Odd = join('Even'), join('Odd')
-x, y = receive[bool] @ Even, receive[bool] @ Odd  # We could call the variable Even.x to be explicit
-Winner = Even if x == y else Odd
+class Player:
+    choice: bool
+even, odd = yield {Player('Even'), Player('Odd')}
+Winner = even if even.choice == odd.choice else odd
 declare("${Winner.name} won")
 
 #[Example: simultaneous game]
-Even, Odd = join('Even', 'Odd')
-x, y = receive_independent[bool] @ (Even, Odd)
-Winner = Even if x == y else Odd
+class Player:
+    choice: bool
+even, odd = independent(yield {Player('Even'), Player('Odd')})
+Winner = even if even.choice == odd.choice else odd
 declare("${Winner.name} won")
 
 #[Example: simultaneous game with payment]
-Even, Odd = join('Even', money=50), join('Odd', money=50)
-x, y = receive_independent[bool] @ (Even, Odd)
-Winner = Even if x == y else Odd
-pay(Winner, Even.money, Odd.money)
+class Player:
+    choice: bool
+    amount: money; require(amount == 50)
+even, odd = yield independent(Player('Even'), Player('Odd'))
+winner = even if even.choice == odd.choice else odd
+pay(winner, even.money, odd.money)
 
 #[Example: Binary option / external arbitration]
-Oracle = join(0x2346234)
-More, Less = join('More', money=50), join('More', money=50)
+class Oracle:
+    # This is _not_ a commitment, just an acknowledgement of future (value unknown) request
+    is_more: future[bool]
+class Bet:
+    bet: money
 
-is_more = receive[bool] @ Oracle
-Winner : Role = More if is_more else Less
-pay(Winner, Less.money, More.money)
+oracle = yield Oracle(id=0x2346234)
+with parallel:
+    more, less = yield (Bet('More'), Bet('Less'))
+
+is_more = yield oracle.is_more
+winner = more if is_more else less
+pay(winner, less.bet, more.bet)
 
 #[Example: Auction without payment; combined]
-Owner = join('Owner')
-max = 0
-Bidder = NOBODY
-while True:
-    NewBidder = join('Bidder', may_replace=Bidder)
-    if NewBidder == Owner:
-        break
-    require(Bidder.money > max)
-    transfer(Bidder.money, Bidder)
-    Bidder = NewBidder
+class Owner:
+    minimum: money
 
-declare("${Bidder.name} has won")
+owner = yield Owner
+
+last_offer : int = Owner.minimum
+while True:
+    class Bidder:
+        amount: money; require(amount > last_offer)
+
+    new_bidder = yield (RealBidder | Stop(id=owner.id))
+    if isinstance(new_bidder, RealBidder):
+        transfer(winner, winner.amount)
+        winner = new_bidder
+        last_offer = len(winner.amount)  # explicit coercion
+    else:
+        break
+
+declare("${winner.name} has won")
+pay(owner, winner.amount)
 
 #[Example: Auction without payment and timeouts]
-Bidders = []
+class Owner:
+    minimum: money
+
+owner = yield Owner
+
+class Bidder:
+    bid: future[hidden[int]]
+
+bidders = set()
 while True:
-    Bidder = join('Bidder')
-    if Bidder == 0x12874632:
+    bidder = yield Bidder | Stop(id=owner.id)
+    if isinstance(bidder, Bidder):
+        bidders.add(bidder)
+    else:
         break
-    Bidders.append(Bidder)
 
 max = 0
-Bidder = NOBODY
-for bid in receive(int) @ Bidders: # performed lazily
+winner = NOBODY
+for bidder, bid in independent(yield from {(b, b.bid) for b in bidders}):
+    # performed lazily
     if bid > max:
         max = bid
-        Bidder = dib.id
+        winner = dib.id
 
-declare("${Bidder.name} has won")
-
-#[Example: Blind auction without payment and timeouts]
-Bidders = []
-while True:
-    Bidder = join('Bidder')
-    if Bidder == 0x12874632:
-        break
-    Bidders.append()
-
-max = 0
-Bidder = NOBODY
-for bid in receive_independent[int] @ Bidders:   # should be performed lazily, on the reveal
-    if bid > max:
-        max = bid
-        Bidder = dib.id
-
-declare("${Bidder.name} has won")
+declare("${winner} has won")
+pay(owner, winner.amount)
 
 #[Example: Monty Hall]
-Host, Guest = join('Host', 'Guest')
-with hidden[int]('car') @ Host as car:
-    # `car` value is unusabe inside this block
-    door1 = receive[int] @ Guest
-    goat = receive[int] @ Host;    require(goat != door1)
-    door2 = receive[int] @ Guest;  require(door2 != goat)
+class Host:
+    car: future[hidden[int]]
+    goat: future[int]
 
-require(goat != car)  # should blame host, since he owns both values. This is simple taint tracking, but is inferrable at compile time and can be made explicit
-Winner = Guest if if door2 == car else Host
-declare("${Winner.name} won")
+class Guest:
+    door1: int
+    door2: future[int]
+
+host = yield Host
+guest = yield Guest
+with yield hidden(host.car):
+    yield host.goat; require(host.goat != guest.door1)
+    yield guest.door2;  require(guest.door2 != host.goat)
+
+require(host.goat != host.car)
+winner = guest if if door2 == car else host
+declare("${winner} won")
