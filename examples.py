@@ -1,19 +1,19 @@
 #[Example: joint declaration]
 class A: ...
 class B: ...
-(a, b) = yield {A, B}
+(a, b) = await A & B
 declare("${A.id} and ${B.id} are getting married")
 
 #[Example: puzzle]
 class A:
     q: int
-a = yield A
+a = await A
 
 class S:
     m: int; require(m != 1)
     n: int; require(n != 1)
     require(m * n == a.q)
-s = yield S
+s = await S
 
 declare("${s} solved the problem!")
 
@@ -21,26 +21,26 @@ declare("${s} solved the problem!")
 class A:
     amount: money
     q: int
-a = yield S
+a = await S
 
-class Solver:
+class S:
     m: int; require(m != 1)
     n: int; require(n != 1)
     require(m * n == a.q)
-s = yield S
+s = await S
 pay(s, a.amount)
 
 #[Example: trusted simultaneous game]
 class Player:
     choice: bool
-even, odd = yield {Player('Even'), Player('Odd')}
+even, odd = await Player('Even') & Player('Odd')
 Winner = even if even.choice == odd.choice else odd
 declare("${Winner.name} won")
 
 #[Example: simultaneous game]
 class Player:
     choice: bool
-even, odd = independent(yield {Player('Even'), Player('Odd')})
+even, odd = await independent(Player('Even') & Player('Odd'))
 Winner = even if even.choice == odd.choice else odd
 declare("${Winner.name} won")
 
@@ -48,7 +48,7 @@ declare("${Winner.name} won")
 class Player:
     choice: bool
     amount: money; require(amount == 50)
-even, odd = yield independent(Player('Even'), Player('Odd'))
+even, odd = await independent(Player('Even') & Player('Odd'))
 winner = even if even.choice == odd.choice else odd
 pay(winner, even.money, odd.money)
 
@@ -59,26 +59,28 @@ class Oracle:
 class Bet:
     bet: money
 
-oracle = yield Oracle(id=0x2346234)
+oracle = await Oracle(id=0x2346234)
 with parallel:
-    more, less = yield (Bet('More'), Bet('Less'))
+    more, less = await Bet('More') & Bet('Less')
 
-is_more = yield oracle.is_more
+is_more = await oracle.is_more
 winner = more if is_more else less
 pay(winner, less.bet, more.bet)
 
-#[Example: Auction without payment; combined]
+#[Example: Auction]
 class Owner:
-    minimum: money
+    minimum: uint
 
-owner = yield Owner
+owner = await Owner
 
-last_offer : int = Owner.minimum
+last_offer: uint = owner.minimum
 while True:
     class Bidder:
         amount: money; require(amount > last_offer)
 
-    new_bidder = yield (RealBidder | Stop(id=owner.id))
+    # It doesn't behave like a global session here - it's as if there's "Server" and "EveryoneElse"
+    # And here the choice is at "EveryoneElse"
+    new_bidder = await (RealBidder | Stop(id=owner.id))
     if isinstance(new_bidder, RealBidder):
         transfer(winner, winner.amount)
         winner = new_bidder
@@ -86,32 +88,31 @@ while True:
     else:
         break
 
-declare("${winner.name} has won")
 pay(owner, winner.amount)
 
 #[Example: Auction without payment and timeouts]
 class Owner:
     minimum: money
 
-owner = yield Owner
+owner = await Owner
 
 class Bidder:
-    bid: future[hidden[int]]
+    pass
 
-bidders = set()
+bidders : dict[Bidder, future[int]] = {}
 while True:
-    bidder = yield Bidder | Stop(id=owner.id)
+    bidder = await Bidder | Stop(id=owner.id)
     if isinstance(bidder, Bidder):
         bidders.add(bidder)
     else:
         break
 
-max = 0
+last_offer: uint = owner.minimum
 winner = NOBODY
-for bidder, bid in independent(yield from {(b, b.bid) for b in bidders}):
+async for bidder, bidder.bid in yield from bidders.items():
     # performed lazily
-    if bid > max:
-        max = bid
+    if bid > last_offer:
+        last_offer = bid
         winner = dib.id
 
 declare("${winner} has won")
@@ -123,15 +124,17 @@ class Host:
     goat: future[int]
 
 class Guest:
-    door1: int
+    door1: future[int]
     door2: future[int]
 
-host = yield Host
-guest = yield Guest
-with yield hidden(host.car):
-    yield host.goat; require(host.goat != guest.door1)
-    yield guest.door2;  require(guest.door2 != host.goat)
+host = await Host
+guest = await Guest
+with await hidden(host.car):
+    await guest.door1
+    await host.goat;    require(host.goat != guest.door1)
+    await guest.door2;  require(guest.door2 != host.goat)
 
-require(host.goat != host.car)
-winner = guest if if door2 == car else host
-declare("${winner} won")
+if host.car is None or host.goat == host.car or guest.door2 == host.car:
+    declare("${guest} won")
+else:
+    declare("${host} won")

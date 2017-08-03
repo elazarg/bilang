@@ -31,28 +31,31 @@ contract JointDeclaration is StateMachine {
     event Declare(string, address, address);
     uint Role_A = 0;
     uint Role_B = 1;
-    address A;
-    address B;
+    address a;
+    address b;
 
-    function stmt_0_join(uint as_role, uint _step_count) step(_step_count) state(0) {
-        // Note that a conforming client could execute this function accidentally due to a race condition.
-        // This is why we use revert()
-        require(as_role == Role_A || as_role == Role_B);
-        // "Role_A" is the title, "A" is the variable. Here it's the same, but not always.
-        if (as_role == Role_A && A != 0x0) revert();
-        if (as_role == Role_B && B != 0x0) revert();
+    // (a, b) = await {A, B}
+    function stmt_0_await_A(uint _step_count1, uint _step_count2) step(__step_count1), step(__step_count2) state_non_inc(0) {
+        if (a != 0x0) revert();
+        a = msg.sender;
+        inc_if_finish();
+    }
+    
+    // (a, b) = await {A, B}
+    function stmt_0_await_B(uint _step_count1, uint _step_count2) step(__step_count1), step(__step_count2) state_non_inc(0) {
+        if (b != 0x0) revert();
+        b = msg.sender;
+        inc_if_finish();
+    }
 
-        if (as_role == Role_A)
-            A = msg.sender;
-        if (as_role == Role_B)
-            B = msg.sender;
-
-        if (A != 0x0 && B != 0x0)
+    function inc_if_finish() {
+        if (a != 0x0 && b != 0x0)
             stmt_index++;
     }
 
+    // declare("${A.id} and ${B.id} are getting married")
     function stmt_1_declare(uint _step_count) step(_step_count) state(1) {
-        Declare("${} and ${} are getting married", A, B);
+        Declare("${} and ${} are getting married", a, b);
     }
 
     function end() state(2) {
@@ -63,136 +66,68 @@ contract JointDeclaration is StateMachine {
 //[Example: puzzle]
 contract Puzzle is StateMachine {
     event Declare(string, address);
-    uint Role_A = 0;
-    uint Role_Solver = 1;
-    address A;
-    address Solver;
+    address a;
+    int a__q;
 
-    int q; address q__sender;
-    int m; address m__sender;
-    int n; address n__sender;
+    address s;
+    int s__m;
+    int s__n;
 
-    function stmt_0_join(uint as_role, uint _step_count) step(_step_count) state(0) {
-        require(as_role == Role_A);
-        if (as_role == Role_A && A != 0x0) revert();
-        A = msg.sender;
-
-        if (A != 0x0)
-            stmt_index++;
+    // a = await A [A has q: int]
+    function stmt_0_await_A(int q, uint _step_count) step(_step_count) state(0) {
+        if (a != 0x0) revert();
+        a = msg.sender;
+        a__q = q;
+    }
+    
+    // s = await S
+    function stmt_1_await_S(int m, int n,  uint _step_count) step(_step_count) state(1) {
+        s = msg.sender;
+        require(m != 1);  s__m = m;
+        require(n != 1);  s__n = n;
+        require(m * n == a__q);
     }
 
-    function stmt_1_receive(int _q, uint _step_count) step(_step_count) state(1) {
-        require(msg.sender == A);
-        q = _q;
-        q__sender = msg.sender;
-    }
-
-    function stmt_2_join(uint as_role, uint _step_count) step(_step_count) state(2) {
-        require(as_role == Role_Solver);
-        if (Solver != 0x0) revert();
-        Solver = msg.sender;
-
-        if (Solver != 0x0)
-            stmt_index++;
-    }
-
-    function stmt_3_receive(int val0, int val1, uint _step_count) step(_step_count) state(3) {
-        if (Solver == msg.sender) {
-            m = val0; m__sender = msg.sender;
-            n = val1; n__sender = msg.sender;
-        } else {
-            require(false);
-        }
-    }
-
-    function stmt_4_require(uint _step_count) step(_step_count) state_non_inc(4) {
-        // Can easily be unified with stmt_3_receive
-        if (m != 1 && n != 1 && m * n == q) {
-            stmt_index++;
-        } else {
-            // cleanup is not technically required here
-            m = 0; m__sender = 0x0;
-            n = 0; n__sender = 0x0;
-            stmt_index = 2; // will be ++'ed
-        }
-    }
-
-    function stmt_5_declare(uint _step_count) step(_step_count) state(5) {
+    function stmt_2_declare(uint _step_count) step(_step_count) state(2) {
         Declare("${} solved the problem!", Solver);
     }
 
-    function end() {
-        require(stmt_index == 6);
+    function end() state(3) {
         selfdestruct(msg.sender);
     }
 }
 
 //[Example: puzzle with payment]
 contract PuzzlePayment is StateMachine {
-    event Declare(string, address, address);
-    uint Role_A = 0;
-    uint Role_Solver = 1;
-    address A; uint __A_amount;
-    address Solver; uint __Solver_amount;
+    event Declare(string, address);
+    address a;
+    int a__q;
+    int a__amount;
+
+    address s;
+    int s__m;
+    int s__n;
+
+    // a = await A [A has q: int]
+    function stmt_0_await_A(int q, uint _step_count) step(_step_count) state(0) payable {
+        a = msg.sender;
+        a__amount = msg.value;
+        a__q = q;
+    }
     
-    uint[2] private amount_of;
-
-    int q; address q__sender;
-    int m; address m__sender;
-    int n; address n__sender;
-
-    function stmt_0_join(uint as_role, uint _step_count) step(_step_count) state(0) payable {
-        require(as_role == Role_A);
-        require(msg.value == 50);
-        if (as_role == Role_A && A != 0x0) revert();
-        A = msg.sender;
-
-        if (A != 0x0)
-            stmt_index++;
+    // s = await S
+    function stmt_1_await_S(int m, int n,  uint _step_count) step(_step_count) state(1) {
+        s = msg.sender;
+        require(m != 1);  s__m = m;
+        require(n != 1);  s__n = n;
+        require(m * n == a__q);
     }
 
-    function stmt_1_receive(int _q, uint _step_count) step(_step_count) state(1) {
-        require(msg.sender == A);
-        q = _q;
-        q__sender = msg.sender;
+    function stmt_2_pay(uint _step_count) step(_step_count) state(2) {
+        //transfer(s, a__amount);
     }
 
-    function stmt_2_join(uint as_role, uint _step_count) step(_step_count) state(2) {
-        require(as_role == Role_Solver);
-        if (Solver != 0x0) revert();
-        Solver = msg.sender;
-
-        if (Solver != 0x0)
-            stmt_index++;
-    }
-
-    function stmt_3_receive(int val0, int val1, uint _step_count) step(_step_count) state(3) {
-        if (Solver == msg.sender) {
-            m = val0; m__sender = msg.sender;
-            n = val1; n__sender = msg.sender;
-        } else {
-            require(false);
-        }
-    }
-
-    function stmt_4_require(uint _step_count) step(_step_count) state_non_inc(4) {
-        // Can easily be unified with stmt_3_receive
-        if (m != 1 && n != 1 && m * n == q) {
-            stmt_index++;
-        } else {
-            // cleanup is not technically required here
-            m = 0; m__sender = 0x0;
-            n = 0; n__sender = 0x0;
-            stmt_index = 3;
-        }
-    }
-
-    function stmt_5_pay(uint _step_count) step(_step_count) state(5) {
-        //transfer(Solver, __A_amount);
-    }
-
-    function end() {
-        require(stmt_index == 5);
+    function end() state(3) {
         selfdestruct(msg.sender);
     }
 }
@@ -200,40 +135,28 @@ contract PuzzlePayment is StateMachine {
 //[Example: trusted simultaneous game]
 contract TrustedSimultaneousGame is StateMachine {
     event Declare(string, address);
-    uint Role_Even = 0;
-    uint Role_Odd = 1;
-    address Even;
-    address Odd;
+    address even;
+    bool x;
 
-    bool x; address x__sender;
-    bool y; address y__sender;
+    address odd;
+    bool y;
 
-    function stmt_0_join(uint as_role, uint _step_count) state(0) step(_step_count) {
-        if (as_role == Role_Even && Even != 0x0) revert();
-        if (as_role == Role_Odd && Odd != 0x0) revert();
+    address winner;
 
-        if (as_role == Role_Even)
-            Even = msg.sender;
-        if (as_role == Role_Odd)
-            Odd = msg.sender;
-
-        if (Even != 0x0 && Odd != 0x0)
-            stmt_index++;
+    // even, odd = await {Player('Even'), Player('Odd')}
+    function stmt_0_await_Even(bool choice, uint _step_count) state(0) step(_step_count) {
+        even = msg.sender;
+        x__choice = choice;
     }
 
-    function stmt_1_receive(bool val, uint _step_count) state(1) step(_step_count) {
-        if (msg.sender == Even) {
-            x = val; x__sender = msg.sender;
-        } else if (msg.sender == Odd) {
-            y = val; y__sender = msg.sender;
-        } else {
-            require(false);
-        }
+    function stmt_0_await_Odd(bool choice, uint _step_count) state(0) step(_step_count) {
+        odd = msg.sender;
+        y__choice = choice;
     }
 
-    function stmt_2_declare(uint _step_count) state(2) step(_step_count) {
-        address Winner = (x == y) ? Even : Odd;
-        Declare("${} won", Winner);
+    function stmt_1_declare(uint _step_count) state(1) step(_step_count) {
+        winner = (x == y) ? even : odd;
+        Declare("${} won", winner);
     }
 
     function end() state(2) {
@@ -244,58 +167,106 @@ contract TrustedSimultaneousGame is StateMachine {
 //[Example: simultaneous game] -- commitment etc.
 //[Example: simultaneous game with payment]
 
-//[Example: Auction without payment; combined]
-contract AuctionPayment is StateMachine {
+//[Example: Monty Hall]
+contract MontyHall is StateMachine {
     event Declare(string, address);
-    uint Role_Owner = 0;
-    uint Role_Bidder = 1;
-    address[2] private address_of;
+    address host;
+    bytes64 host__car__commit;
+    int host__car;
+    bool host__car__failed; // ad-hoc option type
+    int host__goat;
 
-    address Owner = 0x0;
-    address Bidder = 0x0;
-    address NewBidder = 0x0;
-    uint max; address __max_owner;
+    address guest;
+    int guest__door1;
+    int guest__door2;
 
-    function stmt_0_join(uint as_role, uint _step_count) state(0) step(_step_count) {
-        require(as_role == Role_Owner);
-        if (Owner != 0x0) revert();
-        Owner = msg.sender;
-
-        if (Owner != 0x0)
-            stmt_index++;
-        max = 0;
-        Bidder = 0x0;
+    // host = await Host
+    function stmt_0_await_Host(uint _step_count) step(_step_count) state(0) payable {
+        host = msg.sender;
+        host__amount = msg.value;
+    }
+    
+    // guest = await Guest
+    function stmt_1_await_Guest(uint _step_count) step(_step_count) state(1) {
+        guest = msg.sender;
     }
 
-    function stmt_1_join(uint as_role, uint _step_count) state(0) step(_step_count) payable {
-        if (stmt_index != 0) revert();
-        
-        require(as_role == Role_Bidder);
-        // "may_replace=Bidder"
-        if (NewBidder != Bidder) revert();
-        NewBidder = msg.sender;
-
-        if (NewBidder == Owner) {
-            // keep last Bidder
-            stmt_index = 3;
-            return;
-        }
-        require(msg.value > max);
-        
-        if (NewBidder != 0x0)
-            stmt_index++;
+    // with await hidden(host.car):
+    function stmt_2_with_await_hidden(int host__car__commit, uint _step_count) by(host) step(_step_count) state(2) {
+        host__car__commit = car__commit;
     }
 
-    function stmt_2_transfer(uint _step_count) state(2) step(_step_count) {
-        //LazySend(max, Bidder);
+    // await guest.door1
+    function stmt_3_await_door1(int door1, uint _step_count) by(guest) step(_step_count) state(3) {
+        guest__door1 = door1;
     }
 
-    function stmt_3_assign(uint _step_count) state(3) step(_step_count) {
-        Bidder = NewBidder;
+    // await host.goat; require(host.goat != guest.door1)
+    function stmt_4_await_goat(int goat, uint _step_count) by(host) step(_step_count) state(4) {
+        require(goat != guest__door1);
+        host__goat = goat;
     }
 
-    function stmt_4_declare(uint _step_count) state(4) step(_step_count) {
-        Declare("${} won", Bidder);
+    // await guest.door2;  require(guest.door2 != host.goat)
+    function stmt_5_await_door1(int door2, uint _step_count) by(guest) step(_step_count) state(5) {
+        require(door2 != gost__goat);
+        guest__door2 = door2;
+    }
+
+    // EXIT with await hidden(host.car)
+    function stmt_6_with_await_hidden(int car, uint salt, uint _step_count) by(host) step(_step_count) state(6) {
+        host__car__failed = sha3(car, salt) != host__car__commit);
+        if (!host__car__failed)
+            host__car = car;
+    }
+
+    function stmt_7_declare(uint _step_count) step(_step_count) state(7) {
+        if (host__car__failed || host__goat == host__car || guest__door2 == host__car)
+            Declare("${} won", guest);
+        else
+            Declare("${} won", host);
+    }
+
+    function end() state(8) {
+        selfdestruct(msg.sender);
+    }
+}
+
+//[Example: Auction]
+contract Auction is StateMachine {
+    event Declare(string, address);
+    address owner = 0x0;
+    uint owner__minimum;
+
+    uint last_offer;
+
+    address winner = 0x0;
+
+    function stmt_0_await_Owner(uint minimum, uint _step_count) state(0) step(_step_count) {
+        owner = msg.sender;
+        owner__minimum = minimum;
+
+        //combined - pure optimization?
+        last_offer = owner__minimum;
+    }
+
+    function stmt_1_await_Bidder(uint _step_count) state(0) step(_step_count) payable {
+        // isinstance is in the method name?
+        require(msg.value > last_offer);
+        lazy_transfer(winner, winner.amount);
+        last_offer = winner.amount;  // implicit coercion :(
+        winner = msg.sender;
+    }
+
+    function stmt_1_await_Stop(uint _step_count) state(0) step(_step_count) payable {
+        require(msg.address == owner);
+        // break 
+        stmt_index = 3;
+    }
+
+    function stmt_4_pay(uint _step_count) state(4) step(_step_count) {
+        transfer(bidder, winner.amount);
+        // no price yet
     }
 
     function end() state(2) {
