@@ -1,8 +1,7 @@
 #[Example: joint declaration]
-class A: ...
-class B: ...
-(a, b) = await A & B
-declare("${A.id} and ${B.id} are getting married")
+class Participant: pass
+(a, b) = await (Participant('A'), Participant('B'))
+declare("${A} and ${B} are getting married")
 
 #[Example: puzzle]
 class A:
@@ -33,14 +32,14 @@ pay(s, a.amount)
 #[Example: trusted simultaneous game]
 class Player:
     choice: bool
-even, odd = await Player('Even') & Player('Odd')
+even, odd = await (Player('Even'), Player('Odd'))
 Winner = even if even.choice == odd.choice else odd
 declare("${Winner.name} won")
 
 #[Example: simultaneous game]
 class Player:
     choice: bool
-even, odd = await independent(Player('Even') & Player('Odd'))
+even, odd = await independent(Player('Even'), Player('Odd'))
 Winner = even if even.choice == odd.choice else odd
 declare("${Winner.name} won")
 
@@ -48,9 +47,9 @@ declare("${Winner.name} won")
 class Player:
     choice: bool
     amount: money; require(amount == 50)
-even, odd = await independent(Player('Even') & Player('Odd'))
+even, odd = await independent(Player('Even'), Player('Odd'))
 winner = even if even.choice == odd.choice else odd
-pay(winner, even.money, odd.money)
+pay(winner, even.amount, odd.amount)
 
 #[Example: Binary option / external arbitration]
 class Oracle:
@@ -60,8 +59,7 @@ class Bet:
     bet: money
 
 oracle = await Oracle(id=0x2346234)
-with parallel:
-    more, less = await Bet('More') & Bet('Less')
+more, less = await (Bet('More'), Bet('Less'))
 
 is_more = await oracle.is_more
 winner = more if is_more else less
@@ -99,7 +97,7 @@ owner = await Owner
 class Bidder:
     pass
 
-bidders : dict[Bidder, future[int]] = {}
+bidders: dict[Bidder, future[int]] = {}
 while True:
     bidder = await Bidder | Stop(id=owner.id)
     if isinstance(bidder, Bidder):

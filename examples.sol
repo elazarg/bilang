@@ -29,28 +29,28 @@ contract StateMachine {
 //[Example: joint declaration]
 contract JointDeclaration is StateMachine {
     event Declare(string, address, address);
-    uint Role_A = 0;
-    uint Role_B = 1;
     address a;
     address b;
 
     // (a, b) = await {A, B}
-    function stmt_0_await_A(uint _step_count1, uint _step_count2) step(__step_count1), step(__step_count2) state_non_inc(0) {
+    function stmt_0_await_A(uint _step_count) step(_step_count) state_non_inc(0) {
         if (a != 0x0) revert();
         a = msg.sender;
         inc_if_finish();
     }
     
     // (a, b) = await {A, B}
-    function stmt_0_await_B(uint _step_count1, uint _step_count2) step(__step_count1), step(__step_count2) state_non_inc(0) {
+    function stmt_0_await_B(uint _step_count) step(_step_count) state_non_inc(0) {
         if (b != 0x0) revert();
         b = msg.sender;
         inc_if_finish();
     }
 
-    function inc_if_finish() {
-        if (a != 0x0 && b != 0x0)
+    function inc_if_finish() internal {
+        if (a != 0x0 && b != 0x0) {
+            step_count++;
             stmt_index++;
+        }
     }
 
     // declare("${A.id} and ${B.id} are getting married")
@@ -136,26 +136,45 @@ contract PuzzlePayment is StateMachine {
 contract TrustedSimultaneousGame is StateMachine {
     event Declare(string, address);
     address even;
-    bool x;
+    bool even__choice;
 
     address odd;
-    bool y;
+    bool odd__choice;
 
     address winner;
 
-    // even, odd = await {Player('Even'), Player('Odd')}
-    function stmt_0_await_Even(bool choice, uint _step_count) state(0) step(_step_count) {
+    function state_0_await_Even(bool choice, uint _step_count) {
+        require(_step_count == step_count);
+        require(state == 0);
+        if (even != 0x0) revert();
+        
         even = msg.sender;
-        x__choice = choice;
+        
+        even__choice = choice; 
+        
+        if (even != 0x0 && odd != 0x0) {
+            step_count += 1;
+            state = 1;
+        }
     }
 
-    function stmt_0_await_Odd(bool choice, uint _step_count) state(0) step(_step_count) {
+    function state_0_await_Odd(bool choice, uint _step_count) {
+        require(_step_count == step_count);
+        require(state == 0);
+        if (odd != 0x0) revert();
+        
         odd = msg.sender;
-        y__choice = choice;
+        
+        odd__choice = choice; 
+        
+        if (even != 0x0 && odd != 0x0) {
+            step_count += 1;
+            state = 1;
+        }
     }
 
     function stmt_1_declare(uint _step_count) state(1) step(_step_count) {
-        winner = (x == y) ? even : odd;
+        winner = (even__choice == odd__choice) ? even : odd;
         Declare("${} won", winner);
     }
 
@@ -250,7 +269,7 @@ contract Auction is StateMachine {
         last_offer = owner__minimum;
     }
 
-    function stmt_1_await_Bidder(uint _step_count) state(0) step(_step_count) payable {
+    function stmt_1_await_Bidder(uint _step_count) state(1) step(_step_count) payable {
         // isinstance is in the method name?
         require(msg.value > last_offer);
         lazy_transfer(winner, winner.amount);
@@ -258,13 +277,13 @@ contract Auction is StateMachine {
         winner = msg.sender;
     }
 
-    function stmt_1_await_Stop(uint _step_count) state(0) step(_step_count) payable {
+    function stmt_1_await_Stop(uint _step_count) state(1) step(_step_count) payable {
         require(msg.address == owner);
         // break 
         stmt_index = 3;
     }
 
-    function stmt_4_pay(uint _step_count) state(4) step(_step_count) {
+    function stmt_4_pay(uint _step_count) state(2) step(_step_count) {
         transfer(bidder, winner.amount);
         // no price yet
     }
