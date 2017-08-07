@@ -26,7 +26,7 @@ class Translator(ast.NodeVisitor):
             return ot.ParallelJoin([ot.JoinItem(self.visit(t), self.visit(r))
                                     for t, r in elts])
         assert isinstance(target, ast.Name)
-        return ot.Assign(target.id, n.value)
+        return ot.Assign(self.visit(target), n.value)
 
     def visit_AugAssign(self, n: ast.AugAssign) -> ot.Assign:
         return ot.Assign(n.target, ast.BinOp(n.op, n.target, n.value))

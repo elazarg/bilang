@@ -1,14 +1,12 @@
-import typing as tt
-from typing import NamedTuple
+from typing import NamedTuple, Sequence, Union
 
 
-TypeName = str
 VarName = str
 
-Block = tt.Sequence['Statement']
+Block = Sequence['Statement']
 
 # Pure expressions
-Exp = tt.Union['UnOp', 'BinOp', 'Call', 'Subscript', 'Attribute', 'IfExp', 'Const', 'VarName']
+Exp = Union['UnOp', 'BinOp', 'Call', 'Subscript', 'Attribute', 'IfExp', 'Const', 'VarName']
 
 
 class Session(NamedTuple):
@@ -19,15 +17,15 @@ class Session(NamedTuple):
 
 class VarDecl(NamedTuple):
     name: VarName
-    type: TypeName
+    type: str
     init: Exp
-    qualifiers: tt.Sequence[str]
+    qualifiers: Sequence[str]
 
 
 class Struct(NamedTuple):
     name: VarName
-    fields: tt.Sequence[VarDecl]
-    requirements: tt.Set[Exp]
+    fields: Sequence[VarDecl]
+    requirements: Sequence[Exp]
 
 
 # Statements
@@ -40,7 +38,7 @@ class Assign(NamedTuple):
 
 class Declare(NamedTuple):
     declaration: str
-    participants: tt.Sequence[int]
+    participants: Sequence[int]
 
 
 class Require(NamedTuple):
@@ -49,7 +47,7 @@ class Require(NamedTuple):
 
 class Pay(NamedTuple):
     name: VarName
-    args: tt.Sequence[str]
+    args: Sequence[str]
 
 
 class ExpressionStatement(NamedTuple):
@@ -67,14 +65,14 @@ class AwaitItem(NamedTuple):
 
 
 class ParallelJoin(NamedTuple):
-    items: tt.Sequence[JoinItem]
+    items: Sequence[JoinItem]
 
 
 class ParallelWait(NamedTuple):
-    items: tt.Sequence[AwaitItem]
+    items: Sequence[AwaitItem]
 
 
-Parallel = tt.Union[ParallelJoin, ParallelWait]
+Parallel = Union[ParallelJoin, ParallelWait]
 
 
 class IfElse(NamedTuple):
@@ -103,17 +101,14 @@ class With(NamedTuple):
     body: Block
 
 
-Statement = tt.Union[Assign,
-                     Declare,
-                     Pay,
-                     ParallelJoin,
-                     ParallelWait,
-                     ExpressionStatement]
+Statement = Union[Assign, ExpressionStatement,
+                  Declare, Pay, Require,
+                  ParallelJoin, ParallelWait]
 
 
 class Call(NamedTuple):
     func: str
-    args: tt.Sequence[Exp]
+    args: Sequence[Exp]
 
 
 class BinOp(NamedTuple):
@@ -138,13 +133,16 @@ class Const(NamedTuple):
 
 
 class Attribute(NamedTuple):
-    value: VarName
+    value: Exp
     attr: VarName
 
 
 class Subscript(NamedTuple):
     value: VarName
     index: Exp
+
+
+# # Visitor Generator
 
 
 cls_fmt = '''
