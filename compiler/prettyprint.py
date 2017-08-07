@@ -26,7 +26,7 @@ class Printer(NodeVisitor[str]):
     def visit_VarDecl(self, n: nodes.VarDecl) -> str:
         init = ''
         if n.init is not None:
-            init = self.visit(n.init)
+            init = ' = ' + self.visit(n.init)
         return f'{"".join(q + " " for q in n.qualifiers)}{n.type} {self.visit(n.name)}{init}'
 
     def visit_Assign(self, n: nodes.Assign) -> str:

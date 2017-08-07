@@ -1,2 +1,3 @@
 
-* should we allow reassigning role variables?
+* How to deal with reassigning role variables (and using list etc.)
+

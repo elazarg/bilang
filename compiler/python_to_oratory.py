@@ -22,7 +22,7 @@ class Translator(ast.NodeVisitor):
             else:
                 assert isinstance(expr, ast.Name)
                 assert isinstance(target, ast.Name)
-                elts = [(expr, target)]
+                elts = [(target, expr)]
             return ot.ParallelJoin([ot.JoinItem(self.visit(r), self.visit(t))
                                     for t, r in elts])
         assert isinstance(target, ast.Name)
@@ -33,8 +33,7 @@ class Translator(ast.NodeVisitor):
 
     def visit_AnnAssign(self, s: ast.AnnAssign) -> ot.VarDecl:
         qualifiers, t = parse_annotation(s.annotation)
-        return ot.VarDecl(name=self.visit(s.target),
-                          type=t,
+        return ot.VarDecl(name=self.visit(s.target), type=t,
                           init=s.value and self.visit(s.value),
                           qualifiers=qualifiers)
 
@@ -187,6 +186,8 @@ def parse_examples(code: str) -> None:
             res = translate(defn)
             from prettyprint import Printer
             print(Printer().visit(res))
+            from sessionfer import infer_stype
+            print(infer_stype(res))
 
 
 if __name__ == '__main__':
