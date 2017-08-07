@@ -1,49 +1,179 @@
-from typing import NamedTuple
 import typing as tt
+from typing import NamedTuple
 
-SymbolTable = tt.Dict[str, str]
 
+TypeName = str
+VarName = str
+
+Block = tt.Sequence['Statement']
+
+# Pure expressions
+Exp = tt.Union['UnOp', 'BinOp', 'Call', 'Subscript', 'Attribute', 'IfExp', 'Const', 'VarName']
+
+
+class Session(NamedTuple):
+    body: Block
+
+
+# Declarations
 
 class VarDecl(NamedTuple):
-    name: str
-    type: str
+    name: VarName
+    type: TypeName
+    init: Exp
+    qualifiers: tt.Sequence[str]
 
 
-class RoleClass(NamedTuple):
-    role_name: str
-    init_items: SymbolTable
-    requires: tt.List[str]
-    future_items: SymbolTable
-    money_items: SymbolTable
+class Struct(NamedTuple):
+    name: VarName
+    fields: tt.Sequence[VarDecl]
+    requirements: tt.Set[Exp]
 
 
-RoleTable = tt.Dict[str, RoleClass]
+# Statements
 
 
-class JoinItem(NamedTuple):
-    var_name: str
-    tag: str
-    role_class: RoleClass
-
-
-class WaitItem(NamedTuple):
-    role: str
-    var: VarDecl
-    requires: tt.List[str]
-
-
-class Parallel(NamedTuple):
-    items: tt.List[tt.Union[JoinItem, WaitItem]]
+class Assign(NamedTuple):
+    name: VarName
+    value: Exp
 
 
 class Declare(NamedTuple):
     declaration: str
+    participants: tt.Sequence[int]
+
+
+class Require(NamedTuple):
+    test: Exp
 
 
 class Pay(NamedTuple):
-    to: str
-    amounts: tt.List[str]
+    name: VarName
+    args: tt.Sequence[str]
 
 
-def mangle(name: str, attr: str) -> str:
-    return f'{name}__{attr}'
+class ExpressionStatement(NamedTuple):
+    value: Exp
+
+
+class JoinItem(NamedTuple):
+    tag: str
+    var: VarName
+
+
+class AwaitItem(NamedTuple):
+    to: VarName
+    attr: VarName
+
+
+class ParallelJoin(NamedTuple):
+    items: tt.Sequence[JoinItem]
+
+
+class ParallelWait(NamedTuple):
+    items: tt.Sequence[AwaitItem]
+
+
+Parallel = tt.Union[ParallelJoin, ParallelWait]
+
+
+class IfElse(NamedTuple):
+    test: Exp
+    body: Block
+    orelse: Block
+
+
+class While(NamedTuple):
+    test: Exp
+    body: Block
+    # No orelse
+
+
+class Continue(NamedTuple):
+    pass
+
+
+class Break(NamedTuple):
+    pass
+
+
+class With(NamedTuple):
+    context: Exp
+    var: str
+    body: Block
+
+
+Statement = tt.Union[Assign,
+                     Declare,
+                     Pay,
+                     ParallelJoin,
+                     ParallelWait,
+                     ExpressionStatement]
+
+
+class Call(NamedTuple):
+    func: str
+    args: tt.Sequence[Exp]
+
+
+class BinOp(NamedTuple):
+    left: Exp
+    op: str
+    right: Exp
+
+
+class UnaryOp(NamedTuple):
+    op: str
+    operand: Exp
+
+
+class IfExp(NamedTuple):
+    test: Exp
+    body: Exp
+    orelse: Exp
+
+
+class Const(NamedTuple):
+    n: object
+
+
+class Attribute(NamedTuple):
+    value: VarName
+    attr: VarName
+
+
+class Subscript(NamedTuple):
+    value: VarName
+    index: Exp
+
+
+cls_fmt = '''
+from typing import TypeVar, Generic
+import {mod}
+
+_T = TypeVar('_T')
+
+
+class NodeVisitor(Generic(_T)):
+    """
+    """
+    {defs}
+'''
+
+def_fmt = '''
+    def visit_{name}(self, node: {mod}.{name}) -> _T:
+        raise NotImplementedError
+'''
+
+
+def generate_visitor(vs):
+    from os.path import basename
+    mod = basename(__file__)[:-3]
+    defs = ''.join(def_fmt.format(name=name, varname=name[0].lower(), mod=mod)
+                   for name, v in vs.items()
+                   if hasattr(v, '_fields'))
+    return cls_fmt.format(defs=defs, mod=mod)
+
+if __name__ == '__main__':
+    with open('generated/visitor.py', 'w') as f:
+        print(generate_visitor(vars()), file=f, end='')

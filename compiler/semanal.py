@@ -1,7 +1,7 @@
 import ast
 from ast import NodeVisitor, Expr
 
-from nodes import *
+from infos import *
 import typing as tt
 from solidifier import to_str
 
@@ -46,8 +46,7 @@ class StraightLineVisitor(NodeVisitor):
             self.statements.append(to_str(n))
 
     def handle_await(self, role: str, var_name: str) -> WaitItem:
-        var = VarDecl(var_name, self.type_of(role, var_name))
-        return WaitItem(role, var, [])
+        return WaitItem(role, var_name, self.type_of(role, var_name), [])
 
     def type_of(self, role: str, attr: str):
         return self.role_of[role].future_items[attr]
@@ -70,7 +69,7 @@ class StraightLineVisitor(NodeVisitor):
         self.statements.append(joins)
 
     def handle_parallel_await(self, items: tt.Sequence[ast.Attribute]):
-        waits = Parallel([self.handle_await(name, attr) for name, attr in items])
+        waits = Parallel([self.handle_await(attr.value.id, attr.attr) for attr in items])
         self.statements.append(waits)
 
     def visit_Await(self, value):
@@ -115,11 +114,14 @@ class StraightLineVisitor(NodeVisitor):
                 to, *args = call.args
                 self.statements.append(Pay(to_str(to), [to_str(arg) for arg in args]))
         elif isinstance(expr, ast.Await):
-            attr = expr.value
-            assert isinstance(attr, ast.Attribute)
-            assert isinstance(attr.value, ast.Name)
-            wait = self.handle_await(attr.value.id, attr.attr)
-            self.statements.append(wait)
+            if isinstance(expr.value, ast.Tuple):
+                self.handle_parallel_await(expr.value.elts)
+            else:
+                attr = expr.value
+                assert isinstance(attr, ast.Attribute)
+                assert isinstance(attr.value, ast.Name)
+                wait = self.handle_await(attr.value.id, attr.attr)
+                self.statements.append(wait)
 
     def visit_For(self, target, iter, body, orelse): pass
 

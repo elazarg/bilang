@@ -1,5 +1,5 @@
 from typing import *
-from nodes import *
+from infos import *
 
 State = int
 
@@ -48,17 +48,30 @@ def emit_join(src: State, dst: State, j: JoinItem, is_parallel: bool = False) ->
     inits += f'''
         {j.var_name} = msg.sender;'''
     assert len(r.money_items) <= 1
+    requires = r.requires
     for m in r.money_items:
+        mn = mangle(j.var_name, m)
+        for i, req in enumerate(r.requires):
+            if f'{m} == ' in req:
+                inits += f'''
+        {mn} = {req[len(m) + 4:]};'''
+                del requires[i]
+            if f'{mn} == ' in req:
+                inits += f'''
+            {mn} = {req[len(mn) + 4:]};'''
+                del requires[i]
+    mrs = ' + '.join(mangle(j.var_name, m) for m in r.money_items)
+    if mrs:
         inits += f'''
-        {mangle(j.var_name, m)} = msg.value;'''
-    emit_func(src, dst, 'join', j.tag, args, j.var_name, r.requires, inits, is_parallel)
+        require({mrs} == msg.value);'''
+    emit_func(src, dst, 'join', j.tag, args, j.var_name, requires, inits, is_parallel)
 
 
 def emit_attr(src: State, dst: State, att: WaitItem, is_parallel: bool = False) -> None:
-    args = str_args({att.var.name: att.var.type, **STEP_VAR})
-    inits = str_inits(att.role, [att.var.name])
+    args = str_args({att.var_name: att.var_type, **STEP_VAR})
+    inits = str_inits(att.role, [att.var_name])
     requires = [f'msg.sender == {att.role}'] + att.requires
-    emit_func(src, dst, 'await', att.role, args, att.var.name, requires, inits, is_parallel)
+    emit_func(src, dst, 'await', att.role, args, att.var_name, requires, inits, is_parallel)
 
 
 def emit_parallel(src: State, dst: State, p: Parallel) -> None:
@@ -67,7 +80,9 @@ def emit_parallel(src: State, dst: State, p: Parallel) -> None:
             emit_join(src, dst, j, is_parallel=True)
         if isinstance(j, WaitItem):
             emit_attr(src, dst, j, is_parallel=True)
-    parallel_test = ' && '.join(f'{j.var_name} != 0x0' for j in p.items)
+    parallel_test = ' && '.join(f'{j.var_name} != 0x0' if isinstance(j, JoinItem) else
+                                f'{mangle(j.role, j.var_name)}__initialized' if isinstance(j, WaitItem) else '???'
+                                for j in p.items)
     print(f'''
     function move_{src}_{dst}_if_done() internal {{
         if ({parallel_test}) {{
