@@ -1,15 +1,31 @@
 from typing import NamedTuple, Sequence, Union
 
 
-VarName = str
-
 Block = Sequence['Statement']
 
 # Pure expressions
-Exp = Union['UnOp', 'BinOp', 'Call', 'Subscript', 'Attribute', 'IfExp', 'Const', 'VarName']
+Exp = Union['UnOp', 'BinOp', 'UnaryOp', 'Call', 'Subscript',
+            'Attribute', 'IfExp', 'Const', 'VarName']
+
+
+class VarName(NamedTuple):
+    id: str
+
+
+class LvalVar(NamedTuple):
+    id: str
+
+
+class LvalAttr(NamedTuple):
+    value: Exp
+    attr: str
+
+Lvalue = Union[LvalVar, LvalAttr]
+
 
 
 class Session(NamedTuple):
+    name: LvalVar
     body: Block
 
 
@@ -32,7 +48,7 @@ class Struct(NamedTuple):
 
 
 class Assign(NamedTuple):
-    name: VarName
+    name: LvalVar
     value: Exp
 
 
@@ -56,7 +72,7 @@ class ExpressionStatement(NamedTuple):
 
 class JoinItem(NamedTuple):
     tag: str
-    var: VarName
+    var: LvalVar
 
 
 class AwaitItem(NamedTuple):
@@ -97,7 +113,7 @@ class Break(NamedTuple):
 
 class With(NamedTuple):
     context: Exp
-    var: str
+    var: LvalVar
     body: Block
 
 
@@ -107,7 +123,7 @@ Statement = Union[Assign, ExpressionStatement,
 
 
 class Call(NamedTuple):
-    func: str
+    func: Exp
     args: Sequence[Exp]
 
 
@@ -140,38 +156,3 @@ class Attribute(NamedTuple):
 class Subscript(NamedTuple):
     value: VarName
     index: Exp
-
-
-# # Visitor Generator
-
-
-cls_fmt = '''
-from typing import TypeVar, Generic
-import {mod}
-
-_T = TypeVar('_T')
-
-
-class NodeVisitor(Generic(_T)):
-    """
-    """
-    {defs}
-'''
-
-def_fmt = '''
-    def visit_{name}(self, node: {mod}.{name}) -> _T:
-        raise NotImplementedError
-'''
-
-
-def generate_visitor(vs):
-    from os.path import basename
-    mod = basename(__file__)[:-3]
-    defs = ''.join(def_fmt.format(name=name, varname=name[0].lower(), mod=mod)
-                   for name, v in vs.items()
-                   if hasattr(v, '_fields'))
-    return cls_fmt.format(defs=defs, mod=mod)
-
-if __name__ == '__main__':
-    with open('generated/visitor.py', 'w') as f:
-        print(generate_visitor(vars()), file=f, end='')

@@ -1,83 +1,104 @@
-
-from typing import TypeVar, Generic
-import nodes
+from typing import TypeVar, Generic, Sequence, Union, Any
+from nodes import Exp, Lvalue, JoinItem, Break, UnaryOp, ParallelWait, LvalVar, IfElse, BinOp, LvalAttr, Session, Attribute, Require, Assign, VarName, AwaitItem, VarDecl, Call, With, Pay, ExpressionStatement, Subscript, Struct, Declare, Continue, Const, IfExp, ParallelJoin, While
 
 _T = TypeVar('_T')
+_Q = TypeVar('_Q')
 
 
-class NodeVisitor(Generic(_T)):
-    """
-    """
+class Visitor(Generic[_T, _Q]):
+    def visit(self, node) -> _T:
+        return getattr(self, 'visit_' + type(node).__name__)(node)
+
+
+class ExpVisitor(Generic[_T], Visitor[Exp, _T]):
     
-    def visit_Session(self, node: nodes.Session) -> _T:
+    def visit_VarName(self, node: VarName) -> _T:
         raise NotImplementedError
 
-    def visit_VarDecl(self, node: nodes.VarDecl) -> _T:
+    def visit_Call(self, node: Call) -> _T:
         raise NotImplementedError
 
-    def visit_Struct(self, node: nodes.Struct) -> _T:
+    def visit_BinOp(self, node: BinOp) -> _T:
         raise NotImplementedError
 
-    def visit_Assign(self, node: nodes.Assign) -> _T:
+    def visit_UnaryOp(self, node: UnaryOp) -> _T:
         raise NotImplementedError
 
-    def visit_Declare(self, node: nodes.Declare) -> _T:
+    def visit_IfExp(self, node: IfExp) -> _T:
         raise NotImplementedError
 
-    def visit_Require(self, node: nodes.Require) -> _T:
+    def visit_Const(self, node: Const) -> _T:
         raise NotImplementedError
 
-    def visit_Pay(self, node: nodes.Pay) -> _T:
+    def visit_Attribute(self, node: Attribute) -> _T:
         raise NotImplementedError
 
-    def visit_ExpressionStatement(self, node: nodes.ExpressionStatement) -> _T:
+    def visit_Subscript(self, node: Subscript) -> _T:
         raise NotImplementedError
 
-    def visit_JoinItem(self, node: nodes.JoinItem) -> _T:
+
+class LvalVisitor(Generic[_T], Visitor[Lvalue, _T]):
+    
+    def visit_LvalVar(self, node: LvalVar) -> _T:
         raise NotImplementedError
 
-    def visit_AwaitItem(self, node: nodes.AwaitItem) -> _T:
+    def visit_LvalAttr(self, node: LvalAttr) -> _T:
         raise NotImplementedError
 
-    def visit_ParallelJoin(self, node: nodes.ParallelJoin) -> _T:
+
+class StmtVisitor(Generic[_T], Visitor[Any, _T]):
+    
+    def visit_Session(self, node: Session) -> _T:
         raise NotImplementedError
 
-    def visit_ParallelWait(self, node: nodes.ParallelWait) -> _T:
+    def visit_VarDecl(self, node: VarDecl) -> _T:
         raise NotImplementedError
 
-    def visit_IfElse(self, node: nodes.IfElse) -> _T:
+    def visit_Struct(self, node: Struct) -> _T:
         raise NotImplementedError
 
-    def visit_While(self, node: nodes.While) -> _T:
+    def visit_Assign(self, node: Assign) -> _T:
         raise NotImplementedError
 
-    def visit_Continue(self, node: nodes.Continue) -> _T:
+    def visit_Declare(self, node: Declare) -> _T:
         raise NotImplementedError
 
-    def visit_Break(self, node: nodes.Break) -> _T:
+    def visit_Require(self, node: Require) -> _T:
         raise NotImplementedError
 
-    def visit_With(self, node: nodes.With) -> _T:
+    def visit_Pay(self, node: Pay) -> _T:
         raise NotImplementedError
 
-    def visit_Call(self, node: nodes.Call) -> _T:
+    def visit_ExpressionStatement(self, node: ExpressionStatement) -> _T:
         raise NotImplementedError
 
-    def visit_BinOp(self, node: nodes.BinOp) -> _T:
+    def visit_JoinItem(self, node: JoinItem) -> _T:
         raise NotImplementedError
 
-    def visit_UnaryOp(self, node: nodes.UnaryOp) -> _T:
+    def visit_AwaitItem(self, node: AwaitItem) -> _T:
         raise NotImplementedError
 
-    def visit_IfExp(self, node: nodes.IfExp) -> _T:
+    def visit_ParallelJoin(self, node: ParallelJoin) -> _T:
         raise NotImplementedError
 
-    def visit_Const(self, node: nodes.Const) -> _T:
+    def visit_ParallelWait(self, node: ParallelWait) -> _T:
         raise NotImplementedError
 
-    def visit_Attribute(self, node: nodes.Attribute) -> _T:
+    def visit_IfElse(self, node: IfElse) -> _T:
         raise NotImplementedError
 
-    def visit_Subscript(self, node: nodes.Subscript) -> _T:
+    def visit_While(self, node: While) -> _T:
         raise NotImplementedError
 
+    def visit_Continue(self, node: Continue) -> _T:
+        raise NotImplementedError
+
+    def visit_Break(self, node: Break) -> _T:
+        raise NotImplementedError
+
+    def visit_With(self, node: With) -> _T:
+        raise NotImplementedError
+
+
+class NodeVisitor(Generic[_T], ExpVisitor[_T], StmtVisitor[_T], LvalVisitor[_T]):
+    pass

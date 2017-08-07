@@ -6,7 +6,7 @@ import typing as tt
 
 class Translator(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, d: ast.AsyncFunctionDef) -> ot.Session:
-        return ot.Session([self.visit(stmt) for stmt in d.body])
+        return ot.Session(ot.LvalVar(d.name), [self.visit(stmt) for stmt in d.body])
 
     def visit_Assign(self, n: ast.Assign) -> tt.Union[ot.Assign, ot.ParallelJoin]:
         assert len(n.targets) == 1
@@ -23,13 +23,13 @@ class Translator(ast.NodeVisitor):
                 assert isinstance(expr, ast.Name)
                 assert isinstance(target, ast.Name)
                 elts = [(expr, target)]
-            return ot.ParallelJoin([ot.JoinItem(self.visit(t), self.visit(r))
+            return ot.ParallelJoin([ot.JoinItem(self.visit(r), self.visit(t))
                                     for t, r in elts])
         assert isinstance(target, ast.Name)
         return ot.Assign(self.visit(target), n.value)
 
     def visit_AugAssign(self, n: ast.AugAssign) -> ot.Assign:
-        return ot.Assign(n.target, ast.BinOp(n.op, n.target, n.value))
+        return ot.Assign(self.visit(n.target), ast.BinOp(n.op, n.target, n.value))
 
     def visit_AnnAssign(self, s: ast.AnnAssign) -> ot.VarDecl:
         qualifiers, t = parse_annotation(s.annotation)
@@ -85,15 +85,23 @@ class Translator(ast.NodeVisitor):
         [item] = w.items[0]
         return ot.With(item.context, item.optional_var, w.body)
 
-    def visit_Break(self, c): return ot.Break
+    def visit_Break(self, c):
+        return ot.Break
 
-    def visit_Continue(self, c): return ot.Continue
+    def visit_Continue(self, c):
+        return ot.Continue
 
     def visit_Attribute(self, n: ast.Attribute) -> ot.Attribute:
-        return ot.Attribute(self.visit(n.value), n.attr)
+        if isinstance(n.ctx, ast.Load):
+            return ot.Attribute(self.visit(n.value), n.attr)
+        else:
+            return ot.LvalAttr(self.visit(n.value), n.attr)
 
-    def visit_Name(self, node: ast.Name) -> str:
-        return node.id
+    def visit_Name(self, n: ast.Name) -> tt.Union[ot.VarName, ot.LvalVar]:
+        if isinstance(n.ctx, ast.Load):
+            return ot.VarName(n.id)
+        else:
+            return ot.LvalVar(n.id)
 
     def visit_Num(self, node: ast.Num) -> ot.Const:
         return ot.Const(node.n)
@@ -126,8 +134,38 @@ class Translator(ast.NodeVisitor):
     def visit_IfExp(self, n: ast.IfExp):
         return ot.IfExp(self.visit(n.test), self.visit(n.body), self.visit(n.orelse))
 
+    def visit_And(self, n: ast.And): return '&&'
+    def visit_Or(self, n: ast.Or): return '||'
+    def visit_Add(self, n: ast.Add): return '+'
+    def visit_Sub(self, n: ast.Sub): return '-'
+    def visit_Mult(self, n: ast.Mult): return '*'
+    def visit_MatMult(self, n: ast.MatMult): assert False
+    def visit_Div(self, n: ast.Div): return '/'
+    def visit_Mod(self, n: ast.Mod): return '%'
+    def visit_Pow(self, n: ast.Pow):  assert False
+    def visit_LShift(self, n: ast.LShift): return '<<'
+    def visit_RShift(self, n: ast.RShift): return '>>'
+    def visit_BitOr(self, n: ast.BitOr): return '|'
+    def visit_BitXor(self, n: ast.BitXor): return '^'
+    def visit_BitAnd(self, n: ast.BitAnd): return '&'
+    def visit_FloorDiv(self, n: ast.FloorDiv): return '/'
+    def visit_Invert(self, n: ast.Invert): return '~'
+    def visit_Not(self, n: ast.Not): return '!'
+    def visit_UAdd(self, n: ast.UAdd): return '+'
+    def visit_USub(self, n: ast.USub): return '-'
+    def visit_Eq(self, n: ast.Eq): return '=='
+    def visit_NotEq(self, n: ast.NotEq): return '!='
+    def visit_Lt(self, n: ast.Lt): return '<'
+    def visit_LtE(self, n: ast.LtE): return '<='
+    def visit_Gt(self, n: ast.Gt): return '>'
+    def visit_GtE(self, n: ast.GtE): return '>='
+    def visit_Is(self, n: ast.Is):  assert False
+    def visit_IsNot(self, n: ast.IsNot):  assert False
+    def visit_In(self, n: ast.In):  assert False
+    def visit_NotIn(self, n: ast.NotIn):  assert False
 
-def parse_annotation(ann: ast.Expression) -> tt.Tuple[tt.Sequence[str], ot.TypeName]:
+
+def parse_annotation(ann: ast.Expression) -> tt.Tuple[tt.Sequence[str], str]:
     seq = []
     while isinstance(ann, ast.Subscript):
         assert isinstance(ann.value, ast.Name), ann.value
@@ -146,7 +184,9 @@ def parse_examples(code: str) -> None:
     node = ast.parse(code)
     for defn in node.body:
         if isinstance(defn, ast.AsyncFunctionDef):
-            print(translate(defn))
+            res = translate(defn)
+            from prettyprint import Printer
+            print(Printer().visit(res))
 
 
 if __name__ == '__main__':
