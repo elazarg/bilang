@@ -1,7 +1,7 @@
 #[Example: joint declaration]
 class Participant: pass
 (a, b) = await (Participant('A'), Participant('B'))
-declare("${A} and ${B} are getting married")
+declare("${a} and ${b} are getting married")
 
 #[Example: puzzle]
 class A:
