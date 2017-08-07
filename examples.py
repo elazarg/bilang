@@ -1,85 +1,66 @@
 #[Example: joint declaration]
-class Participant: pass
-(a, b) = await (Participant('A'), Participant('B'))
-declare("${a} and ${b} are getting married")
+(A, B) = await ([role], [role])
+declare("${A} and ${B} are getting married")
 
 #[Example: puzzle]
-class A:
-    q: int
-a = await A
+A = await role
+q = await A[int]
 
-class S:
+class Solution:
     m: int; require(m != 1)
     n: int; require(n != 1)
     require(m * n == a.q)
-s = await S
+S = await role
+s = await S[Solution]
 
 declare("${s} solved the problem!")
 
 #[Example: puzzle with payment]
-class A:
-    amount: money
-    q: int
-a = await S
+A = await role
+q = await A[int]
+prize = await A[money]
+# shorthand: [q, prize] = await role[int, money]
 
-class S:
+class Solution:
     m: int; require(m != 1)
     n: int; require(n != 1)
     require(m * n == a.q)
-s = await S
-pay(s, a.amount)
-
-#[Example: trusted simultaneous game]
-class Player:
-    choice: bool
-even, odd = await (Player('Even'), Player('Odd'))
-Winner = even if even.choice == odd.choice else odd
-declare("${Winner.name} won")
+S = await role
+_ = await S[Solution]
+# _ = await role[Solution]
+pay(S, prize)
 
 #[Example: simultaneous game]
-class Player:
-    choice: bool
-even, odd = await independent(Player('Even'), Player('Odd'))
-Winner = even if even.choice == odd.choice else odd
+Even, Odd = await (role, role)
+even_choice, odd_choice = await (even[bool], odd[bool])
+Winner = even if even_choice == odd_choice else odd
 declare("${Winner.name} won")
 
 #[Example: simultaneous game with payment]
-class Player:
-    choice: bool
-    amount: money; require(amount == 50)
-even, odd = await independent(Player('Even'), Player('Odd'))
-winner = even if even.choice == odd.choice else odd
+Even, Odd = await (role, role)
+even_choice, odd_choice = await (even[bool], odd[bool])
+Winner = even if even_choice == odd_choice else odd
 pay(winner, even.amount, odd.amount)
 
 #[Example: Binary option / external arbitration]
-class Oracle:
-    # This is _not_ a commitment, just an acknowledgement of future (value unknown) request
-    is_more: future[bool]
-class Bet:
-    bet: money
-
-oracle = await Oracle(id=0x2346234)
-more, less = await (Bet('More'), Bet('Less'))
-
-is_more = await oracle.is_more
-winner = more if is_more else less
-pay(winner, less.bet, more.bet)
+Oracle = await role(id=0x2346234)
+[More, bet1], [Less, bet2] = await (role[money], role[money])
+is_more = await Oracle[bool]
+Winner = <ore if is_more else Less
+pay(winner, bet1, bet2)
 
 #[Example: Auction]
-class Owner:
-    minimum: uint
+Owner = await role
 
-owner = await Owner
-
-last_offer: uint = owner.minimum
+last_offer = await Owner[uint]
 while True:
     class Bidder:
         amount: money; require(amount > last_offer)
 
     # It doesn't behave like a global session here - it's as if there's "Server" and "EveryoneElse"
     # And here the choice is at "EveryoneElse"
-    new_bidder = await (RealBidder | Stop(id=owner.id))
-    if isinstance(new_bidder, RealBidder):
+    new_bidder = await (role | Stop(id=owner.id))
+    if new_bidder.id == owner.id:
         transfer(winner, winner.amount)
         winner = new_bidder
         last_offer = len(winner.amount)  # explicit coercion
@@ -117,22 +98,14 @@ declare("${winner} has won")
 pay(owner, winner.amount)
 
 #[Example: Monty Hall]
-class Host:
-    car: future[hidden[int]]
-    goat: future[int]
+Host = await role
+Guest = await role
+with await hidden(Host[int]) as car:
+    door1 = await Guest[int]
+    goat = await Host[int];  require(goat != door1)
+    door1 = await Guest[int];  require(door2 != goat)
 
-class Guest:
-    door1: future[int]
-    door2: future[int]
-
-host = await Host
-guest = await Guest
-with await hidden(host.car):
-    await guest.door1
-    await host.goat;    require(host.goat != guest.door1)
-    await guest.door2;  require(guest.door2 != host.goat)
-
-if host.car is None or host.goat == host.car or guest.door2 == host.car:
-    declare("${guest} won")
+if car is None or goat == car or door2 == car:
+    declare("${Guest} won")
 else:
-    declare("${host} won")
+    declare("${Host} won")
