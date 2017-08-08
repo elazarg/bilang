@@ -23,7 +23,6 @@ class LvalAttr(NamedTuple):
 Lvalue = Union[LvalVar, LvalAttr]
 
 
-
 class Session(NamedTuple):
     name: LvalVar
     body: Block
@@ -118,7 +117,9 @@ class With(NamedTuple):
 
 
 Statement = Union[Assign, ExpressionStatement,
+                  IfElse, While, With,
                   Declare, Pay, Require,
+                  Continue, Break,
                   ParallelJoin, ParallelWait]
 
 
