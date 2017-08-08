@@ -36,19 +36,16 @@ class SessionInferenceVisitor(StmtVisitor[Optional[str]]):
         res += '}'
         return res
 
-    def visit_ParallelJoin(self, n: nodes.ParallelJoin) -> str:
+    def visit_Parallel(self, n: nodes.Parallel) -> str:
         return self.parallel(n.items)
 
     def visit_JoinItem(self, n: nodes.JoinItem) -> str:
         return f'S connects {n.var.id};'
 
-    def visit_ParallelWait(self, n: nodes.ParallelWait) -> str:
-        return self.parallel(n.items)
-
     def visit_AwaitItem(self, n: nodes.AwaitItem) -> str:
         res = ''
         # res += f'request_{n.attr}() from S to {n.to.id}; '
-        res += f'{n.attr}() from {n.to.id} to S;'
+        res += f'receive({", ".join(self.visit(t) for t in n.types)}) from {n.to.id} to S;'
         return res
 
     def visit_IfElse(self, n: nodes.IfElse) -> str:
@@ -63,6 +60,9 @@ class SessionInferenceVisitor(StmtVisitor[Optional[str]]):
 
     def visit_Break(self, n: nodes.Break) -> None:
         return None
+
+    def visit_VarName(self, n: nodes.VarName) -> None:
+        return n.id
 
     def block(self, *blocks: list) -> str:
         self.depth += 1

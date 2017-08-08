@@ -202,8 +202,8 @@ def parse_examples(code: str) -> None:
             print(res)
             from prettyprint import Printer
             print(Printer().visit(res))
-            #from sessionfer import infer_stype
-            #print(infer_stype(res))
+            from sessionfer import infer_stype
+            print(infer_stype(res))
 
 
 if __name__ == '__main__':
