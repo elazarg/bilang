@@ -49,6 +49,19 @@ is_more = await Oracle[bool]
 Winner = <ore if is_more else Less
 pay(winner, bet1, bet2)
 
+#[Example: Monty Hall]
+Host = await role
+Guest = await role
+with await hidden(Host[int]) as car:
+    door1 = await Guest[int]
+    goat = await Host[int];  require(goat != door1)
+    door1 = await Guest[int];  require(door2 != goat)
+
+if car is None or goat == car or door2 == car:
+    declare("${Guest} won")
+else:
+    declare("${Host} won")
+
 #[Example: Auction]
 Owner = await role
 
@@ -96,16 +109,3 @@ async for bidder, bidder.bid in yield from bidders.items():
 
 declare("${winner} has won")
 pay(owner, winner.amount)
-
-#[Example: Monty Hall]
-Host = await role
-Guest = await role
-with await hidden(Host[int]) as car:
-    door1 = await Guest[int]
-    goat = await Host[int];  require(goat != door1)
-    door1 = await Guest[int];  require(door2 != goat)
-
-if car is None or goat == car or door2 == car:
-    declare("${Guest} won")
-else:
-    declare("${Host} won")

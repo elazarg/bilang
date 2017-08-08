@@ -8,7 +8,7 @@ class Translator(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, d: ast.AsyncFunctionDef) -> ot.Session:
         return ot.Session(ot.LvalVar(d.name), [self.visit(stmt) for stmt in d.body])
 
-    def visit_Assign(self, n: ast.Assign) -> tt.Union[ot.Assign, ot.ParallelJoin]:
+    def visit_Assign(self, n: ast.Assign) -> tt.Union[ot.Assign, ot.Parallel]:
         assert len(n.targets) == 1
         target = n.targets[0]
         if isinstance(n.value, ast.Await):
@@ -20,13 +20,33 @@ class Translator(ast.NodeVisitor):
                     raise SyntaxWarning
                 elts = list(zip(targets, rvals))
             else:
-                assert isinstance(expr, ast.Name)
-                assert isinstance(target, ast.Name)
                 elts = [(target, expr)]
-            return ot.ParallelJoin([ot.JoinItem(self.visit(r), self.visit(t))
-                                    for t, r in elts])
+            return self.parallel(elts)
         assert isinstance(target, ast.Name)
-        return ot.Assign(self.visit(target), n.value)
+        return ot.Assign(self.visit(target), self.visit(n.value))
+
+    def parallel(self, elts: tt.Sequence[tt.Tuple[ast.Expr, ast.Expr]]):
+        items = []
+        for target, expr in elts:
+            if isinstance(expr, ast.Str):
+                # Join
+                items.append(ot.JoinItem(self.visit(expr), self.visit(target)))
+            elif isinstance(expr, ast.Subscript):
+                # Await
+                type_arg = expr.slice.value
+                if isinstance(type_arg, ast.Tuple):
+                    assert isinstance(target, ast.List)
+                    type_args = type_arg.elts
+                    targets = target.elts
+                else:
+                    type_args = [type_arg]
+                    targets = [target]
+                items.append(ot.AwaitItem(self.visit(expr.value),
+                                          [self.visit(t) for t in targets],
+                                          [self.visit(a) for a in type_args]))
+            else:
+                assert False, expr
+        return ot.Parallel(items)
 
     def visit_AugAssign(self, n: ast.AugAssign) -> ot.Assign:
         return ot.Assign(self.visit(n.target), ast.BinOp(n.op, n.target, n.value))
@@ -50,7 +70,7 @@ class Translator(ast.NodeVisitor):
                 raise SyntaxError(stmt)
         return ot.Struct(cls.name, fields, reqs)
 
-    def visit_Expr(self, body: ast.Expr) -> tt.Union[ot.Require, ot.Declare, ot.Pay, ot.ParallelWait, ot.ExpressionStatement]:
+    def visit_Expr(self, body: ast.Expr) -> tt.Union[ot.Require, ot.Declare, ot.Pay, ot.Parallel, ot.ExpressionStatement]:
         expr = body.value
         if isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name):
             call = expr
@@ -67,14 +87,6 @@ class Translator(ast.NodeVisitor):
                 to, *args = call.args
                 assert isinstance(to, ast.Name), to
                 return ot.Pay(self.visit(to), [self.visit(arg) for arg in args])
-        elif isinstance(expr, ast.Await):
-            if isinstance(expr.value, ast.Tuple):
-                elts = expr.value.elts
-            else:
-                assert isinstance(expr.value, ast.Attribute)
-                elts = [expr.value]
-            return ot.ParallelWait([ot.AwaitItem(self.visit(att.value), att.attr)
-                                    for att in elts])
         return ot.ExpressionStatement(body)
 
     def visit_While(self, w: ast.While):
@@ -107,6 +119,9 @@ class Translator(ast.NodeVisitor):
 
     def visit_Str(self, node: ast.Str) -> ot.Const:
         return ot.Const(node.s)
+
+    def visit_List(self, node: ast.Str) -> ot.Const:
+        assert False
 
     def visit_BoolOp(self, n: ast.BoolOp) -> ot.BinOp:
         left, right = n.values
@@ -184,10 +199,11 @@ def parse_examples(code: str) -> None:
     for defn in node.body:
         if isinstance(defn, ast.AsyncFunctionDef):
             res = translate(defn)
+            print(res)
             from prettyprint import Printer
             print(Printer().visit(res))
-            from sessionfer import infer_stype
-            print(infer_stype(res))
+            #from sessionfer import infer_stype
+            #print(infer_stype(res))
 
 
 if __name__ == '__main__':

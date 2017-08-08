@@ -32,20 +32,20 @@ class Printer(NodeVisitor[str]):
     def visit_Assign(self, n: nodes.Assign) -> str:
         return f'{self.visit(n.name)} = {self.visit(n.value)}'
 
-    def visit_ParallelJoin(self, n: nodes.ParallelJoin) -> str:
-        return 'join ' + ' '.join(f'{self.visit(item)}' for item in n.items)
-
-    def visit_ParallelWait(self, n: nodes.ParallelWait) -> str:
-        return 'wait ' + ' '.join(f'{self.visit(item)}' for item in n.items)
+    def visit_Parallel(self, n: nodes.Parallel) -> str:
+        return ' and '.join(f'{self.visit(item)}' for item in n.items)
 
     def visit_JoinItem(self, node: nodes.JoinItem) -> str:
         if node.var is not None:
-            return f'{self.visit(node.tag)} as {self.visit(node.var)}'
+            return f'join {self.visit(node.tag)} as {self.visit(node.var)}'
         else:
-            return f'{self.visit(node.tag)}'
+            return f'join {self.visit(node.tag)}'
 
     def visit_AwaitItem(self, node: nodes.AwaitItem) -> str:
-        return f'{self.visit(node.to)}.{node.attr}'
+        assert all(x is not None for x in node.targets), node.targets
+        assert node.types is not None
+        assert node.types is not None
+        return f'wait {self.args(node.targets)} = {self.visit(node.to)}[{self.args(node.types)}]'
 
     def visit_Struct(self, n: nodes.Struct) -> str:
         return f'Struct {n.name}{self.block(n.fields)}'

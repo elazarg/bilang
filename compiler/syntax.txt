@@ -26,8 +26,7 @@ Stmt:       BasicCmd
 BasicCmd:   PrimCmd |
             VisibleCmd | 
             ErrorCmd | 
-            JCommCmd | 
-            WCommCmd  
+            CommCmd
 
 PrimCmd:    skip | 
             VarId = Exp |                           // Assign Exp to VarId
@@ -42,13 +41,11 @@ ErrorCmd:   require BoolExp                         // Checks if BoolExp holds, 
 
 
 
-JCommCmd:   PVarId = join String   |               // Waiting for a participant to join the contract. The participants asks to join as String
+CommCmd:   PVarId = join String   |               // Waiting for a participant to join the contract. The participants asks to join as String
                                                     //   The identifier of the participant is assigned to PVarId, which is expected to be of type parid
                                                     //   The role of the participant is Role
-            PVarId = join String and JCommCmd       // Parallel join
-
-WCommCmd:   ListVarId = wait PVarId |               // Waiting for participant PVarID to send a (sequence of) values whose type determined by ListVarId. 
-            ListVarId = wait PVarId and WCommCmd       // Parallel join
+           ListVarId = wait PVarId |               // Waiting for participant PVarID to send a (sequence of) values whose type determined by ListVarId.
+           PVarId = join String and CommCmd       // Parallel join
 
 
 visibleCmd: pay CVarId to PVarId  |                 // transfer the money stored in CVarId to PVarId

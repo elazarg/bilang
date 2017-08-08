@@ -1,5 +1,5 @@
 from typing import TypeVar, Generic, Sequence, Union, Any
-from nodes import Exp, Lvalue, JoinItem, Break, UnaryOp, ParallelWait, LvalVar, IfElse, BinOp, LvalAttr, Session, Attribute, Require, Assign, VarName, AwaitItem, VarDecl, Call, With, Pay, ExpressionStatement, Subscript, Struct, Declare, Continue, Const, IfExp, ParallelJoin, While
+from nodes import Exp, Lvalue, Struct, Assign, Declare, Const, With, AwaitItem, LvalAttr, UnaryOp, IfElse, Break, Call, JoinItem, IfExp, Attribute, Parallel, Subscript, While, BinOp, Pay, Require, Continue, Session, VarName, ExpressionStatement, VarDecl, TypeName, LvalVar
 
 _T = TypeVar('_T')
 _Q = TypeVar('_Q')
@@ -48,6 +48,9 @@ class LvalVisitor(Generic[_T], Visitor[Lvalue, _T]):
 
 class StmtVisitor(Generic[_T], Visitor[Any, _T]):
     
+    def visit_TypeName(self, node: TypeName) -> _T:
+        raise NotImplementedError
+
     def visit_Session(self, node: Session) -> _T:
         raise NotImplementedError
 
@@ -78,10 +81,7 @@ class StmtVisitor(Generic[_T], Visitor[Any, _T]):
     def visit_AwaitItem(self, node: AwaitItem) -> _T:
         raise NotImplementedError
 
-    def visit_ParallelJoin(self, node: ParallelJoin) -> _T:
-        raise NotImplementedError
-
-    def visit_ParallelWait(self, node: ParallelWait) -> _T:
+    def visit_Parallel(self, node: Parallel) -> _T:
         raise NotImplementedError
 
     def visit_IfElse(self, node: IfElse) -> _T:

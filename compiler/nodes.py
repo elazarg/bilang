@@ -11,9 +11,15 @@ Exp = Union['UnOp', 'BinOp', 'UnaryOp', 'Call', 'Subscript',
 class VarName(NamedTuple):
     id: str
 
+TypeName = VarName
+
 
 class LvalVar(NamedTuple):
     id: str
+
+
+class LvalList(NamedTuple):
+    items: Sequence['Lvalue']
 
 
 class LvalAttr(NamedTuple):
@@ -76,18 +82,12 @@ class JoinItem(NamedTuple):
 
 class AwaitItem(NamedTuple):
     to: VarName
-    attr: VarName
+    targets: Sequence[Lvalue]
+    types: Sequence[TypeName]
 
 
-class ParallelJoin(NamedTuple):
-    items: Sequence[JoinItem]
-
-
-class ParallelWait(NamedTuple):
-    items: Sequence[AwaitItem]
-
-
-Parallel = Union[ParallelJoin, ParallelWait]
+class Parallel(NamedTuple):
+    items: Sequence[Union[JoinItem, AwaitItem]]
 
 
 class IfElse(NamedTuple):
@@ -117,10 +117,9 @@ class With(NamedTuple):
 
 
 Statement = Union[Assign, ExpressionStatement,
-                  IfElse, While, With,
+                  IfElse, While, With, Parallel,
                   Declare, Pay, Require,
-                  Continue, Break,
-                  ParallelJoin, ParallelWait]
+                  Continue, Break]
 
 
 class Call(NamedTuple):
