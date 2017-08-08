@@ -39,9 +39,6 @@ class SessionInferenceVisitor(StmtVisitor[Optional[str]]):
     def visit_Parallel(self, n: nodes.Parallel) -> str:
         return self.parallel(n.items)
 
-    def visit_JoinItem(self, n: nodes.JoinItem) -> str:
-        return f'S connects {n.var.id};'
-
     def visit_AwaitItem(self, n: nodes.AwaitItem) -> str:
         res = ''
         # res += f'request_{n.attr}() from S to {n.to.id}; '

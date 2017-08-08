@@ -35,16 +35,7 @@ class Printer(NodeVisitor[str]):
     def visit_Parallel(self, n: nodes.Parallel) -> str:
         return ' and '.join(f'{self.visit(item)}' for item in n.items)
 
-    def visit_JoinItem(self, node: nodes.JoinItem) -> str:
-        if node.var is not None:
-            return f'join {self.visit(node.tag)} as {self.visit(node.var)}'
-        else:
-            return f'join {self.visit(node.tag)}'
-
     def visit_AwaitItem(self, node: nodes.AwaitItem) -> str:
-        assert all(x is not None for x in node.targets), node.targets
-        assert node.types is not None
-        assert node.types is not None
         return f'wait {self.args(node.targets)} = {self.visit(node.to)}[{self.args(node.types)}]'
 
     def visit_Struct(self, n: nodes.Struct) -> str:

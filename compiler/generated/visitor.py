@@ -1,5 +1,5 @@
 from typing import TypeVar, Generic, Sequence, Union, Any
-from nodes import Exp, Lvalue, VarDecl, VarName, With, Parallel, BinOp, AwaitItem, LvalAttr, Session, Const, Pay, LvalList, Call, Require, Break, IfElse, Subscript, TypeName, Attribute, UnaryOp, While, IfExp, Struct, Declare, Continue, LvalVar, JoinItem, ExpressionStatement, Assign
+from nodes import Exp, Lvalue, VarDecl, VarName, With, Parallel, BinOp, AwaitItem, LvalAttr, Session, Const, Pay, LvalList, Call, Require, Break, IfElse, Subscript, TypeName, Attribute, UnaryOp, While, IfExp, Struct, Declare, Continue, LvalVar, ExpressionStatement, Assign
 
 _T = TypeVar('_T')
 _Q = TypeVar('_Q')
@@ -76,9 +76,6 @@ class StmtVisitor(Generic[_T], Visitor[Any, _T]):
         raise NotImplementedError
 
     def visit_ExpressionStatement(self, node: ExpressionStatement) -> _T:
-        raise NotImplementedError
-
-    def visit_JoinItem(self, node: JoinItem) -> _T:
         raise NotImplementedError
 
     def visit_AwaitItem(self, node: AwaitItem) -> _T:
