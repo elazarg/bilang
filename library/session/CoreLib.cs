@@ -9,10 +9,12 @@ public static class CoreLib {
 
     public static async Task<(Connection, T)> Connect<T>(string tag, Func<T, bool> require, uint? id = null) where T : struct {
         uint connected_id;
-        if (id == null)
+        if (id == null) {
             connected_id = await connector.Receive<uint>(tag: tag);
-        else
+        } else {
+            Notify("Would you like to connect?", (uint)id);
             connected_id = await connector.Receive<uint>(tag: tag, require: cid => cid == id);
+        }
         return UNKOWN; // new ConnectionImp<T>(connected_id);
     }
     
