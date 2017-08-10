@@ -5,3 +5,4 @@ __pycache__
 library/session/.vs/
 library/session/obj/
 library/session/bin/
+.vscode/
