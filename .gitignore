@@ -2,3 +2,6 @@
 __pycache__
 
 .idea
+library/session/.vs/
+library/session/obj/
+library/session/bin/
