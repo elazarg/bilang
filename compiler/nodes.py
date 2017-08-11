@@ -75,19 +75,15 @@ class ExpressionStatement(NamedTuple):
     value: Exp
 
 
-class JoinItem(NamedTuple):
-    tag: str
-    var: LvalVar
-
-
 class AwaitItem(NamedTuple):
     to: VarName
     targets: Sequence[Lvalue]
     types: Sequence[TypeName]
+    args: Sequence[Exp]
 
 
 class Parallel(NamedTuple):
-    items: Sequence[Union[JoinItem, AwaitItem]]
+    items: Sequence[AwaitItem]
 
 
 class IfElse(NamedTuple):

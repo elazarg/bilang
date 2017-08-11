@@ -27,29 +27,29 @@ class Translator(ast.NodeVisitor):
 
     def parallel(self, elts: tt.Sequence[tt.Tuple[ast.Expr, ast.Expr]]):
         items = []
-        for target, expr in elts:
-            if isinstance(expr, ast.Str):
-                # Join
-                items.append(ot.JoinItem(self.visit(expr), self.visit(target)))
-            elif isinstance(expr, ast.Subscript):
-                # Await
-                type_arg = expr.slice.value
-                if isinstance(type_arg, ast.Tuple):
-                    assert isinstance(target, ast.List)
-                    type_args = type_arg.elts
-                    targets = target.elts
-                else:
-                    type_args = [type_arg]
-                    targets = [target]
-                items.append(ot.AwaitItem(self.visit(expr.value),
-                                          [self.visit(t) for t in targets],
-                                          [self.visit(a) for a in type_args]))
+        for target, cexpr in elts:
+            assert isinstance(cexpr, ast.Call), (cexpr, cexpr.lineno)
+            expr = cexpr.func
+            assert isinstance(expr, ast.Subscript)
+            # Await
+            type_arg = expr.slice.value
+            if isinstance(type_arg, ast.Tuple):
+                assert isinstance(target, ast.List)
+                type_args = type_arg.elts
+                targets = target.elts
             else:
-                assert False, expr
+                type_args = [type_arg]
+                targets = [target]
+            args = cexpr.args
+            items.append(ot.AwaitItem(self.visit(expr.value),
+                                      [self.visit(t) for t in targets],
+                                      [self.visit(a) for a in type_args],
+                                      [self.visit(arg) for arg in args]))
         return ot.Parallel(items)
 
     def visit_AugAssign(self, n: ast.AugAssign) -> ot.Assign:
-        return ot.Assign(self.visit(n.target), ast.BinOp(n.op, n.target, n.value))
+        t = self.visit(n.target)
+        return ot.Assign(t, ot.BinOp(t, self.visit(n.op), self.visit(n.value)))
 
     def visit_AnnAssign(self, s: ast.AnnAssign) -> ot.VarDecl:
         qualifiers, t = parse_annotation(s.annotation)
