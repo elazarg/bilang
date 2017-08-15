@@ -18,7 +18,7 @@ static class ParallelBlindAuction {
     }
 
     static async void Server() {
-        var (host, last_bid) = await Connect<int>("Host");
+        (var host, var last_bid) = await Connect<int>("Host");
         using (host) {
             var bidders = await ConnectMany("Offer",
                 until: host.Receive<bool>("Continue"));

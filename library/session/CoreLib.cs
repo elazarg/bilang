@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 using static Utils;
 
@@ -8,6 +10,8 @@ public static class CoreLib {
     static Connection connector = UNKOWN;
 
     public static async Task<(Connection, T)> Connect<T>(string tag, Func<T, bool> require, uint? id = null) where T : struct {
+        return (new Connection(VM.WaitForClientConnection(tag)), default(T));
+        /*
         uint connected_id;
         if (id == null) {
             connected_id = await connector.Receive<uint>(tag: tag);
@@ -16,6 +20,7 @@ public static class CoreLib {
             connected_id = await connector.Receive<uint>(tag: tag, require: cid => cid == id);
         }
         return UNKOWN; // new ConnectionImp<T>(connected_id);
+        */
     }
     
     public static void Declare(String declaration, params Connection[] participants) {}
@@ -34,7 +39,10 @@ public static class CoreLib {
     }
 
     public struct Connection : IDisposable {
-        public uint address;
+        public readonly uint address;
+        public Connection(uint address) {
+            this.address = address;
+        }
         
         public async Task<T> Receive<T>(string tag, Func<T, bool> require) where T : struct {
             return await UNKOWN;

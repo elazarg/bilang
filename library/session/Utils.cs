@@ -26,9 +26,6 @@ public static class Utils {
             Item2.Dispose();
         }
     }
-    public static void Main() {
-        // silence the analyzer
-    }
 
     public static void Atomically(Action f) {
         // non-async function f

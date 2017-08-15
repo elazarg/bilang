@@ -6,3 +6,4 @@ library/session/.vs/
 library/session/obj/
 library/session/bin/
 .vscode/
+library/session/packages/

@@ -1,12 +1,12 @@
 ﻿using static SessionLib;
 using static CoreLib;
 using static ClientSessionLib;
-
+using System.Threading.Tasks;
 
 static class MontyHall {
-    enum Door { a, b, c }
+    public enum Door { a, b, c }
 
-    static async void Server() {
+    public static async void Server() {
         (var host, Money host_money) = await Connect<Money>("Host");
         using (host) {
             var hiddenCar = await host.Hide<Door>();
@@ -32,9 +32,9 @@ static class MontyHall {
         }
     }
 
-    static Contract s;
+    public static Contract s;
 
-    static async void ClientHost(Door car) {
+    public static async void ClientHost(Door car) {
         UpwardConnection c = await s.Connect("Host", new Money());
         var hiddenCar = await c.Hide(car);
         Door door1 = await c.ReceiveNotification<Door>("Guest chose");
@@ -46,7 +46,7 @@ static class MontyHall {
         System.Console.WriteLine(result);
     }
 
-    static async void ClientGuest() {
+    public static async void ClientGuest() {
         UpwardConnection c = await s.Connect("Guest", new Money());
         await c.SendAsync(Door.a);
         Door goat = await c.ReceiveNotification<Door>("Goat behind door");
