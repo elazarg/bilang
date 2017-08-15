@@ -7,10 +7,10 @@ static class MontyHall {
     public enum Door { a, b, c }
 
     public static async void Server() {
-        (var host, Money host_money) = await Connect<Money>("Host");
+        var (host, host_money) = await Connect<Money>("Host");
         using (host) {
             var hiddenCar = await host.Hide<Door>();
-            (var guest, Money guest_money) = await Connect<Money>("Guest");
+            var (guest, guest_money) = await Connect<Money>("Guest");
             using (guest) {
                 var door1 = await guest.Receive<Door>();
                 host.Notify("Guest chose", door1);

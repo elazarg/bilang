@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 
 using static Utils;
 
@@ -66,11 +64,11 @@ public static class CoreLib {
 
     #region Combinators
 
-    public static Task<ValueTuple<T1, T2>> Parallel<T1, T2>(Task<T1> t1, Task<T2> t2) where T1: struct where T2: struct {
+    public static Task<(T1, T2)> Parallel<T1, T2>(Task<T1> t1, Task<T2> t2) where T1: struct where T2: struct {
         return UNKOWN;
     }
 
-    public static Task<ValueTuple<T1?, T2?>> Parallel<T1, T2>(Task<T1?> t1, Task<T2?> t2) where T1 : struct where T2 : struct {
+    public static Task<(T1?, T2?)> Parallel<T1, T2>(Task<T1?> t1, Task<T2?> t2) where T1 : struct where T2 : struct {
         return UNKOWN;
     }
 

@@ -5,11 +5,11 @@ using static ClientSessionLib;
 
 class Puzzle {
     static async void Server() {
-        (var a, (int q, Money prize)) = await Connect<(int, Money)>("Pose riddle",
+        var (a, (q, prize)) = await Connect<(int, Money)>("Pose riddle",
             require: qp => qp.Item2.amount == 80);
         using (a) {
             Publish("Question", q);
-            (var solver, (int m, int n)) = await Connect<(int, int)>("Factor", require: mn => {
+            var (solver, (m, n)) = await Connect<(int, int)>("Factor", require: mn => {
                 (var m1, var n1) = mn;
                 return m1 != 1 && n1 != 1 && m1 * n1 == q;
             });
@@ -24,7 +24,7 @@ class Puzzle {
 
     static async void ClientA() {
         var c = await s.Connect("Pose riddle", (15, new Money(80)));
-        (var m, var n) = await c.ReceiveNotification<(int, int)>();
+        var (m, n) = await c.ReceiveNotification<(int, int)>();
         System.Console.WriteLine($"The solution is {m} * {n}");
     }
 
@@ -49,15 +49,15 @@ class Puzzle {
 
 class PuzzleSpecific {
     static async void Server() {
-        (var a, Money prize) = await Connect<Money>("Q");
+        var (a, prize) = await Connect<Money>("Q");
         var solver = await Connect("A");
         using (a) {
             using (solver) {
                 a.Notify("Solver connected");
                 int q = await a.Receive<int>();
                 solver.Notify("Riddle", q);
-                (int m, int n) = await solver.Receive<(int, int)>(require: mn => {
-                    (var m1, var n1) = mn;
+                var (m, n) = await solver.Receive<(int, int)>(require: mn => {
+                    var (m1, n1) = mn;
                     return m1 != 1 && n1 != 1 && m1 * n1 == q;
                 });
                 a.Notify($"Answer", (m, n));

@@ -14,7 +14,7 @@ static class ClientSessionLib
         public Task SendAsync<T>(T t) { return Task.Run(() => Send(t)); }
         public async Task<string> ReceiveNotification() { return ""; }
         public async Task ReceiveNotification(string tag) { }
-        public async Task<T> ReceiveNotification<T>(string tag = "") { return default(T); }
+        public async Task<T> ReceiveNotification<T>(string tag = "") { return default; }
 
         public async Task<Hiding<T>> Hide<T>(T value) where T : struct {
             var res = new Hiding<T>(value, new System.Random(0x2346).Next());

@@ -25,7 +25,7 @@ public static class SessionLib {
     public static void Notify<T>(T declaration, params Connection[] participants) {
         Notify(""+declaration, participants);
     }
-    public static Task<ValueTuple<Connection, T>> Connect<T>(string tag, int id = 0) where T : struct =>
+    public static Task<(Connection, T)> Connect<T>(string tag, int id = 0) where T : struct =>
         CoreLib.Connect<T>(tag, require: NoReq);
 
     public static Task<Connection> Connect(string tag = "", int id = 0) => Connect();
@@ -33,7 +33,7 @@ public static class SessionLib {
     public static Task<T1> Receive<T1>(this Connection c, string tag="") where T1 : struct => c.Receive<T1>(tag, NoReq);
     public static Task<T1> Receive<T1>(this Connection c, Func<T1, bool> require) where T1 : struct => c.Receive<T1>("", NoReq);
 
-    public static async Task<ValueTuple<Connection, T1?, Connection, T2?>>
+    public static async Task<(Connection, T1?, Connection, T2?)>
         IndependentConnection<T1, T2>(string tag1, string tag2)
         where T1 : struct
         where T2 : struct {
@@ -41,7 +41,7 @@ public static class SessionLib {
             Connect<Hidden<T1>>("Hide1"),
             Connect<Hidden<T2>>("Hide2")
         );
-        (var p1, var p2) = await CoreLib.Parallel(
+        var (p1, p2) = await CoreLib.Parallel(
             c1.Open(h1),
             c2.Open(h2)
         );
@@ -69,7 +69,7 @@ public static class SessionLib {
         return null;
     }
 
-    public static async Task<ValueTuple<T1?, T2?>> Independent<T1, T2>(Connection a, Connection b)
+    public static async Task<(T1?, T2?)> Independent<T1, T2>(Connection a, Connection b)
     where T1 : struct
     where T2 : struct {
         var h = await CoreLib.Parallel(a.Hide<T1>(), b.Hide<T2>());
@@ -77,8 +77,8 @@ public static class SessionLib {
     }
 
     public static async Task<T?[]> Independent<T>(params Connection[] ts) where T : struct {
-        var hs = await Parallel(ts.Select(async a => (a, await a.Hide<T>())));
-        return await Parallel(hs.Select(a => a.Item1.Open(a.Item2)));
+        var hs = await Parallel(ts.Select(async a => (connection: a, hidden: await a.Hide<T>())));
+        return await Parallel(hs.Select( a => a.connection.Open(a.hidden)));
     }
 
     public static async Task<T?[]> Independent<T>(IEnumerable<Connection> ts) where T : struct {
@@ -88,12 +88,5 @@ public static class SessionLib {
     public static async Task<T> AwaitOrAwait<T>(Task<T?> first, Task<T> fallback) where T : struct {
         var res = await first;
         return res ?? await fallback;
-    }
-
-
-    public static void Dispose<T>(this T[] list) where T : IDisposable {
-        foreach (var item in list) {
-            item.Dispose();
-        }
     }
 }

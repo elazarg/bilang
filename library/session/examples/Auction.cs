@@ -18,7 +18,7 @@ static class ParallelBlindAuction {
     }
 
     static async void Server() {
-        (var host, var last_bid) = await Connect<int>("Host");
+        var (host, last_bid) = await Connect<int>("Host");
         using (host) {
             var bidders = await ConnectMany("Offer",
                 until: host.Receive<bool>("Continue"));
@@ -60,7 +60,7 @@ static class ParallelBlindAuction {
 static class EitherAuction {
     
     static async void Server() {
-        (Connection host, Money last_bid) = await Connect<Money>("Host");
+        var (host, last_bid) = await Connect<Money>("Host");
         Connection winner = host;
          while (true) {
             // Idea: have a `Global` struct for visible state

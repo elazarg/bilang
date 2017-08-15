@@ -4,10 +4,10 @@ using static ClientSessionLib;
 
 class STPG {
     static async void Server() {
-        ((var even, var even_payment), (var odd, var odd_payment)) = await Parallel(Connect<Money>("E"), Connect<Money>("O"));
+        var ((even, even_payment), (odd, odd_payment)) = await Parallel(Connect<Money>("E"), Connect<Money>("O"));
         using (even) {
             using (odd) {
-                (var even_choice, var odd_choice) = await Independent<bool, bool>(even, odd);
+                var (even_choice, odd_choice) = await Independent<bool, bool>(even, odd);
                 if (odd_choice == null && even_choice == null) {
                     //repeat????
                     return;
