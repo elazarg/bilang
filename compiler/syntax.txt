@@ -10,7 +10,8 @@ Type:       PrimType |
 
 PrimType:   int | string | bool | 
             coin |                                  // The "units" of "money" used in contracts as a specific type
-            parid |                                 // Primitive types. parid is the type of users/contracts identifiers (e.g., the type "address" in solidity)  
+            parid |                                 // Primitive types. parid is the type of users/contracts identifiers 
+                                                    // (e.g., the type "address" in solidity)  
             hiddenVal                               // A commitment to a value    
 
 Qualifiers: \epsilon | Qualifier Qualifiers 
@@ -48,15 +49,14 @@ CommCmd:   PVarId = join String   |               // Waiting for a participant t
            PVarId = join String and CommCmd       // Parallel join
 
 
-visibleCmd: pay CVarId to PVarId  |                 // transfer the money stored in CVarId to PVarId
+VisibleCmd: pay CVarId to PVarId  |                 // transfer the money stored in CVarId to PVarId
 
             print ParticipantList String |          // Print a string to blockchain + the ids of the participants in the contract    
 
 
 Exp:        IntExp | BoolExp | StringExp  
             
-BoolExp:    HVarId hides VarId
-
+BoolExp:    HVarId hides VarId [according to PVarId]
 
 
 ParticipantList:    Participant | Participant ParticipantList
@@ -64,6 +64,16 @@ ParticipantList:    Participant | Participant ParticipantList
 Participant:        Exp
 
 
+===========================
+
+
+await hidden(a[int]) as ahi
+in
+ S 
+;
+await (a[int[) as ai
+
+require (ahi hides ai according to a)
 
 
 // Example program
