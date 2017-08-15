@@ -39,20 +39,28 @@ public static class Utils {
 
 
     public struct Hidden<T> where T : struct {
-        public readonly uint owner;
-        public readonly uint hash;
+        public readonly int hash;
 
-        public Hidden(uint hash, uint owner) : this() {
+        public Hidden(int hash) : this() {
             this.hash = hash;
-            this.owner = owner;
+        }
+        
+        public bool CheckOpen(T value, int salt, uint owner) {
+            return (value, salt, owner).GetHashCode() == hash;
+        }
+    }
+
+    public struct Hiding<T> where T : struct {
+        public readonly int salt;
+        public readonly T value;
+
+        public Hiding(T value, int salt) : this() {
+            this.value = value;
+            this.salt = salt;
         }
 
-        public struct Salted {
-            internal T value;
-            internal uint salt;
-        }
-        public bool CheckOpen(Salted salted) {
-            return Tuple.Create(salted, owner).GetHashCode() != hash;
+        public int Hidden(uint owner) {
+            return (value, salt, owner).GetHashCode();
         }
     }
 }

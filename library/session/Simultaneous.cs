@@ -1,23 +1,31 @@
 ﻿using static SessionLib;
 using static CoreLib;
+using static ClientSessionLib;
 
 class STPG {
-    static async void Play() {
+    static async void Server() {
         ((var even, var even_payment), (var odd, var odd_payment)) = await Parallel(Connect<Money>("E"), Connect<Money>("O"));
         using (even) {
             using (odd) {
-                var choices = await Independent<bool, bool>(even, odd);
-                var even_choice = choices.Item1;
-                var odd_choice = choices.Item2;
+                (var even_choice, var odd_choice) = await Independent<bool, bool>(even, odd);
                 if (odd_choice == null && even_choice == null) {
                     //repeat????
                     return;
                 }
-                if (odd_choice == null || even_choice == odd_choice)
+                if (odd_choice == null || even_choice == odd_choice) {
                     Pay(even, even_payment, odd_payment);
-                else
+                } else {
                     Pay(odd, even_payment, odd_payment);
+                }
             }
         }
+    }
+
+    static Contract s;
+
+    static async void ClientPlayer(string tag, bool choice) {
+        UpwardConnection c = await s.Connect(tag, new Money());
+        await c.Hide(choice, until: "Open");
+        // TODO: add finishing message to show the user
     }
 }

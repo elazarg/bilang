@@ -19,13 +19,19 @@ public static class SessionLib {
     public static void Notify(String declaration, params Connection[] participants) {
         CoreLib.Notify(declaration, participants.Select(x => x.address).ToArray());
     }
-
+    public static void Notify(String declaration, IEnumerable<Connection> participants) {
+        Notify(declaration, participants.ToArray());
+    }
+    public static void Notify<T>(T declaration, params Connection[] participants) {
+        Notify(""+declaration, participants);
+    }
     public static Task<ValueTuple<Connection, T>> Connect<T>(string tag, int id = 0) where T : struct =>
         CoreLib.Connect<T>(tag, require: NoReq);
 
     public static Task<Connection> Connect(string tag = "", int id = 0) => Connect();
     
-    public static Task<T1> Receive<T1>(this Connection c, string tag) where T1 : struct => c.Receive<T1>(tag, NoReq);
+    public static Task<T1> Receive<T1>(this Connection c, string tag="") where T1 : struct => c.Receive<T1>(tag, NoReq);
+    public static Task<T1> Receive<T1>(this Connection c, Func<T1, bool> require) where T1 : struct => c.Receive<T1>("", NoReq);
 
     public static async Task<ValueTuple<Connection, T1?, Connection, T2?>>
         IndependentConnection<T1, T2>(string tag1, string tag2)
@@ -51,15 +57,16 @@ public static class SessionLib {
     }
 
     public static async Task<Hidden<T1>> Hide<T1>(this Connection c) where T1 : struct {
-        uint hash = await c.Receive<uint>("Hide");
-        return new Hidden<T1>(hash, c.address); // should be some identity
+        var hash = await c.Receive<int>("Hide");
+
+        return new Hidden<T1>(hash); // should be some identity
     }
 
     public static async Task<T?> Open<T>(this Connection c, Hidden<T> h) where T : struct {
-        var salted = await c.Receive<Hidden<T>.Salted>("Open");
-        if (Tuple.Create(salted, h.owner).GetHashCode() != h.hash)
-            return null;
-        return salted.value;
+        (var value, var salt) = await c.Receive<(T, int)>("Open");
+        if (h.CheckOpen(value, salt, c.address))
+            return value;
+        return null;
     }
 
     public static async Task<ValueTuple<T1?, T2?>> Independent<T1, T2>(Connection a, Connection b)
@@ -83,4 +90,10 @@ public static class SessionLib {
         return res ?? await fallback;
     }
 
+
+    public static void Dispose<T>(this T[] list) where T : IDisposable {
+        foreach (var item in list) {
+            item.Dispose();
+        }
+    }
 }
