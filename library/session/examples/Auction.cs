@@ -1,7 +1,7 @@
-﻿using static SessionLib;
+﻿using System;
+using static SessionLib;
 using static CoreLib;
 using static ClientSessionLib;
-using System;
 
 static class ParallelBlindAuction {
     private static Connection FindWinner(Connection host, Connection[] bidders, int?[] bids) {
