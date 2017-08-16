@@ -13,29 +13,35 @@ class Playground {
     const uint serverAddress = 1;
 
     static async Task ClientQuestion(uint address) {
+        var link = new Link(bc, address, serverAddress);
+
         Console.WriteLine($"Client {address} sends");
-        await bc.PublishAsync((default(A), 15), new Metadata() { sender = address, target = serverAddress });
-        var (solver, (m, n)) = await bc.Receive<(int, int)>(address, serverAddress);
+        await link.Send((default(A), 15));
+        var (m, n) = await link.Receive<(int, int)>();
         Console.WriteLine($"Client {address} received solution {m}, {n}");
     }
 
     static async Task ClientAnswer(uint address) {
-        Console.WriteLine($"Client {address} sends");
-        await bc.PublishAsync((default(B), (3, 5)), new Metadata() { sender = address, target = serverAddress });
-        Console.WriteLine($"Client {address} done");
+        var link = new Link(bc, address, serverAddress);
+        
+        //Console.WriteLine($"Client {address} sends");
+        var riddle = await link.Receive<int>();
+        // pretend we are solving the problem
+        await link.Send((default(B), (3, 5)));
+        //Console.WriteLine($"Client {address} done");
     }
 
     static async Task Server(uint address) {
         var (asker, (_, riddle)) = await bc.Receive<(A, int)>(address);
-        Console.WriteLine($"Server received {riddle} from {asker}");
+        //Console.WriteLine($"Server received {riddle} from {asker}");
         // publishing without waiting does not work with single point for pending/delivered
         // it should be extracted out to the clients, or as a public state
-        //bc.Publish(riddle, new Metadata() { sender = address, target = null });
-        Console.WriteLine("Server receives...");
+        bc.Publish(riddle, new Metadata() { sender = address, target = null });
+        //Console.WriteLine("Server receives...");
         var (solver, (_, (m, n))) = await bc.Receive<(B, (int, int))>(address);
-        Console.WriteLine($"Server received {m} {n} from {solver}");
+        //Console.WriteLine($"Server received {m} {n} from {solver}");
         await bc.PublishAsync((3, 5), new Metadata() { sender = address, target = asker });
-        Console.WriteLine($"Server done");
+        //Console.WriteLine("Server done");
     }
 
     static TaskFactory factory = new TaskFactory(new OrderedTaskScheduler());
@@ -56,7 +62,7 @@ class Playground {
 
 public class Metadata {
     public uint sender;
-    // {} means everyone
+    // null means everyone
     public uint? target;
     public volatile bool pending = true;
     public override string ToString() => $"{sender} -> {target} ({pending})";
@@ -73,12 +79,15 @@ class BC {
             publications[address] = new List<(object, Metadata)> { (null, new Metadata() { pending = false }) };
     }
 
-    public async Task PublishAsync<T>(T payload, Metadata info) {
+    public void Publish(object payload, Metadata info) {
         lock (this) {
             publications[info.sender].Add((payload, info));
         }
+    }
 
-        while (!info.pending) {
+    public async Task PublishAsync(object payload, Metadata info) {
+        Publish(payload, info);
+        while (info.pending) {
             //Console.WriteLine($"Sender {msg.sender} yields");
             await Task.Yield();
         }
@@ -99,7 +108,8 @@ class BC {
                 foreach (var from in froms) {
                     var v = publications[from];
                     foreach (var (payload, info) in v) {
-                        if (info.pending && info.target == requestor
+                        if (info.pending
+                            && (info.target == null || info.target == requestor)
                             && typeof(T).IsInstanceOfType(payload)) {
                             info.pending = false;
                             return (info.sender, (T)payload);
@@ -109,5 +119,27 @@ class BC {
             }
             await Task.Yield();
         }
+    }
+}
+
+/// <summary>
+///  Helper class, hides some ugly parameters
+/// </summary>
+class Link {
+    uint address;
+    uint target;
+    BC bc;
+
+    public Link(BC bc, uint address, uint target) {
+        this.address = address;
+        this.target = target;
+        this.bc = bc;
+    }
+    public async Task<T> Receive<T>() {
+        var (_, v) = await bc.Receive<T>(address, new uint[] { target });
+        return v;
+    }
+    public async Task Send<T>(T payload) {
+        await bc.PublishAsync(payload, new Metadata() { sender = address, target = target });
     }
 }
