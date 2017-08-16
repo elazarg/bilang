@@ -8,7 +8,7 @@ public static class CoreLib {
     static Connection connector = UNKOWN;
 
     public static async Task<(Connection, T)> Connect<T>(string tag, Func<T, bool> require, uint? id = null) where T : struct {
-        return (new Connection(VM.WaitForClientConnection(tag)), default(T));
+        return UNKOWN; // (new Connection(BC.WaitForClientConnection(tag)), default(T));
         /*
         uint connected_id;
         if (id == null) {
