@@ -27,7 +27,7 @@ struct Nothing { }
 /// </summary>
 abstract class Link {
     protected BC bc;
-    protected uint address;
+    public uint address;
 
     public Link(BC bc, uint address) {
         this.address = address;
@@ -46,7 +46,7 @@ abstract class Link {
 }
 
 class DirLink<From, To> : Link {
-    readonly uint target;
+    public readonly uint target;
 
     public DirLink(BC bc, uint address, uint target) : base(bc, address) {
         this.target = target;

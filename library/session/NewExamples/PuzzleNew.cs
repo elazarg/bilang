@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Schedulers;
 using static System.Console;
 
 
 static class PuzzleNew {
 
-    interface Q : All { }
-    interface A : All { }
-    interface S : All { }
+    private interface Q : All { }
+    private interface A : All { }
+    private interface S : All { }
 
     private sealed class Question : Args<int>, Dir<Q, S>, Dir<S, All> { internal Question(int _1) { _ = _1; } }
     private sealed class Answer : Args<(int, int)>, Dir<A, S>, Dir<S, Q> { internal Answer(int _1, int _2) { _ = (_1, _2); } }
@@ -58,14 +57,10 @@ static class PuzzleNew {
         WriteLine($"Client A done");
     }
 
-    public static void Main() {
-        BC bc = new BC();
-        OrderedTaskScheduler.Start(
-            Server(new PublicLink<S>(bc, 0)),
-            ClientQuestion(new DirLink<Q, S>(bc, 1, 0)),
-            ClientAnswer(new DirLink<A, S>(bc, 2, 0))
-        );
+    internal static Task[] Players(BC bc) => new Task[] {
+        Server(new PublicLink<S>(bc, 0)),
+        ClientQuestion(new DirLink<Q, S>(bc, 1, 0)),
+        ClientAnswer(new DirLink<A, S>(bc, 2, 0))
+    };
 
-        Console.ReadKey();
-    }
 }
