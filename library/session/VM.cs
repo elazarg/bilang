@@ -6,31 +6,41 @@ using System.Threading.Tasks.Schedulers;
 
 
 class Playground {
+    [Flags]
     enum Tag {
-        PlayerA, PlayerB, Question, Answer
+        PlayerA, PlayerB, Question, Answer, Accepted, Rejected
     }
 
     static async Task ClientQuestion(uint address) {
-        var link = new Link(bc, address, serverAddress);          Console.WriteLine($"Client {address} sends question");
-        await link.Send(Tag.PlayerA, 15);
+        var link = new Link<Tag>(bc, address, serverAddress);       Console.WriteLine($"Client {address} sends question");
+        await link.SendAsync(Tag.PlayerA, 15);
         var (m, n) = await link.Receive<(int, int)>(Tag.Answer);    Console.WriteLine($"Client {address} received solution ({m}, {n})");
     }
 
     static async Task ClientAnswer(uint address) {
-        var link = new Link(bc, address, serverAddress);      Console.WriteLine($"Client {address} fetches question");
-        var riddle = await link.Receive<int>(Tag.Question);     Console.WriteLine($"Client {address} sends solution {(3, 5)}");
+        var link = new Link<Tag>(bc, address, serverAddress);        Console.WriteLine($"Client {address} fetches question");
+        var riddle = await link.Receive<int>(Tag.Question);          Console.WriteLine($"Client {address} sends solution {(3, 5)}");
         // pretend we are solving the problem
-        await link.Send(Tag.PlayerB, (3, 5));                   Console.WriteLine($"Client {address} done");
+        await link.SendAsync(Tag.PlayerB, (3, 5));                   Console.WriteLine($"Client {address} done");
+        //var response = await link.Receive<Nothing>(Tag.Accepted | Tag.Rejected);
     }
 
     static async Task Server(uint address) {
-        var pub = new PublicLink(bc, address);
+        var pub = new PublicLink<Tag>(bc, address);
         var (asker, riddle) = await pub.Connection<int>(Tag.PlayerA);                  Console.WriteLine($"Server received {riddle} from {asker}");
         // publishing without waiting does not work with single point for pending/delivered
         // it should be extracted out to the clients, or as a public state
         pub.Publish(Tag.Question, riddle);                                             Console.WriteLine("Server receives...");
-        var (solver, (m, n)) = await pub.Connection<(int, int)>(Tag.PlayerB);          Console.WriteLine($"Server received {m} {n} from {solver}");
-        await asker.Send(Tag.Answer, (3, 5));                                          Console.WriteLine("Server done");
+        while (true) {
+            var (solver, (m, n)) = await pub.Connection<(int, int)>(Tag.PlayerB);      Console.WriteLine($"Server received {m} {n} from {solver}");
+            if (m * n == riddle) {
+                //solver.Send(Tag.Accepted);
+                asker.Send(Tag.Answer, (3, 5));                                        Console.WriteLine("Server done");
+                break;
+            } else {
+                //solver.Send(Tag.Rejected);
+            }
+        }
     }
 
     static BC bc;
@@ -52,29 +62,26 @@ class Playground {
     }
 }
 
-public class Metadata {
-    public uint sender;
-    // null means everyone
-    public uint? target;
-    public Enum tag;
-    public volatile bool pending = true;
-    public override string ToString() => $"{sender} -> {target} ({pending})";
-}
-
 class BC {
+
+    public class Metadata {
+        public uint sender;
+        // null means everyone
+        public uint? target;
+        public volatile bool pending = true;
+        public override string ToString() => $"{sender} -> {target} ({pending})";
+    }
     /// <summary>
     /// key 0 is for connection requests
     /// </summary>
-    Dictionary<uint, List<(object, Metadata)>> publications = new Dictionary<uint, List<(object, Metadata)>>();
+    List<(object, Metadata)> publications = new List<(object, Metadata)>();
 
     public BC(params uint[] addresses) {
-        foreach (var address in addresses)
-            publications[address] = new List<(object, Metadata)> {  };
     }
 
     public void Publish(object payload, Metadata info) {
         lock (this) {
-            publications[info.sender].Add((payload, info));
+            publications.Add((payload, info));
         }
     }
 
@@ -89,23 +96,17 @@ class BC {
     /// Query the pull of <paramref name="from"/> until a non-pending message to <paramref name="requestor"/> appears.
     /// </summary>
     /// <typeparam name="T">The expected type of the payload</typeparam>
-    /// <param name="requestor">Receiver of the message</param>
-    /// <param name="from">Expected senders of the message</param>
-    /// <returns>The payload of the message</returns>
-    public async Task<(uint, T)> Receive<T>(object tag, uint requestor, params uint[] froms) {
+    /// <param name="p">filter messages</param>
+    /// <returns>The payload of the message and the address of the sender</returns>
+    public async Task<(uint, T)> Receive<T>(Func<object, Metadata, T?> p) where T: struct {
         while (true) {
-            if (froms.Length == 0)
-                froms = publications.Keys.ToArray();
             lock (this) {
-                foreach (var from in froms) {
-                    var v = publications[from];
-                    foreach (var (payload, info) in v) {
-                        if (info.pending
-                            && (info.tag.Equals(tag))
-                            && (info.target == null || info.target == requestor)
-                            && typeof(T).IsInstanceOfType(payload)) {
+                foreach (var (payload, info) in publications) {
+                    if (info.pending) {
+                        var res = p(payload, info);
+                        if (res != null) {
                             info.pending = false;
-                            return (info.sender, (T)payload);
+                            return (info.sender, (T)res);
                         }
                     }
                 }
@@ -115,10 +116,12 @@ class BC {
     }
 }
 
+struct Nothing { }
+
 /// <summary>
 ///  Helper class: one side of a binary channel, hides some ugly parameters
 /// </summary>
-class Link {
+class Link<E> {
     uint address;
     uint target;
     BC bc;
@@ -129,16 +132,45 @@ class Link {
         this.bc = bc;
     }
 
-    public async Task<T> Receive<T>(object tag) {
-        var (_, v) = await bc.Receive<T>(tag, address, new uint[] { target });
+    private (E, T)? f<T>(object payload, BC.Metadata info) {
+        //Console.WriteLine(info.target == address);
+        if (info.target != null && info.target != address)
+            return null;
+        try {
+            return ((E, T))payload;
+        } catch (InvalidCastException) {
+            return null;
+        }
+    }
+
+    public async Task<T> Receive<T>(E tag) {
+        var (_, (_, v)) = await bc.Receive((payload, info) => {
+            var res = f<T>(payload, info);
+            if (res?.Item1.Equals(tag) == true)
+                return res;
+            return null;
+        });
         return v;
     }
-    public async Task Send<T>(Enum tag, T payload) {
-        await bc.PublishAsync(payload, new Metadata() { tag = tag, sender = address, target = target });
+
+    public async Task SendAsync<T>(E tag, T payload) {
+        await bc.PublishAsync((tag, payload), new BC.Metadata() { sender = address, target = target });
+    }
+
+    public Task SendAsync(E tag) {
+        return SendAsync(tag, new Nothing());
+    }
+
+    public void Send<T>(E tag, T payload) {
+        bc.Publish((tag, payload), new BC.Metadata() { sender = address, target = target });
+    }
+
+    public void Send(E tag) {
+        Send(tag, new Nothing());
     }
 }
 
-class PublicLink {
+class PublicLink<E> {
     uint address;
     BC bc;
 
@@ -147,15 +179,31 @@ class PublicLink {
         this.bc = bc;
     }
 
-    public async Task<(Link, T)> Connection<T>(object tag) {
-        var (addr, val) = await bc.Receive<T>(tag, address);
-        return (new Link(bc, address, addr), val);
+    private (E, T)? f<T>(object payload, BC.Metadata info) {
+        //Console.WriteLine(info.target == address);
+        if (info.target != null && info.target != address)
+            return null;
+        try {
+            return ((E, T))payload;
+        } catch (InvalidCastException) {
+            return null;
+        }
     }
 
-    public async void Publish<T>(Enum tag, T payload) {
-        bc.Publish(payload, new Metadata() { tag = tag, sender = address, target = null });
+    public async Task<(Link<E>, T)> Connection<T>(E tag) {
+        var (addr, (_, val)) = await bc.Receive((payload, info) => {
+            var res = f<T>(payload, info);
+            if (res?.Item1.Equals(tag) == true)
+                return res;
+            return null;
+        });
+        return (new Link<E>(bc, address, addr), val);
     }
-    public async Task PublishAsync<T>(Enum tag, T payload) {
-        await bc.PublishAsync(payload, new Metadata() { tag = tag, sender = address, target = null });
+
+    public void Publish<T>(E tag, T payload) {
+        bc.Publish((tag, payload), new BC.Metadata() { sender = address, target = null });
+    }
+    public async Task PublishAsync<T>(E tag, T payload) {
+        await bc.PublishAsync((tag, payload), new BC.Metadata() { sender = address, target = null });
     }
 }
