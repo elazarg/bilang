@@ -36,7 +36,7 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>Playground</StartupObject>
+    <StartupObject>PuzzleNew</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -60,6 +60,8 @@
     <Compile Include="examples\BinaryOptions.cs" />
     <Compile Include="ClientSessionLib.cs" />
     <Compile Include="CoreLib.cs" />
+    <Compile Include="NewExamples\Puzzle.cs" />
+    <Compile Include="Roles.cs" />
     <Compile Include="Scheduler.cs" />
     <Compile Include="examples\MontyHall.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

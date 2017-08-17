@@ -21,6 +21,13 @@ namespace System.Threading.Tasks.Schedulers {
     /// running on top of the ThreadPool.
     /// </summary>
     public class OrderedTaskScheduler : TaskScheduler {
+        static TaskFactory factory = new TaskFactory(new OrderedTaskScheduler());
+
+        public static void Start(params Task[] ts) {
+            foreach (var t in ts)
+                factory.StartNew(t.RunSynchronously);
+        }
+
         /// <summary>The list of tasks to be executed.</summary>
         private readonly LinkedList<Task> _tasks = new LinkedList<Task>(); // protected by lock(_tasks)
         /// <summary>Whether the scheduler is currently processing work items.</summary>
