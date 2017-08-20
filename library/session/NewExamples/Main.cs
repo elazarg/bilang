@@ -7,7 +7,8 @@ class MainTest {
         BC bc = new BC();
         //OrderedTaskScheduler.Start(PuzzleNew.Players(new BC()));
         //OrderedTaskScheduler.Start(MontyHallNew.Players(new BC()));
-        OrderedTaskScheduler.Start(BinaryOptionsNew.Players(new BC()));
+        //OrderedTaskScheduler.Start(BinaryOptionsNew.Players(new BC()));
+        OrderedTaskScheduler.Start(HonestSimultaneousNew.Players(new BC()));
         Console.ReadKey();
     }
 }

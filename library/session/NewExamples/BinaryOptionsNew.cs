@@ -21,13 +21,13 @@ static class BinaryOptionsNew {
 
 
     static async Task Server(PublicLink<S> @public) {
-        var (oracle, firstStockPrice) = await @public.Connection<StockPrice, Oracle>();
+        (var oracle, uint firstStockPrice) = await @public.Connection<StockPrice, Oracle>();
         // the double publish should be resolved by new messaging system
         @public.Publish(new StockPrice(firstStockPrice));
         @public.Publish(new StockPrice(firstStockPrice));
         var (more, less) = await Parallel(@public.Connection<M>(), @public.Connection<L>());
         oracle.Send(new Ready());
-        var secondStockPrice = await oracle.Receive<StockPrice>();
+        uint secondStockPrice = await oracle.Receive<StockPrice>();
         if (secondStockPrice > firstStockPrice) {
             more.Send(new Won());
             less.Send(new Lost());
