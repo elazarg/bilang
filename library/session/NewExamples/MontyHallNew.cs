@@ -23,9 +23,9 @@ static class MontyHallNew {
     private sealed class Winner : Response { }
     private sealed class Loser : Response { }
 
-    static async Task Server(PublicLink<S> pub) {
-        (var host, int hiddenCar) = await pub.Connection<HDoor, H>();
-        (var guest, Door door1) = await pub.Connection<Choice, G>();
+    static async Task Server(PublicLink<S> @public) {
+        (var host, int hiddenCar) = await @public.Connection<HDoor, H>();
+        (var guest, Door door1) = await @public.Connection<Choice, G>();
         host.Send(new Choice(door1));
         Door goat = await host.Receive<Goat>();
         guest.Send(new Goat(goat));
@@ -43,27 +43,27 @@ static class MontyHallNew {
         }
     }
 
-    static async Task ClientHost(DirLink<H, S> link) {
+    static async Task ClientHost(DirLink<H, S> server) {
         Door car = Door.a;
-        var hcar = new Hiding<Door>(car, 0x78573264);
-        await link.SendAsync(new HDoor(hcar.Hidden(link.address)));
-        Door door1 = await link.Receive<Choice>();
-        link.Send(new Goat(door1 == car ? Door.c : Door.b));
-        await link.Receive<Reveal>();
-        link.Send(new Car(hcar));
-        switch (await link.Receive<Response>()) {
+        var hcar = new Hiding<Door>(car, salt: 0x78573264);
+        await server.SendAsync(new HDoor(hcar.Hidden(server.address)));
+        Door door1 = await server.Receive<Choice>();
+        server.Send(new Goat(door1 == car ? Door.c : Door.b));
+        await server.Receive<Reveal>();
+        server.Send(new Car(hcar));
+        switch (await server.Receive<Response>()) {
             case Winner x: WriteLine("Host won"); break;
             case Loser x: WriteLine("Host lost"); break;
             default: Debug.Assert(false); break;
         }
     }
 
-    static async Task ClientGuest(DirLink<G, S> link) {
-        await link.SendAsync(new Choice(Door.c));
-        Door goat = await link.Receive<Goat>();
+    static async Task ClientGuest(DirLink<G, S> server) {
+        await server.SendAsync(new Choice(Door.c));
+        Door goat = await server.Receive<Goat>();
         Door door2 = goat == Door.b ? Door.a : Door.b;
-        link.Send(new Choice2(door2));
-        switch (await link.Receive<Response>()) {
+        server.Send(new Choice2(door2));
+        switch (await server.Receive<Response>()) {
             case Winner x: WriteLine("Guest won"); break;
             case Loser x: WriteLine("Guest lost"); break;
             default: Debug.Assert(false); break;

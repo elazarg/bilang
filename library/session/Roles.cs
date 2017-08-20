@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 
 interface Dir<out From, in To> { } // "in" since we want to be covariant
-interface All { }
+interface Client { }
 
 abstract class Args<T> {
     internal T _;
@@ -60,7 +60,9 @@ class DirLink<From, To> : Link {
     public async Task SendAsync<T>(T payload) where T : Dir<From, To> {
         await bc.PublishAsync(payload, new BC.Metadata() { sender = address, target = target });
     }
-
+    public async Task SendAsync() {
+        await bc.PublishAsync(new Nothing(), new BC.Metadata() { sender = address, target = target });
+    }
     public void Send<T>(T payload) where T : Dir<From, To> {
         bc.Publish(payload, new BC.Metadata() { sender = address, target = target });
     }
@@ -74,11 +76,14 @@ class PublicLink<From> : Link {
         (uint addr, T val) = await bc.Receive(f<T>);
         return (new DirLink<From, To>(bc, address, addr), val);
     }
+    public async Task<DirLink<From, To>> Connection<To>() {
+        return (await Connection<Nothing, To>()).Item1;
+    }
 
-    public void Publish<T>(T payload) where T : Dir<From, All> {
+    public void Publish<T>(T payload) where T : Dir<From, Client> {
         bc.Publish(payload, new BC.Metadata() { sender = address, target = null });
     }
-    public async Task PublishAsync<T>(T payload) where T : Dir<From, All> {
+    public async Task PublishAsync<T>(T payload) where T : Dir<From, Client> {
         await bc.PublishAsync(payload, new BC.Metadata() { sender = address, target = null });
     }
 }

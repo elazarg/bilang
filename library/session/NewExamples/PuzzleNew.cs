@@ -6,11 +6,11 @@ using static System.Console;
 
 static class PuzzleNew {
 
-    private interface Q : All { }
-    private interface A : All { }
-    private interface S : All { }
+    private interface Q : Client { }
+    private interface A : Client { }
+    private interface S { }
 
-    private sealed class Question : Args<int>, Dir<Q, S>, Dir<S, All> { internal Question(int _1) { _ = _1; } }
+    private sealed class Question : Args<int>, Dir<Q, S>, Dir<S, Client> { internal Question(int _1) { _ = _1; } }
     private sealed class Answer : Args<(int, int)>, Dir<A, S>, Dir<S, Q> { internal Answer(int _1, int _2) { _ = (_1, _2); } }
 
     private interface Response : Dir<S, A> { }
@@ -18,17 +18,14 @@ static class PuzzleNew {
     private sealed class Rejected : Response { }
 
 
-    static async Task Server(PublicLink<S> pub) {
-        WriteLine($"Server is waiting for connection");
-        (var asker, int riddle) = await pub.Connection<Question, Q>(); WriteLine($"Server received {riddle} from {asker}");
-        // publishing without waiting does not work with single point for pending/delivered
-        // it should be extracted out to the clients, or as a public state
-        pub.Publish(new Question(riddle)); WriteLine("Server receives...");
+    static async Task Server(PublicLink<S> @public) {
+        (var asker, int riddle) = await @public.Connection<Question, Q>();
+        @public.Publish(new Question(riddle));
         while (true) {
-            var (solver, (m, n)) = await pub.Connection<Answer, A>(); WriteLine($"Server received {m} {n} from {solver}");
+            var (solver, (m, n)) = await @public.Connection<Answer, A>();
             if (m * n == riddle) {
                 solver.Send(new Accepted());
-                asker.Send(new Answer(3, 5)); WriteLine("Server done");
+                asker.Send(new Answer(3, 5));
                 break;
             } else {
                 solver.Send(new Rejected());
@@ -36,25 +33,22 @@ static class PuzzleNew {
         }
     }
 
-
-    static async Task ClientQuestion(DirLink<Q, S> link) {
-        WriteLine($"Client Q sends question");
-        await link.SendAsync(new Question(15));
-        var (m, n) = await link.Receive<Answer>(); WriteLine($"Client Q received solution ({m}, {n})");
-        WriteLine($"Client Q done");
+    static async Task ClientQuestion(DirLink<Q, S> server) {
+        int q = 15;
+        await server.SendAsync(new Question(q));
+        var (m, n) = await server.Receive<Answer>();
+        WriteLine("Client received answer {m} * {n} == {q}");
     }
 
-    static async Task ClientAnswer(DirLink<A, S> link) {
-        WriteLine($"Client A fetches question");
-        int riddle = await link.Receive<Question>(); WriteLine($"Client A sends solution {(3, 5)}");
-        // pretend we are solving the problem
-        await link.SendAsync(new Answer(3, 5)); WriteLine($"Client A sent solution");
-        switch (await link.Receive<Response>()) {
+    static async Task ClientAnswer(DirLink<A, S> server) {
+        int riddle = await server.Receive<Question>();
+        // pretend we are solving the problem, then...
+        await server.SendAsync(new Answer(3, 5));
+        switch (await server.Receive<Response>()) {
             case Accepted x: WriteLine("Good answer"); break;
-            case Rejected x: WriteLine("Bad answer"); break;
+            case Rejected x: WriteLine("Bad answer" ); break;
             default: Debug.Assert(false); break;
         }
-        WriteLine($"Client A done");
     }
 
     internal static Task[] Players(BC bc) => new Task[] {

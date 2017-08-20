@@ -62,6 +62,7 @@
     <Compile Include="CoreLib.cs" />
     <Compile Include="NewExamples\Main.cs" />
     <Compile Include="NewExamples\MontyHallNew.cs" />
+    <Compile Include="NewExamples\BinaryOptionsNew.cs" />
     <Compile Include="NewExamples\PuzzleNew.cs" />
     <Compile Include="Roles.cs" />
     <Compile Include="Scheduler.cs" />
