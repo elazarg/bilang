@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using static System.Console;
+using static Combinators;
 
 
 static class BinaryOptionsNew {
@@ -24,9 +25,7 @@ static class BinaryOptionsNew {
         // the double publish should be resolved by new messaging system
         @public.Publish(new StockPrice(firstStockPrice));
         @public.Publish(new StockPrice(firstStockPrice));
-        // TODO: parallel
-        var more = await @public.Connection<M>();
-        var less = await @public.Connection<L>();
+        var (more, less) = await Parallel(@public.Connection<M>(), @public.Connection<L>());
         oracle.Send(new Ready());
         var secondStockPrice = await oracle.Receive<StockPrice>();
         if (secondStockPrice > firstStockPrice) {
@@ -54,6 +53,7 @@ static class BinaryOptionsNew {
         }
     }
 
+    // Exact copy of Client more up to s/M/L/
     static async Task ClientLess(DirLink<L, S> server) {
         uint price = await server.Receive<StockPrice>();
         await server.SendAsync();

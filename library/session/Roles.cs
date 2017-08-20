@@ -87,3 +87,10 @@ class PublicLink<From> : Link {
         await bc.PublishAsync(payload, new BC.Metadata() { sender = address, target = null });
     }
 }
+
+static class Combinators {
+    public static async Task<(T1, T2)> Parallel<T1, T2>(Task<T1> t1, Task<T2> t2) {
+        System.Threading.Tasks.Parallel.Invoke(async () => await t1, async () => await t2);
+        return (t1.Result, t2.Result);
+    }
+}
