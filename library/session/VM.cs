@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
+using System.Threading.Tasks.Schedulers;
 
 class BC {
     public class Metadata {
@@ -11,6 +11,14 @@ class BC {
         public volatile bool pending = true;
         public override string ToString() => $"{sender} -> {target} ({pending})";
     }
+    OrderedTaskScheduler scheduler = new OrderedTaskScheduler();
+
+    public void Start(params Task[] ts) {
+        TaskFactory factory = new TaskFactory(scheduler);
+        foreach (var t in ts)
+            factory.StartNew(t.RunSynchronously);
+    }
+
     List<(object, Metadata)> publications = new List<(object, Metadata)>();
 
     public void Publish(object payload, Metadata info) {
@@ -22,7 +30,7 @@ class BC {
     public async Task PublishAsync(object payload, Metadata info) {
         Publish(payload, info);
         while (info.pending) {
-            await Task.Yield();
+            await scheduler.Yield();
         }
     }
     
@@ -39,7 +47,7 @@ class BC {
                     }
                 }
             }
-            await Task.Yield();
+            await scheduler.Yield();
         }
     }
 }

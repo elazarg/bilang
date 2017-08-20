@@ -21,13 +21,13 @@ namespace System.Threading.Tasks.Schedulers {
     /// running on top of the ThreadPool.
     /// </summary>
     public class OrderedTaskScheduler : TaskScheduler {
-        static TaskFactory factory = new TaskFactory(new OrderedTaskScheduler());
+        int? currentBusy = null;
 
-        public static void Start(params Task[] ts) {
-            foreach (var t in ts)
-                factory.StartNew(t.RunSynchronously);
+        internal async Task Yield() {
+            currentBusy = Task.CurrentId;
+            await Task.Yield();
         }
-
+        
         /// <summary>The list of tasks to be executed.</summary>
         private readonly LinkedList<Task> _tasks = new LinkedList<Task>(); // protected by lock(_tasks)
         /// <summary>Whether the scheduler is currently processing work items.</summary>
@@ -64,8 +64,14 @@ namespace System.Threading.Tasks.Schedulers {
                         }
 
                         // Get the next item from the queue
-                        item = _tasks.First.Value;
-                        _tasks.RemoveFirst();
+                        while (true) {
+                            item = _tasks.First.Value;
+                            _tasks.RemoveFirst();
+                            if (item.Id == currentBusy)
+                                _tasks.AddLast(item);
+                            else
+                                break;
+                        }
                     }
 
                     // Execute the task we pulled out of the queue
@@ -96,8 +102,12 @@ namespace System.Threading.Tasks.Schedulers {
             bool lockTaken = false;
             try {
                 Monitor.TryEnter(_tasks, ref lockTaken);
-                if (lockTaken) return _tasks.ToArray();
-                else throw new NotSupportedException();
+                if (lockTaken) {
+                    foreach (var t in _tasks) {
+                        if (currentBusy != t.Id)
+                            yield return t;
+                    }
+                } else throw new NotSupportedException();
             } finally {
                 if (lockTaken) Monitor.Exit(_tasks);
             }
