@@ -12,7 +12,7 @@ static class MontyHallNew {
     interface G { }
     interface S { }
 
-    private sealed class HDoor : Args<int>, Dir<H, S> { internal HDoor(int _1) { _ = _1; } }
+    private sealed class HCar : Args<int>, Dir<H, S> { internal HCar(int _1) { _ = _1; } }
     private sealed class Goat : Args<Door>, Dir<H, S>, Dir<S, G> { internal Goat(Door _1) { _ = _1; } }
     private sealed class Choice : Args<Door>, Dir<G, S>, Dir<S, H> { internal Choice(Door _1) { _ = _1; } }
     private sealed class Choice2 : Args<Door>, Dir<G, S> { internal Choice2(Door _1) { _ = _1; } }
@@ -24,7 +24,7 @@ static class MontyHallNew {
     private sealed class Loser : Response { }
 
     static async Task Server(PublicLink<S> @public) {
-        (var host, int hiddenCar) = await @public.Connection<HDoor, H>();
+        (var host, int hiddenCar) = await @public.Connection<HCar, H>();
         (var guest, Door door1) = await @public.Connection<Choice, G>();
         host.Send(new Choice(door1));
         Door goat = await host.Receive<Goat>();
@@ -46,7 +46,7 @@ static class MontyHallNew {
     static async Task ClientHost(DirLink<H, S> server) {
         Door car = Door.a;
         var hcar = new Hiding<Door>(car, salt: 0x78573264);
-        await server.SendAsync(new HDoor(hcar.Hidden(server.address)));
+        await server.SendAsync(new HCar(hcar.Hidden(server.address)));
         Door door1 = await server.Receive<Choice>();
         server.Send(new Goat(door1 == car ? Door.c : Door.b));
         await server.Receive<Reveal>();
