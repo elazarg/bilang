@@ -60,6 +60,7 @@
     <Compile Include="examples\BinaryOptions.cs" />
     <Compile Include="ClientSessionLib.cs" />
     <Compile Include="CoreLib.cs" />
+    <Compile Include="NewExamples\StepAuction.cs" />
     <Compile Include="NewExamples\SimultaneousNew.cs" />
     <Compile Include="NewExamples\Main.cs" />
     <Compile Include="NewExamples\MontyHallNew.cs" />

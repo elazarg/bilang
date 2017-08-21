@@ -21,10 +21,10 @@ namespace System.Threading.Tasks.Schedulers {
     /// running on top of the ThreadPool.
     /// </summary>
     public class OrderedTaskScheduler : TaskScheduler {
-        int? currentBusy = null;
+        int? waitingForMessage = null;
 
         internal async Task Yield() {
-            currentBusy = Task.CurrentId;
+            waitingForMessage = Task.CurrentId;
             await Task.Yield();
         }
         
@@ -67,7 +67,7 @@ namespace System.Threading.Tasks.Schedulers {
                         while (true) {
                             item = _tasks.First.Value;
                             _tasks.RemoveFirst();
-                            if (item.Id == currentBusy)
+                            if (item.Id == waitingForMessage)
                                 _tasks.AddLast(item);
                             else
                                 break;
@@ -104,7 +104,7 @@ namespace System.Threading.Tasks.Schedulers {
                 Monitor.TryEnter(_tasks, ref lockTaken);
                 if (lockTaken) {
                     foreach (var t in _tasks) {
-                        if (currentBusy != t.Id)
+                        if (waitingForMessage != t.Id)
                             yield return t;
                     }
                 } else throw new NotSupportedException();

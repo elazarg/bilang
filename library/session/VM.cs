@@ -1,53 +1,70 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using System.Threading.Tasks.Schedulers;
 
 class BC {
-    public class Metadata {
-        public uint sender;
-        // null means everyone
-        public uint? target;
-        public volatile bool pending = true;
-        public override string ToString() => $"{sender} -> {target} ({pending})";
-    }
-    OrderedTaskScheduler scheduler = new OrderedTaskScheduler();
+    internal readonly Requests requests = new Requests();
+    internal readonly Events events = new Events();
+    readonly OrderedTaskScheduler scheduler = new OrderedTaskScheduler();
 
     public void Start(params Task[] ts) {
         TaskFactory factory = new TaskFactory(scheduler);
         foreach (var t in ts)
             factory.StartNew(t.RunSynchronously);
     }
+}
 
-    List<(object, Metadata)> publications = new List<(object, Metadata)>();
+class Requests {
+    Dictionary<uint, ITargetBlock<object>> requests = new Dictionary<uint, ITargetBlock<object>>();
 
-    public void Publish(object payload, Metadata info) {
+    // for simplicity we ignore the target since there's only one for now
+    ISourceBlock<object> server = new BufferBlock<object>();
+
+    void Register(uint sender) {
+        var block = new BufferBlock<object>();
+        requests[sender] = block;
+        // TODO: make sure we still have all possible races
+        block.LinkTo((BufferBlock<object>)server);
+    }
+
+    public void SendRequest(object payload, uint sender, uint target) {
+        requests[sender].Post(payload);
+    }
+
+    public async Task<bool> SendRequestAsync(object payload, uint sender, uint target) {
+        return await requests[sender].SendAsync(payload);
+    }
+
+    public async Task<object> ReceiveRequest<T>(Func<object> p, uint target) {
+        return await server.ReceiveAsync();
+    }
+}
+
+class Events {
+    List<(object, uint)> events = new List<(object, uint)>();
+
+    public void PublishEvent(object payload, uint sender) {
         lock (this) {
-            publications.Add((payload, info));
+            events.Add((payload, sender));
         }
     }
 
-    public async Task PublishAsync(object payload, Metadata info) {
-        Publish(payload, info);
-        while (info.pending) {
-            await scheduler.Yield();
-        }
-    }
-    
-    public async Task<(uint, T)> Receive<T>(Func<object, Metadata, (bool, T)> p) {
+    public async Task<(uint, T)> ReadEvents<T>(Func<object, uint, (bool, T)> p) {
         while (true) {
             lock (this) {
-                foreach (var (payload, info) in publications) {
-                    if (info.pending) {
-                        var (ok, res) = p(payload, info);
-                        if (ok) {
-                            info.pending = false;
-                            return (info.sender, res);
-                        }
+                // this reverse might break things
+                for (int i = events.Count - 1; i >= 0; i++) {
+                    var (payload, sender) = events[i];
+                    var (ok, res) = p(payload, sender);
+                    if (ok) {
+                        return (sender, res);
                     }
                 }
             }
-            await scheduler.Yield();
+            await Task.Yield();
         }
     }
 }

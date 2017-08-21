@@ -34,7 +34,7 @@ abstract class Link {
         this.bc = bc;
     }
 
-    protected (bool, T) f<T>(object payload, BC.Metadata info) {
+    protected (bool, T) f<T>(object payload, uint sender) {
         if (info.target != null && info.target != address)
             return (false, default);
         try {
@@ -45,7 +45,14 @@ abstract class Link {
     }
 }
 
-class DirLink<From, To> : Link {
+interface IDirLink<From, To> {
+    Task<T> Receive<T>() where T : Dir<To, From>;
+    void Send<T>(T payload) where T : Dir<From, To>;
+    Task SendAsync();
+    Task SendAsync<T>(T payload) where T : Dir<From, To>;
+}
+
+class DirLink<From, To> : Link, IDirLink<From, To> {
     public readonly uint target;
 
     public DirLink(BC bc, uint address, uint target) : base(bc, address) {
@@ -58,13 +65,13 @@ class DirLink<From, To> : Link {
     }
 
     public async Task SendAsync<T>(T payload) where T : Dir<From, To> {
-        await bc.PublishAsync(payload, new BC.Metadata() { sender = address, target = target });
+        await bc.PublishAsync(payload, new BC.RequestMetadata() { sender = address, target = target });
     }
     public async Task SendAsync() {
-        await bc.PublishAsync(new Nothing(), new BC.Metadata() { sender = address, target = target });
+        await bc.PublishAsync(new Nothing(), new BC.RequestMetadata() { sender = address, target = target });
     }
     public void Send<T>(T payload) where T : Dir<From, To> {
-        bc.Publish(payload, new BC.Metadata() { sender = address, target = target });
+        bc.Publish(payload, new BC.RequestMetadata() { sender = address, target = target });
     }
 }
 
@@ -81,10 +88,10 @@ class PublicLink<From> : Link {
     }
 
     public void Publish<T>(T payload) where T : Dir<From, Client> {
-        bc.Publish(payload, new BC.Metadata() { sender = address, target = null });
+        bc.Publish(payload, new BC.RequestMetadata() { sender = address, target = null });
     }
     public async Task PublishAsync<T>(T payload) where T : Dir<From, Client> {
-        await bc.PublishAsync(payload, new BC.Metadata() { sender = address, target = null });
+        await bc.PublishAsync(payload, new BC.RequestMetadata() { sender = address, target = null });
     }
 }
 
