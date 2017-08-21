@@ -8,8 +8,8 @@ class MainTest {
         //bc.Start(PuzzleNew.Players(bc));
         //bc.Start(MontyHallNew.Players(bc));
         //bc.Start(BinaryOptionsNew.Players(bc));
-        //bc.Start(SimultaneousNew.Players(bc));
-        bc.Start(StepAuction.Players(bc));
+        bc.Start(SimultaneousNew.Players(bc));
+        //bc.Start(StepAuction.Players(bc));
         Console.ReadKey();
     }
 }

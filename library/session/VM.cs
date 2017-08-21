@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Threading.Tasks.Schedulers;
+using System.Linq;
 
 class BC {
+    internal readonly uint serverAddress = 0;
     internal readonly Requests requests = new Requests();
-    internal readonly Events events = new Events();
-    readonly OrderedTaskScheduler scheduler = new OrderedTaskScheduler();
 
+    internal readonly List<object> events = new List<object>();
+
+    readonly OrderedTaskScheduler scheduler = new OrderedTaskScheduler();
     public void Start(params Task[] ts) {
         TaskFactory factory = new TaskFactory(scheduler);
         foreach (var t in ts)
@@ -17,54 +19,48 @@ class BC {
     }
 }
 
-class Requests {
-    Dictionary<uint, ITargetBlock<object>> requests = new Dictionary<uint, ITargetBlock<object>>();
-
-    // for simplicity we ignore the target since there's only one for now
-    ISourceBlock<object> server = new BufferBlock<object>();
-
-    void Register(uint sender) {
-        var block = new BufferBlock<object>();
-        requests[sender] = block;
-        // TODO: make sure we still have all possible races
-        block.LinkTo((BufferBlock<object>)server);
+struct Packet {
+    internal uint? sender;
+    internal object payload;
+    internal Packet(uint? _1, object _2) { sender = _1; payload = _2; }
+    public void Deconstruct(out uint? _1, out object _2) {
+        _1 = sender; _2 = payload;
     }
-
-    public void SendRequest(object payload, uint sender, uint target) {
-        requests[sender].Post(payload);
-    }
-
-    public async Task<bool> SendRequestAsync(object payload, uint sender, uint target) {
-        return await requests[sender].SendAsync(payload);
-    }
-
-    public async Task<object> ReceiveRequest<T>(Func<object> p, uint target) {
-        return await server.ReceiveAsync();
+    public override string ToString() {
+        return $"Packet({sender}: {payload})";
     }
 }
 
-class Events {
-    List<(object, uint)> events = new List<(object, uint)>();
+class Requests {
 
-    public void PublishEvent(object payload, uint sender) {
-        lock (this) {
-            events.Add((payload, sender));
-        }
+    private Dictionary<uint, ITargetBlock<object>> requests = new Dictionary<uint, ITargetBlock<object>>();
+
+    private BufferBlock<Packet> server = new BufferBlock<Packet>();
+
+    public void Register(uint sender) {
+        var block = new BufferBlock<object>();
+        requests[sender] = block;
+        // TODO: make sure we still have all possible races
+        var t = new TransformBlock<object, Packet>(payload => new Packet(sender, payload));
+        block.LinkTo(t);
+        t.LinkTo(server);
     }
 
-    public async Task<(uint, T)> ReadEvents<T>(Func<object, uint, (bool, T)> p) {
-        while (true) {
-            lock (this) {
-                // this reverse might break things
-                for (int i = events.Count - 1; i >= 0; i++) {
-                    var (payload, sender) = events[i];
-                    var (ok, res) = p(payload, sender);
-                    if (ok) {
-                        return (sender, res);
-                    }
-                }
-            }
-            await Task.Yield();
-        }
+    public void SendRequest(uint sender, object payload) {
+        //Console.WriteLine($"Client {sender} posts {payload}");
+        requests[sender].Post(payload);
+    }
+
+    public async Task<bool> SendRequestAsync(uint sender, object payload) {
+        //Console.WriteLine($"Client {sender} sends {payload}");
+        return await requests[sender].SendAsync(payload);
+    }
+
+    public async Task<Packet> ReceiveRequest() {
+        //Console.WriteLine($"Server receives");
+        // this is an actual "method call" execution
+        var res = await server.ReceiveAsync();
+        //Console.WriteLine($"Server received {res}");
+        return res;
     }
 }

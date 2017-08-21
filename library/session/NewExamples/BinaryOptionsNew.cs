@@ -10,7 +10,6 @@ static class BinaryOptionsNew {
     private interface Oracle : Client { }
     private interface L : Client { }
     private interface M : Client { }
-    private interface S { }
 
     private sealed class StockPrice : Args<uint>, Dir<Oracle, S>, Dir<S, Client> { internal StockPrice(uint _1) { _ = _1; } }
     private sealed class Ready : Dir<S, Oracle> { }
@@ -20,10 +19,8 @@ static class BinaryOptionsNew {
     private sealed class Lost : Response { }
 
 
-    static async Task Server(PublicLink<S> @public) {
+    static async Task Server(PublicLink @public) {
         (var oracle, uint firstStockPrice) = await @public.Connection<StockPrice, Oracle>();
-        // the double publish should be resolved by new messaging system
-        @public.Publish(new StockPrice(firstStockPrice));
         @public.Publish(new StockPrice(firstStockPrice));
         var (more, less) = await Parallel(@public.Connection<M>(), @public.Connection<L>());
         oracle.Send(new Ready());
@@ -37,16 +34,16 @@ static class BinaryOptionsNew {
         }
     }
 
-    static async Task ClientOracle(DirLink<Oracle, S> server) {
+    static async Task ClientOracle(UpLink<Oracle> server) {
         server.Send(new StockPrice(16));
-        await server.Receive<Ready>();
+        await server.ReceiveEarliest<Ready>();
         await server.SendAsync(new StockPrice(5));
     }
 
-    static async Task ClientMore(DirLink<M, S> server) {
-        uint price = await server.Receive<StockPrice>();
+    static async Task ClientMore(UpLink<M> server) {
+        uint price = await server.ReceiveEarliest<StockPrice>(@public: true);
         await server.SendAsync();
-        switch (await server.Receive<Response>()) {
+        switch (await server.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("More won! :)"); break;
             case Lost x: WriteLine("More lost :("); break;
             default: Debug.Assert(false); break;
@@ -54,10 +51,10 @@ static class BinaryOptionsNew {
     }
 
     // Exact copy of Client more up to s/M/L/
-    static async Task ClientLess(DirLink<L, S> server) {
-        uint price = await server.Receive<StockPrice>();
+    static async Task ClientLess(UpLink<L> server) {
+        uint price = await server.ReceiveEarliest<StockPrice>(@public: true);
         await server.SendAsync();
-        switch (await server.Receive<Response>()) {
+        switch (await server.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("Less won! :)"); break;
             case Lost x: WriteLine("Less lost :("); break;
             default: Debug.Assert(false); break;
@@ -65,10 +62,10 @@ static class BinaryOptionsNew {
     }
 
     internal static Task[] Players(BC bc) => new Task[] {
-        Server(new PublicLink<S>(bc, 0)),
-        ClientOracle(new DirLink<Oracle, S>(bc, 1, 0)),
-        ClientMore(new DirLink<M, S>(bc, 2, 0)),
-        ClientLess(new DirLink<L, S>(bc, 3, 0))
+        Server(new PublicLink(bc, 0)),
+        ClientOracle(new UpLink<Oracle>(bc, 1, 0)),
+        ClientMore(new UpLink<M>(bc, 2, 0)),
+        ClientLess(new UpLink<L>(bc, 3, 0))
     };
 
 }
