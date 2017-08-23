@@ -57,10 +57,7 @@ class Requests {
     }
 
     public async Task<Packet> ReceiveRequest() {
-        //Console.WriteLine($"Server receives");
         // this is an actual "method call" execution
-        var res = await server.ReceiveAsync();
-        //Console.WriteLine($"Server received {res}");
-        return res;
+        return await server.ReceiveAsync();
     }
 }

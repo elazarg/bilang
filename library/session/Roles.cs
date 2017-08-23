@@ -22,8 +22,8 @@ struct Nothing { }
 
 class UpLink<From> {
     public readonly uint address;
-    private BC bc;
-    private int last;
+    private readonly BC bc;
+    private int last = 0;
 
     public UpLink(BC bc, uint address, uint target) {
         this.address = address;
@@ -41,13 +41,10 @@ class UpLink<From> {
                     (uint? to, object payload) = (Packet)obj_payload;
                     if (to == address || @public && to == null) {
                         last++;
-                        //Console.WriteLine($"Client {address} received {payload}");
                         return (T)payload;
                     } else {
-                        //Console.WriteLine($"Client {address} dropped {obj_payload} (wrong target)");
                     }
                 } catch (InvalidCastException) {
-                    //Console.WriteLine($"Client {address} dropped {obj_payload} (unassignable)");
                 }
             }
             await Task.Yield();
@@ -96,7 +93,7 @@ class PublicLink {
 class DownLink<To> {
     public readonly uint target;
     public readonly uint address;
-    protected BC bc;
+    private readonly BC bc;
 
     public DownLink(BC bc, uint address, uint target) {
         this.target = target;

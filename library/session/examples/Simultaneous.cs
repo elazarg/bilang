@@ -24,11 +24,8 @@ static class Simultaneous {
         var even = await @public.Connection<E>();
         var odd = await @public.Connection<O>();
         (int even_hchoice, int odd_hchoice) = await Parallel(even.Receive<HChoice>(), odd.Receive<HChoice>());
-        Console.WriteLine("1");
         even.Send(new Reveal()); odd.Send(new Reveal());
-        Console.WriteLine("2");
         (Hiding<bool> even_choice, Hiding<bool> odd_choice) = await Parallel(even.Receive<Choice>(), odd.Receive<Choice>());
-        Console.WriteLine("3");
         bool even_honest = even_choice.Hidden(even.target) == even_hchoice;
         bool odd_honest = odd_choice.Hidden(odd.target) == odd_hchoice;
         if (!even_honest && !odd_honest) {
