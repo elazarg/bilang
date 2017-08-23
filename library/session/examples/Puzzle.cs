@@ -1,95 +1,59 @@
-﻿using static SessionLib;
-using static CoreLib;
-using static ClientSessionLib;
+﻿using System.Diagnostics;
+using System.Threading.Tasks;
+using static System.Console;
 
 
-class Puzzle {
-    static async void Server() {
-        var (a, (q, prize)) = await Connect<(int, Money)>("Pose riddle",
-            require: qp => qp.Item2.amount == 80);
-        using (a) {
-            Publish("Question", q);
-            var (solver, (m, n)) = await Connect<(int, int)>("Factor", require: mn => {
-                (var m1, var n1) = mn;
-                return m1 != 1 && n1 != 1 && m1 * n1 == q;
-            });
-            using (solver) {
-                a.Notify($"Answer", (m, n));
-                Pay(solver, prize);
+static class Puzzle {
+
+    private interface Q : Client { }
+    private interface A : Client { }
+
+    private sealed class Question : Args<int>, Dir<Q, S>, Dir<S, Client> { internal Question(int _1) { _ = _1; } }
+    private sealed class Answer : Args<(int, int)>, Dir<A, S>, Dir<S, Q> { internal Answer(int _1, int _2) { _ = (_1, _2); } }
+
+    private interface Response : Dir<S, A> { }
+    private sealed class Accepted : Response { }
+    private sealed class Rejected : Response { }
+
+
+    static async Task Server(PublicLink @public) {
+        (var asker, int riddle) = await @public.Connection<Question, Q>();
+        @public.Publish(new Question(riddle));
+        while (true) {
+            var (solver, (m, n)) = await @public.Connection<Answer, A>();
+            if (m * n == riddle) {
+                asker.Send(new Answer(3, 5));
+                solver.Send(new Accepted());
+                break;
+            } else {
+                solver.Send(new Rejected());
             }
         }
     }
 
-    static Contract s;
-
-    static async void ClientA() {
-        var c = await s.Connect("Pose riddle", (15, new Money(80)));
-        var (m, n) = await c.ReceiveNotification<(int, int)>();
-        System.Console.WriteLine($"The solution is {m} * {n}");
+    static async Task ClientQuestion(UpLink<Q> server) {
+        int q = 15;
+        await server.SendAsync(new Question(q));
+        WriteLine($"Question: factor {q}");
+        var (m, n) = await server.ReceiveEarliest<Answer>();
+        WriteLine($"Answer {m} * {n} == {q}");
     }
 
-    static async void ClientSolver() {
-        int value = s.Read<int>("Question");
-        (int, int)? nfs = Solve(value);
-        if (nfs is null)
-            return;
-        var c = await s.Connect("Factor", ((int, int))nfs);
-        string result = await c.ReceiveNotification();
-    }
-
-    private static (int, int)? Solve(int value) {
-        (int, int)? fs = null;
-        for (int i = 2; i < value; i++)
-            if (i * (value / i) == value)
-                fs = (i, value / i);
-        return fs;
-    }
-}
-
-
-class PuzzleSpecific {
-    static async void Server() {
-        var (a, prize) = await Connect<Money>("Q");
-        var solver = await Connect("A");
-        using (a) {
-            using (solver) {
-                a.Notify("Solver connected");
-                int q = await a.Receive<int>();
-                solver.Notify("Riddle", q);
-                var (m, n) = await solver.Receive<(int, int)>(require: mn => {
-                    var (m1, n1) = mn;
-                    return m1 != 1 && n1 != 1 && m1 * n1 == q;
-                });
-                a.Notify($"Answer", (m, n));
-                Pay(solver, prize);
-            }
+    static async Task ClientAnswer(UpLink<A> server) {
+        int riddle = await server.ReceiveEarliest<Question>(@public: true);
+        // pretend we are solving the problem, then...
+        await server.SendAsync(new Answer(3, 5));
+        switch (await server.ReceiveEarliest<Response>()) {
+            case Accepted x: WriteLine("Good answer"); break;
+            case Rejected x: WriteLine("Bad answer" ); break;
+            default: Debug.Assert(false); break;
         }
     }
 
-    static Contract s;
+    internal static Task[] Players(BC bc) => new Task[] {
+        Server(new PublicLink(bc, 0)),
+        ClientQuestion(new UpLink<Q>(bc, 1, 0)),
+        ClientAnswer(new UpLink<A>(bc, 2, 0))
+    };
 
-    static async void ClientA() {
-        var c = await s.Connect("Pose riddle", new Money(80));
-        await c.ReceiveNotification("Solver connected");
-        await c.SendAsync(15);
-        (var m, var n) = await c.ReceiveNotification<(int, int)>();
-        System.Console.WriteLine($"The solution is {m} * {n}");
-    }
-
-    static async void ClientSolver() {
-        int value = s.Read<int>("Question");
-        (int, int)? nfs = Solve(value);
-        if (nfs is null)
-            return;
-        var c = await s.Connect("Factor", ((int, int))nfs);
-        string result = await c.ReceiveNotification();
-    }
-
-    private static (int, int)? Solve(int value) {
-        (int, int)? fs = null;
-        for (int i = 2; i < value; i++)
-            if (i * (value / i) == value)
-                fs = (i, value / i);
-        return fs;
-    }
 }

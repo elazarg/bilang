@@ -56,23 +56,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="examples\Auction.cs" />
+    <Compile Include="examples\StepAuction.cs" />
+    <Compile Include="examples\Simultaneous.cs" />
+    <Compile Include="examples\Main.cs" />
+    <Compile Include="examples\MontyHall.cs" />
     <Compile Include="examples\BinaryOptions.cs" />
-    <Compile Include="ClientSessionLib.cs" />
-    <Compile Include="CoreLib.cs" />
-    <Compile Include="NewExamples\StepAuction.cs" />
-    <Compile Include="NewExamples\SimultaneousNew.cs" />
-    <Compile Include="NewExamples\Main.cs" />
-    <Compile Include="NewExamples\MontyHallNew.cs" />
-    <Compile Include="NewExamples\BinaryOptionsNew.cs" />
-    <Compile Include="NewExamples\PuzzleNew.cs" />
+    <Compile Include="examples\Puzzle.cs" />
     <Compile Include="Roles.cs" />
     <Compile Include="Scheduler.cs" />
-    <Compile Include="examples\MontyHall.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="examples\Puzzle.cs" />
-    <Compile Include="SessionLib.cs" />
-    <Compile Include="examples\Simultaneous.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="VM.cs" />
   </ItemGroup>
