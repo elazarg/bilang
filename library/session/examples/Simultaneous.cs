@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using static System.Console;
 using static Combinators;
 using static Utils;
-using System.Diagnostics.Contracts;
 
 static class Simultaneous {
     
