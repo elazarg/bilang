@@ -22,7 +22,7 @@ struct Nothing { }
 
 class UpLink<From> {
     public readonly uint address;
-    private readonly BC bc;
+    readonly BC bc;
     private int last = 0;
 
     public UpLink(BC bc, uint address, uint target) {
@@ -62,65 +62,100 @@ class UpLink<From> {
     }
 }
 
-class PublicLink {
-    public readonly uint address;
-    protected BC bc;
 
-    public PublicLink(BC bc, uint address) {
+abstract class Link {
+    public readonly uint address;
+    public readonly uint? target;
+    public readonly BC bc;
+    protected Link(uint address, uint? target, BC bc) {
         this.address = address;
+        this.target = target;
         this.bc = bc;
     }
-    
-    public async Task<(DownLink<To>, T)> Connection<T, To>() {
-        while (true) {
-            (uint? sender, object payload) = await bc.requests.ReceiveRequest();
-            try {
-                return (new DownLink<To>(bc, address, (uint)sender), (T)payload);
-            } catch (InvalidCastException) {
-            }
-        }
-    }
+}
 
-    public async Task<DownLink<To>> Connection<To>() {
-        return (await Connection<Nothing, To>()).Item1;
-    }
+class PublicLink : Link {
+    public PublicLink(BC bc, uint address) : base(address, null, bc) {    }
+    public Connector<T, To> Connection<T, To>() => new Connector<T, To>(){link = this};
+    public Connector<Nothing, To> Connection<To>() => Connection<Nothing, To>();
 
     public void Publish<T>(T payload) where T : Dir<S, Client> {
         bc.events.Add(new Packet(null, payload));
     }
 }
 
-class DownLink<To> {
-    public readonly uint target;
-    public readonly uint address;
-    private readonly BC bc;
-
-    public DownLink(BC bc, uint address, uint target) {
-        this.target = target;
-        this.address = address;
-        this.bc = bc;
+class DownLink<To> : Link {
+    public DownLink(BC bc, uint address, uint target) : base(address, target, bc) {
     }
 
-    public async Task<T> Receive<T>() where T : Dir<To, S> {
-        while (true) {
-            (uint? sender, object payload) = await bc.requests.ReceiveRequest();
-            try {
-                if (sender == target)
-                    return (T)payload;
-            } catch (InvalidCastException) {
-            }
-        }
-    }
-    
+    public Receiver<T> Receive<T>() where T : Dir<To, S> => new Receiver<T>() { link=this };
+
     public void Send<T>(T payload) where T : Dir<S, To> {
         bc.events.Add(new Packet(target, payload));
     }
 }
 
+abstract class Acceptor<T> {
+    public Link link;
+    public abstract (bool, T) TryAccept(uint? sender, object payload);
+
+    private async Task<T> Accept() {
+        while (true) {
+            (uint? sender, object payload) = await link.bc.requests.ReceiveRequest();
+            var (ok, res) = TryAccept(sender, payload);
+            if (!ok)
+                continue;
+            return res;
+        }
+    }
+
+    public System.Runtime.CompilerServices.TaskAwaiter<T> GetAwaiter() {
+        return Accept().GetAwaiter();
+    }
+}
+
+class Connector<T, To>: Acceptor<(DownLink<To>, T)> {
+    public override (bool, (DownLink<To>, T)) TryAccept(uint? sender, object payload) {
+        try {
+            return (true, (new DownLink<To>(link.bc, link.address, (uint)sender), (T)payload));
+        } catch (InvalidCastException) {
+        }
+        return (false, default);
+    }
+}
+
+class Receiver<T> : Acceptor<T> {
+    public override (bool, T) TryAccept(uint? sender, object payload) {
+        try {
+            if (sender == link.target) {
+                return (true, (T)payload);
+            }
+        } catch (InvalidCastException) {
+        }
+        return (false, default);
+    }
+}
+
 
 static class Combinators {
-    public static async Task<(T1, T2)> Parallel<T1, T2>(Task<T1> t1, Task<T2> t2) {
-        System.Threading.Tasks.Parallel.Invoke(async () => await t1, async () => await t2);
-        return (t1.Result, t2.Result);
+    public static async Task<(T1, T2)> Parallel<T1, T2>(Acceptor<T1> t1, Acceptor<T2> t2) {
+        BC bc = t1.link.bc;
+        T1 left = default;        bool doneLeft = false;
+        T2 right = default;       bool doneRight = false;
+        while (!doneLeft || !doneRight) {
+            (uint? sender, object payload) = await bc.requests.ReceiveRequest();
+            var (ok1, p1) = t1.TryAccept(sender, payload);
+            var (ok2, p2) = t2.TryAccept(sender, payload);
+            if (ok1 && !doneLeft) {
+                left = p1;
+                doneLeft = true;
+            } else if (ok2 && !doneRight) {
+                right = p2;
+                doneRight = true;
+            } else {
+                Console.WriteLine("Dropped packets");
+            }
+        }
+        return (left, right);
     }
 }

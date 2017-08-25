@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using static System.Console;
 using static Combinators;
 using static Utils;
-
+using System.Diagnostics.Contracts;
 
 static class Simultaneous {
     
@@ -18,16 +18,15 @@ static class Simultaneous {
     private interface Response : Dir<S, O>, Dir<S, E> { }
     private sealed class Won : Response { }
     private sealed class Lost : Response { }
-
-
+    
     static async Task Server(PublicLink @public) {
-        var even = await @public.Connection<E>();
-        var odd = await @public.Connection<O>();
+        var (even, _) = await @public.Connection<E>();
+        var (odd, _) = await @public.Connection<O>();
         (int even_hchoice, int odd_hchoice) = await Parallel(even.Receive<HChoice>(), odd.Receive<HChoice>());
         even.Send(new Reveal()); odd.Send(new Reveal());
         (Hiding<bool> even_choice, Hiding<bool> odd_choice) = await Parallel(even.Receive<Choice>(), odd.Receive<Choice>());
-        bool even_honest = even_choice.Hidden(even.target) == even_hchoice;
-        bool odd_honest = odd_choice.Hidden(odd.target) == odd_hchoice;
+        bool even_honest = even_choice.Hidden((uint)even.target) == even_hchoice;
+        bool odd_honest = odd_choice.Hidden((uint)odd.target) == odd_hchoice;
         if (!even_honest && !odd_honest) {
             even.Send(new Lost());
             odd.Send(new Lost());

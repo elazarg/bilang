@@ -22,7 +22,7 @@ static class BinaryOptions {
     static async Task Server(PublicLink @public) {
         (var oracle, uint firstStockPrice) = await @public.Connection<StockPrice, Oracle>();
         @public.Publish(new StockPrice(firstStockPrice));
-        var (more, less) = await Parallel(@public.Connection<M>(), @public.Connection<L>());
+        var ((more, _), (less, _)) = await Parallel(@public.Connection<M>(), @public.Connection<L>());
         oracle.Send(new Ready());
         uint secondStockPrice = await oracle.Receive<StockPrice>();
         if (secondStockPrice > firstStockPrice) {

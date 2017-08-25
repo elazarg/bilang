@@ -25,15 +25,14 @@ static class MontyHall {
     static async Task Server(PublicLink @public) {
         (var host, int hiddenCar) = await @public.Connection<HCar, H>();
         (var guest, Door door1) = await @public.Connection<Choice, G>();
-        host.Send(new Choice(door1));
-        Door goat = await host.Receive<Goat>();
-        guest.Send(new Goat(goat));
-        Door door2 = await guest.Receive<Choice2>();
-        host.Send(new Reveal());
-        Hiding<Door> hcar = await host.Receive<Car>();
+
+        host.Send(new Choice(door1));  Door goat = await host.Receive<Goat>();
+        guest.Send(new Goat(goat));    Door door2 = await guest.Receive<Choice2>();
+        host.Send(new Reveal());       Hiding<Door> hcar = await host.Receive<Car>();
+
         Door car = hcar.value;
         // FIX: confusing naming
-        if (hcar.Hidden(host.target) != hiddenCar || car == goat || car == door2) {
+        if (hcar.Hidden((uint)host.target) != hiddenCar || car == goat || car == door2) {
             guest.Send(new Winner());
             host.Send(new Loser());
         } else {
