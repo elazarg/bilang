@@ -59,11 +59,5 @@ static class BinaryOptions {
         }
     }
 
-    internal static Action[] Players(BC bc) => new Action[] {
-        () => Server(new PublicLink(bc, 0)),
-        () => ClientOracle(new ServerLink(bc, 1)),
-        () => ClientMore(new ServerLink(bc, 2)),
-        () => ClientLess(new ServerLink(bc, 3))
-    };
-
+    internal static Session Players = new Session(Server, ClientOracle, ClientMore, ClientLess);
 }

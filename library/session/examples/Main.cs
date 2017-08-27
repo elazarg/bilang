@@ -2,11 +2,12 @@
 
 class MainTest {
     public static void Main() {
-        BC bc = new BC();
-        //bc.Start(Puzzle.Players(bc));
-        //bc.Start(MontyHall.MontyHall.Players(bc));
-        bc.Start(BinaryOptions.Players(bc));
-        //bc.Start(Simultaneous.Simultaneous.Players(bc));
-        //bc.Start(StepAuction.Players(bc));
+        var c = new Controller();
+        BC bc = new BC(c);
+        //c.Start(bc, Puzzle.Players(bc));
+        //c.Start(bc, MontyHall.MontyHall.Players(bc));
+        c.Start(BinaryOptions.Players);
+        //c.Start(bc, Simultaneous.Simultaneous.Players(bc));
+        //c.Start(bc, StepAuction.Players(bc));
     }
 }

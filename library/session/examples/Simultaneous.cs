@@ -64,11 +64,6 @@ namespace Simultaneous {
             }
         }
 
-        internal static Action[] Players(BC bc) => new Action[] {
-        () => Server(new PublicLink(bc, 0)),
-        () => ClientOdd(new ServerLink(bc, 2)),
-        () => ClientEven(new ServerLink(bc, 1))
-    };
-
+        internal static Session Players = new Session(Server, ClientOdd, ClientEven);
     }
 }

@@ -3,82 +3,17 @@ using System.Collections.Generic;
 using System.Threading.Tasks.Dataflow;
 using System.Threading;
 
-
 class BC {
-    internal readonly uint serverAddress = 0;
     internal readonly Requests requests;
-    public BC() {
+    internal readonly List<object> events = new List<object>();
+    public BC(Controller c) {
+        controller = c;
         requests = new Requests() { bc = this };
     }
 
-    internal readonly List<object> events = new List<object>();
-
-    BufferBlock<bool>[] run;
-    BroadcastBlock<string>[] state;
-
-    private void Prompt(string s) {
-        Console.Write($"\r{s}\n>>> ");
-        Console.Out.Flush();
-    }
-
+    private readonly Controller controller;
     public void Yield(uint address, object details) {
-        state[address].Post($"Waiting: {details}");
-        run[address].Receive();
-        state[address].Post($"Running");
-    }
-    
-    public void Start(params Action[] ts) {
-        var threads = new List<Thread>();
-        int n = ts.Length;
-        run = new BufferBlock<bool>[n];
-        state = new BroadcastBlock<string>[n];
-        for (uint i = 0; i < n; i++) {
-            var val = new object();
-            requests.Register(i);
-            run[i] = new BufferBlock<bool>();
-            state[i] = new BroadcastBlock<string>(x=>x);
-            state[i].Post("Nothing");
-            var t = ts[i];
-            threads.Add(new Thread(() => t()));
-        }
-        foreach (var t in threads)
-            t.Start();
-        Prompt("Start game");
-        while (true) {
-            var s = Console.ReadLine();
-            if (s == "exit" || s == "q" || s == "quit") {
-                Console.WriteLine("Killing threads");
-                foreach (var t in threads)
-                    t.Abort();
-                Console.WriteLine("Exiting");
-                return;
-            } else if (uint.TryParse(s, out uint address)) {
-                if (address < n) {
-                    Prompt($"Wake {address}");
-                    run[address].Post(true);
-                } else {
-                    Prompt($"Bad address {address}");
-                }
-            } else if (s.Contains(" ") && s.Split(' ')[0] == "run" && uint.TryParse(s.Split(' ')[1], out uint count)) { 
-                for (int i=0; i < count; i++) {
-                    address = (uint)new Random().Next();
-                    run[address % n].Post(true);
-                    Thread.Sleep(100);
-                }
-            } else if (s != "") {
-                Prompt($"Unkown command {s}");
-            } else {
-                address = (uint)new Random().Next();
-                Prompt($"Wake {address % n}");
-                run[address % n].Post(true);
-            }
-            {
-                for (uint i = 0; i < n; i++) {
-                    var v = state[i].Receive();
-                    Prompt($"{i}: {v}");
-                }
-            }
-        }
+        controller.Yield(address, details);
     }
 }
 

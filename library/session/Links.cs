@@ -46,10 +46,10 @@ class ServerLink: Link {
                 try {
                     return (T)((PublicMail)e).payload;
                 } catch (InvalidCastException) {
-                    Console.WriteLine("Dropped");
+                    //Console.WriteLine("Dropped");
                 }
             }
-            Console.WriteLine("Nothing to read");
+            //Console.WriteLine("Nothing to read");
         }
     }
 
@@ -84,10 +84,10 @@ class UpLink<Role> : Link {
                         last++;
                         return (T)mail.payload;
                     } else {
-                        Console.WriteLine($"{address} dropped (wrong target) {payload}");
+                        //Console.WriteLine($"{address} dropped (wrong target) {payload}");
                     }
                 } catch (InvalidCastException) {
-                    Console.WriteLine($"{address} dropped (wrong type) {payload} != {typeof(T)}");
+                    //Console.WriteLine($"{address} dropped (wrong type) {payload} != {typeof(T)}");
                 }
             }
         }
