@@ -11,9 +11,9 @@ static class Puzzle {
     private sealed class Question : Args<int>, Dir<Q, S>, Dir<S, Client>, Dir<S, A> { internal Question(int _1) { _ = _1; } }
     private sealed class Answer : Args<(int, int)>, Dir<A, S>, Dir<S, Q> { internal Answer(int _1, int _2) { _ = (_1, _2); } }
 
-    private interface Response : Dir<S, A> { }
-    private sealed class Accepted : Response { }
-    private sealed class Rejected : Response { }
+    private interface IResponse : Dir<S, A> { }
+    private sealed class Accepted : IResponse { }
+    private sealed class Rejected : IResponse { }
 
 
     static void Server(PublicLink @public) {
@@ -43,7 +43,7 @@ static class Puzzle {
         int riddle = server.ReceiveLatestPublic<Question>();
         // pretend we are solving the problem, then...
         var c = server.Connection<A, Answer>(new Answer(3, 5));
-        switch (c.ReceiveEarliest<Response>()) {
+        switch (c.ReceiveEarliest<IResponse>()) {
             case Accepted x: WriteLine("Good answer"); break;
             case Rejected x: WriteLine("Bad answer" ); break;
             default: Debug.Assert(false); break;

@@ -16,11 +16,11 @@ struct Session {
 
     internal IEnumerable<Actor> CreateActors(BC bc) {
         Action<PublicLink> _server = server;
-        yield return new Actor(0, () => _server(new PublicLink(bc, 0)));
+        yield return new Actor(_server.Method.Name, 0, () => _server(new PublicLink(bc, 0)));
         for (uint i = 0; i < clients.Length; i++) {
             uint address = i + 1;
             var client = clients[i];
-            yield return new Actor(address, () => client(new ServerLink(bc, address)));
+            yield return new Actor(client.Method.Name, address, () => client(new ServerLink(bc, address)));
         }
     }
 }
@@ -41,9 +41,10 @@ class Actor {
         run.Post(true);
     }
 
-    public Actor(uint address, Action action) {
+    public Actor(string name, uint address, Action action) {
         this.address = address;
         this.thread = new Thread(() => { action(); state.Post("Done"); });
+        thread.Name = name;
         state.Post("Ready to start");
     }
 }
