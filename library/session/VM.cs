@@ -13,7 +13,8 @@ class BC {
 
     internal readonly List<object> events = new List<object>();
 
-    BufferBlock<bool>[] run = new BufferBlock<bool>[5];
+    BufferBlock<bool>[] run;
+    BroadcastBlock<string>[] state;
 
     private void Prompt(string s) {
         Console.Write($"\r{s}\n>>> ");
@@ -21,27 +22,55 @@ class BC {
     }
 
     public void Yield(uint address, object details) {
-        Prompt($"Waiting - {address}: {details}");
+        state[address].Post($"Waiting: {details}");
         run[address].Receive();
-        Prompt($"Running {address}");
+        state[address].Post($"Running");
     }
     
     public void Start(params Action[] ts) {
-        uint i = 0;
-        foreach (var t in ts) {
+        var threads = new List<Thread>();
+        int n = ts.Length;
+        run = new BufferBlock<bool>[n];
+        state = new BroadcastBlock<string>[n];
+        for (uint i = 0; i < n; i++) {
             var val = new object();
             requests.Register(i);
             run[i] = new BufferBlock<bool>();
-            new Thread(() => t()).Start();
-            i++;
+            state[i] = new BroadcastBlock<string>(x=>x);
+            state[i].Post("Nothing");
+            var t = ts[i];
+            threads.Add(new Thread(() => t()));
         }
+        foreach (var t in threads)
+            t.Start();
+        Prompt("Start game");
         while (true) {
             var s = Console.ReadLine();
-            if (s == "exit")
+            if (s == "exit" || s == "q" || s == "quit") {
+                Console.WriteLine("Killing threads");
+                foreach (var t in threads)
+                    t.Abort();
+                Console.WriteLine("Exiting");
                 return;
-            if (uint.TryParse(s, out uint address)) {
-                Console.WriteLine($"Wake {address}");
-                run[address].Post(true);
+            } else if (uint.TryParse(s, out uint address)) {
+                if (address < n) {
+                    Prompt($"Wake {address}");
+                    run[address].Post(true);
+                } else {
+                    Prompt($"Bad address {address}");
+                }
+            } else if (s != "") {
+                Prompt($"Unkown command {s}");
+            } else {
+                address = (uint)new Random().Next();
+                Prompt($"Wake {address % n}");
+                run[address % n].Post(true);
+            }
+            {
+                for (uint i = 0; i < n; i++) {
+                    var v = state[i].Receive();
+                    Prompt($"{i}: {v}");
+                }
             }
         }
     }
@@ -87,6 +116,8 @@ class Requests {
     public Packet ReceiveRequest() {
         // this is an actual "method call" execution
         bc.Yield(0, $"Receiving");
-        return server.Receive();
+        var res =  server.Receive();
+        bc.Yield(0, $"Received");
+        return res;
     }
 }

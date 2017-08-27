@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 struct Nothing { }
 
@@ -6,8 +7,8 @@ struct ConnectionRequest<Role> : Dir<S, Role> { }
 struct ConnectionConfirmed<Role> : Dir<S, Role> { }
 
 /// A blockchain event, possibly targeted at specific client. unlike packet, it's target
-struct Mail<T> { internal uint target; internal T payload; }
-struct PublicMail<T> { internal T payload; }
+struct Mail { internal uint target; internal object payload; }
+struct PublicMail { internal object payload; }
 
 abstract class Link {
     public readonly uint address;
@@ -26,7 +27,7 @@ class PublicLink : Link {
     public Connector<Nothing, Role> Connection<Role>() => Connection<Nothing, Role>();
 
     public void Publish<T>(T payload) where T : Dir<S, Client> {
-        bc.events.Add(new PublicMail<T>() { payload = payload });
+        bc.events.Add(new PublicMail() { payload = payload });
     }
 }
 
@@ -39,13 +40,14 @@ class ServerLink: Link {
         // retrieves the newest message
         while (true) {
             bc.Yield(address, $"Receive latest public {typeof(T)}");
-            try {
-                var mail = (PublicMail<T>)bc.events.FindLast(x => {
-                    return typeof(PublicMail<T>).IsAssignableFrom(x.GetType());
-                });
-                return mail.payload;
-            } catch (InvalidCastException) {
-                Console.WriteLine("Dropped");
+            var events = new List<object>(bc.events);
+            events.Reverse();
+            foreach (var e in events) {
+                try {
+                    return (T)((PublicMail)e).payload;
+                } catch (InvalidCastException) {
+                    Console.WriteLine("Dropped");
+                }
             }
             Console.WriteLine("Nothing to read");
         }
@@ -75,14 +77,17 @@ class UpLink<Role> : Link {
         while (true) {
             bc.Yield(address, $"Receive earliest {typeof(T)}");
             for (; last < bc.events.Count; last++) {
+                var payload = bc.events[last];
                 try {
-                    var mail = (Mail<T>)bc.events[last];
+                    var mail = (Mail)payload;
                     if (mail.target == address) {
                         last++;
-                        return mail.payload;
+                        return (T)mail.payload;
                     } else {
+                        Console.WriteLine($"{address} dropped (wrong target) {payload}");
                     }
                 } catch (InvalidCastException) {
+                    Console.WriteLine($"{address} dropped (wrong type) {payload} != {typeof(T)}");
                 }
             }
         }
@@ -106,7 +111,7 @@ class DownLink<Role> : Link {
     public Receiver<T> Receive<T>() where T : Dir<Role, S> => new Receiver<T>() { link=this };
 
     public void Send<T>(T payload) where T : Dir<S, Role> {
-        bc.events.Add( new Mail<T>() { target = (uint)target, payload=payload }) ;
+        bc.events.Add( new Mail() { target = (uint)target, payload=payload }) ;
     }
 }
 
