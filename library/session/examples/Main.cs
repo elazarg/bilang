@@ -3,11 +3,10 @@
 class MainTest {
     public static void Main() {
         var c = new Controller();
-        BC bc = new BC(c);
-        //c.Start(bc, Puzzle.Players(bc));
-        //c.Start(bc, MontyHall.MontyHall.Players(bc));
-        c.Start(BinaryOptions.Players);
-        //c.Start(bc, Simultaneous.Simultaneous.Players(bc));
-        //c.Start(bc, StepAuction.Players(bc));
+        c.Start(Puzzle.Players);
+        //c.Start(MontyHall.MontyHall.Players);
+        //c.Start(BinaryOptions.Players);
+        //c.Start(Simultaneous.Simultaneous.Players);
+        //c.Start(StepAuction.Players);
     }
 }

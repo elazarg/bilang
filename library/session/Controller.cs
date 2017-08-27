@@ -53,11 +53,6 @@ class Controller {
     List<Actor> actors = new List<Actor>();
     static Random rnd = new Random();
 
-    private static void Prompt(string s) {
-        Console.Write($"\r{s}\n>>> ");
-        Console.Out.Flush();
-    }
-
     internal void Yield(uint address, object details) {
         actors[(int)address].Yield(details);
     }
@@ -79,38 +74,63 @@ class Controller {
         while (true) {
             var s = Console.ReadLine();
             if (s == "exit" || s == "q" || s == "quit") {
-                Console.WriteLine("Killing threads");
-                foreach (var actor in actors)
-                    actor.thread.Abort();
-                Console.WriteLine("Exiting");
+                KillAll();
                 return;
             } else if (int.TryParse(s, out int address)) {
-                if (address < actors.Count) {
-                    Prompt($"Wake {address}");
-                    actors[address].Wake();
-                } else {
-                    Prompt($"Bad address {address}");
-                }
-            } else if (s.Contains(" ") && s.Split(' ')[0] == "run" && uint.TryParse(s.Split(' ')[1], out uint count)) {
-                for (int i = 0; i < count; i++) {
-                    int id = rnd.Next(actors.Count);
-                    Prompt($"Wake {id}");
-                    actors[id].Wake();
-                    Thread.Sleep(100);
-                }
+                Wake(address);
+            } else if (RunCmd(s, out uint count)) {
+                Run(count);
             } else if (s != "") {
                 Prompt($"Unkown command {s}");
             } else {
-                int id = rnd.Next(actors.Count);
-                Prompt($"Wake {id}");
-                actors[id].Wake();
+                WakeRandom();
             }
-            {
-                foreach (var actor in actors) {
-                    var v = actor.state.Receive();
-                    Prompt($"{actor.address}: {v}");
-                }
-            }
+            PrintState();
         }
+    }
+
+    private static bool RunCmd(string s, out uint count) {
+        count = 0;
+        return s.Contains(" ") && s.Split(' ')[0] == "run" && uint.TryParse(s.Split(' ')[1], out count);
+    }
+
+    private void PrintState() {
+        foreach (var actor in actors) {
+            var v = actor.state.Receive();
+            Prompt($"{actor.address}: {v}");
+        }
+    }
+
+    private void Run(uint count) {
+        for (int i = 0; i < count; i++) {
+            WakeRandom();
+        }
+    }
+
+    private void Wake(int address) {
+        if (address < actors.Count) {
+            Prompt($"Wake {address}");
+            actors[address].Wake();
+        } else {
+            Prompt($"Bad address {address}");
+        }
+    }
+
+    private void KillAll() {
+        Console.WriteLine("Killing threads");
+        foreach (var actor in actors)
+            actor.thread.Abort();
+        Console.WriteLine("Exiting");
+    }
+
+    private static void Prompt(string s) {
+        Console.Write($"\r{s}\n>>> ");
+        Console.Out.Flush();
+    }
+
+    private void WakeRandom() {
+        int id = rnd.Next(actors.Count);
+        //Prompt($"Wake {id}");
+        actors[id].Wake();
     }
 }

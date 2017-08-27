@@ -83,11 +83,5 @@ static class StepAuction {
         WriteLine($"Finish at {mylast}");
     }
 
-    internal static Action[] Players(BC bc) => new Action[] {
-        () => Server(new PublicLink(bc, 0)),
-        () => ClientHost(new ServerLink(bc, 1)),
-        () => ClientBidder(new ServerLink(bc, 2)),
-        () => ClientBidder(new ServerLink(bc, 3))
-    };
-
+    internal static Session Players = new Session(Server, ClientHost, ClientBidder, ClientBidder);
 }

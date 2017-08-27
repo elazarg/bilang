@@ -55,11 +55,7 @@ namespace MontyHall {
             }
         }
 
-        internal static Action[] Players(BC bc) => new Action[] {
-            () => Server(new PublicLink(bc, 0)),
-            () => ClientHost(new ServerLink(bc, 1)),
-            () => ClientGuest(new ServerLink(bc, 2))
-        };
+        internal static Session Players = new Session(Server, ClientHost, ClientGuest);
     }
 
     public enum Door { a, b, c }

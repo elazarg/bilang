@@ -50,10 +50,5 @@ static class Puzzle {
         }
     }
 
-    internal static Action[] Players(BC bc) => new Action[] {
-        () => Server(new PublicLink(bc, 0)),
-        () => ClientQuestion(new ServerLink(bc, 1)),
-        () => ClientAnswer(new ServerLink(bc, 2))
-    };
-
+    internal static Session Players = new Session(Server, ClientQuestion, ClientAnswer);
 }
