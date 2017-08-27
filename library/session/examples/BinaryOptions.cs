@@ -32,10 +32,10 @@ static class BinaryOptions {
         }
     }
 
-    static void ClientOracle(UpLink<Oracle> server) {
-        server.Send(new StockPrice(16));
-        server.ReceiveEarliest<Ready>();
-        server.SendAsync(new StockPrice(18));
+    static void ClientOracle(ServerLink server) {
+        var c = server.Connection<Oracle, StockPrice>(new StockPrice(16));
+        c.ReceiveEarliest<Ready>();
+        c.SendAsync(new StockPrice(18));
     }
 
     static void ClientMore(ServerLink server) {
@@ -61,7 +61,7 @@ static class BinaryOptions {
 
     internal static Action[] Players(BC bc) => new Action[] {
         () => Server(new PublicLink(bc, 0)),
-        () => ClientOracle(new UpLink<Oracle>(bc, 1, 0)),
+        () => ClientOracle(new ServerLink(bc, 1)),
         () => ClientMore(new ServerLink(bc, 2)),
         () => ClientLess(new ServerLink(bc, 3))
     };

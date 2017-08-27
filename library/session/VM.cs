@@ -59,6 +59,12 @@ class BC {
                 } else {
                     Prompt($"Bad address {address}");
                 }
+            } else if (s.Contains(" ") && s.Split(' ')[0] == "run" && uint.TryParse(s.Split(' ')[1], out uint count)) { 
+                for (int i=0; i < count; i++) {
+                    address = (uint)new Random().Next();
+                    run[address % n].Post(true);
+                    Thread.Sleep(100);
+                }
             } else if (s != "") {
                 Prompt($"Unkown command {s}");
             } else {
