@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks.Schedulers;
-
 
 class MainTest {
     public static void Main() {
@@ -10,6 +8,5 @@ class MainTest {
         //bc.Start(BinaryOptions.Players(bc));
         //bc.Start(Simultaneous.Players(bc));
         //bc.Start(StepAuction.Players(bc));
-        Console.ReadKey();
     }
 }

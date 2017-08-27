@@ -2,20 +2,55 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using System.Threading.Tasks.Schedulers;
 using System.Linq;
+using System.Threading;
+
 
 class BC {
     internal readonly uint serverAddress = 0;
-    internal readonly Requests requests = new Requests();
+    internal readonly Requests requests;
+    public BC() {
+        requests = new Requests() { bc = this };
+    }
 
     internal readonly List<object> events = new List<object>();
 
-    readonly OrderedTaskScheduler scheduler = new OrderedTaskScheduler();
-    public void Start(params Task[] ts) {
+    object[] d = new object[5];
+
+    private void Prompt(string s) {
+        Console.Write($"\r{s}\n>>> ");
+        Console.Out.Flush();
+    }
+
+    public void Yield(uint address, object details) {
+        Prompt($"Waiting - {address}: {details}");
+        Monitor.Wait(d[address]);
+        Prompt($"Running {address}");
+    }
+    
+    public void Start(params Action[] ts) {
         TaskFactory factory = new TaskFactory();
-        foreach (var t in ts)
-            factory.StartNew(t.RunSynchronously);
+        uint i = 0;
+        foreach (var t in ts) {
+            var val = new object();
+            requests.Register(i);
+            d[i] = val;
+            new Thread(() => { Monitor.Enter(val); t(); }).Start();
+            i++;
+        }
+        while (true) {
+            var s = Console.ReadLine();
+            if (s == "exit")
+                return;
+            if (uint.TryParse(s, out uint num)) {
+                Console.WriteLine($"Take lock {num}");
+                lock (d[num]) {
+                    Console.WriteLine("send pulse");
+                    Monitor.Pulse(d[num]);
+                    Console.WriteLine("sent");
+                }
+            }
+        }
     }
 }
 
@@ -31,7 +66,7 @@ struct Packet {
 }
 
 class Requests {
-
+    public BC bc;
     private Dictionary<uint, ITargetBlock<object>> requests = new Dictionary<uint, ITargetBlock<object>>();
 
     private BufferBlock<Packet> server = new BufferBlock<Packet>();
@@ -46,17 +81,19 @@ class Requests {
     }
 
     public void SendRequest(uint sender, object payload) {
-        //Console.WriteLine($"Client {sender} posts {payload}");
         requests[sender].Post(payload);
+        bc.Yield(sender, $"Sent {payload}");
     }
 
     public async Task<bool> SendRequestAsync(uint sender, object payload) {
-        //Console.WriteLine($"Client {sender} sends {payload}");
-        return await requests[sender].SendAsync(payload);
+        var res = await requests[sender].SendAsync(payload);
+        bc.Yield(sender, $"Sending {payload}");
+        return res;
     }
 
     public async Task<Packet> ReceiveRequest() {
         // this is an actual "method call" execution
+        bc.Yield(0, $"Receiving");
         return await server.ReceiveAsync();
     }
 }

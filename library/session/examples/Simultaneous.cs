@@ -19,7 +19,6 @@ sealed class Lost : Response { }
 static class Simultaneous {    
     static async Task Server(PublicLink @public) {
         var ((even, even_hchoice), (odd, odd_hchoice)) = await Parallel(
-            // FIX: does not seem to test for E/O
             @public.Connection<HChoice, E>(),
             @public.Connection<HChoice, O>()
         );
@@ -39,26 +38,26 @@ static class Simultaneous {
         }
     }
 
-    static async Task ClientEven(UpLink<E> server) {
+    static async Task ClientEven(ServerLink server) {
         bool choice = true;
         var hchoice = new Hiding<bool>(choice, salt: 0x78573264);
-        await server.SendAsync(new HChoice(hchoice.Hidden(server.address)));
-        await server.ReceiveEarliest<Reveal>();
-        await server.SendAsync(new Choice(hchoice));
-        switch (await server.ReceiveEarliest<Response>()) {
+        var c = await server.Connection<E, HChoice>(new HChoice(hchoice.Hidden(server.address)));
+        await c.ReceiveEarliest<Reveal>();
+        await c.SendAsync(new Choice(hchoice));
+        switch (await c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("Even won! :)"); break;
             case Lost x: WriteLine("Even lost :("); break;
             default: Debug.Assert(false); break;
         }
     }
 
-    static async Task ClientOdd(UpLink<O> server) {
+    static async Task ClientOdd(ServerLink server) {
         bool choice = true;
-        var hchoice = new Hiding<bool>(choice, salt: 0x78573264);
-        await server.SendAsync(new HChoice(hchoice.Hidden(server.address)));
-        await server.ReceiveEarliest<Reveal>();
-        await server.SendAsync(new Choice(hchoice));
-        switch (await server.ReceiveEarliest<Response>()) {
+        var hchoice = new Hiding<bool>(choice, salt: 0x78543564);
+        var c = await server.Connection<O, HChoice>(new HChoice(hchoice.Hidden(server.address)));
+        await c.ReceiveEarliest<Reveal>();
+        await c.SendAsync(new Choice(hchoice));
+        switch (await c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("Odd won! :)"); break;
             case Lost x: WriteLine("Odd lost :("); break;
             default: Debug.Assert(false); break;
@@ -67,8 +66,8 @@ static class Simultaneous {
 
     internal static Task[] Players(BC bc) => new Task[] {
         Server(new PublicLink(bc, 0)),
-        ClientOdd(new UpLink<O>(bc, 2, 0)),
-        ClientEven(new UpLink<E>(bc, 1, 0))
+        ClientOdd(new ServerLink(bc, 2)),
+        ClientEven(new ServerLink(bc, 1))
     };
 
 }

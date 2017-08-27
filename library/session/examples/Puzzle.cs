@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using static System.Console;
 
@@ -16,7 +17,7 @@ static class Puzzle {
     private sealed class Rejected : Response { }
 
 
-    static async Task Server(PublicLink @public) {
+    static async void Server(PublicLink @public) {
         (var asker, int riddle) = await @public.Connection<Question, Q>();
         @public.Publish(new Question(riddle));
         while (true) {
@@ -31,7 +32,7 @@ static class Puzzle {
         }
     }
 
-    static async Task ClientQuestion(ServerLink server) {
+    static async void ClientQuestion(ServerLink server) {
         int q = 15;
         var c = await server.Connection<Q, Question>(new Question(q));
         WriteLine($"Question: factor {q}");
@@ -39,7 +40,7 @@ static class Puzzle {
         WriteLine($"Answer {m} * {n} == {q}");
     }
 
-    static async Task ClientAnswer(ServerLink server) {
+    static async void ClientAnswer(ServerLink server) {
         int riddle = await server.ReceiveLatestPublic<Question>();
         // pretend we are solving the problem, then...
         var c = await server.Connection<A, Answer>(new Answer(3, 5));
@@ -50,10 +51,10 @@ static class Puzzle {
         }
     }
 
-    internal static Task[] Players(BC bc) => new Task[] {
-        Server(new PublicLink(bc, 0)),
-        ClientQuestion(new ServerLink(bc, 1)),
-        ClientAnswer(new ServerLink(bc, 2))
+    internal static Action[] Players(BC bc) => new Action[] {
+        () => Server(new PublicLink(bc, 0)),
+        () => ClientQuestion(new ServerLink(bc, 1)),
+        () => ClientAnswer(new ServerLink(bc, 2))
     };
 
 }

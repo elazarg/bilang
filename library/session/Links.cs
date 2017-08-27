@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 struct Nothing { }
@@ -9,7 +11,6 @@ struct ConnectionConfirmed<Role> : Dir<S, Role> { }
 /// A blockchain event, possibly targeted at specific client. unlike packet, it's target
 struct Mail<T> { internal uint target; internal T payload; }
 struct PublicMail<T> { internal T payload; }
-
 
 abstract class Link {
     public readonly uint address;
@@ -34,12 +35,13 @@ class PublicLink : Link {
 
 class ServerLink: Link {
     public ServerLink(BC bc, uint address) : base(address, null, bc) {
-        bc.requests.Register(address);
+        //bc.requests.Register(address);
     }
 
     public async Task<T> ReceiveLatestPublic<T>() {
         // retrieves the newest message
         while (true) {
+            bc.Yield(address, $"Receive latest public {typeof(T)}");
             try {
                 var mail = (PublicMail<T>)bc.events.FindLast(x => {
                     return typeof(PublicMail<T>).IsAssignableFrom(x.GetType());
@@ -48,7 +50,7 @@ class ServerLink: Link {
             } catch (InvalidCastException) {
                 Console.WriteLine("Dropped");
             }
-            await Task.Yield();
+            Console.WriteLine("Nothing to read");
         }
     }
 
@@ -74,6 +76,7 @@ class UpLink<Role> : Link {
         // retrieves the oldest message since the last one received
         // Console.WriteLine($"Client {address} receives");
         while (true) {
+            bc.Yield(address, $"Receive earliest {typeof(T)}");
             for (; last < bc.events.Count; last++) {
                 try {
                     var mail = (Mail<T>)bc.events[last];
@@ -85,7 +88,6 @@ class UpLink<Role> : Link {
                 } catch (InvalidCastException) {
                 }
             }
-            await Task.Yield();
         }
     }
 
@@ -117,8 +119,8 @@ abstract class Acceptor<T> {
 
     private async Task<T> Accept() {
         while (true) {
-            (uint sender, object payload) = await link.bc.requests.ReceiveRequest();
-            var (ok, res) = TryAccept(sender, payload);
+            var p = await link.bc.requests.ReceiveRequest();
+            var (ok, res) = TryAccept(p.sender, p.payload);
             if (!ok)
                 continue;
             return res;
@@ -163,9 +165,9 @@ static class Combinators {
         T1 left = default;        bool doneLeft = false;
         T2 right = default;       bool doneRight = false;
         while (!doneLeft || !doneRight) {
-            (uint sender, object payload) = await bc.requests.ReceiveRequest();
-            var (ok1, p1) = t1.TryAccept(sender, payload);
-            var (ok2, p2) = t2.TryAccept(sender, payload);
+            var p = await bc.requests.ReceiveRequest();
+            var (ok1, p1) = t1.TryAccept(p.sender, p.payload);
+            var (ok2, p2) = t2.TryAccept(p.sender, p.payload);
             if (ok1 && !doneLeft) {
                 left = p1;
                 doneLeft = true;
