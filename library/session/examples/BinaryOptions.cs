@@ -12,9 +12,9 @@ static class BinaryOptions {
     private sealed class StockPrice : Args<uint>, Dir<Oracle, S>, Dir<S, Client>, Dir<S, L>, Dir<S, M> { internal StockPrice(uint _1) { _ = _1; } }
     private sealed class Ready : Dir<S, Oracle> { }
 
-    private interface Response : Dir<S, M>, Dir<S, L> { }
-    private sealed class Won : Response { }
-    private sealed class Lost : Response { }
+    private interface IResponse : Dir<S, M>, Dir<S, L> { }
+    private sealed class Won : IResponse { }
+    private sealed class Lost : IResponse { }
 
 
     static void Server(PublicLink @public) {
@@ -41,7 +41,7 @@ static class BinaryOptions {
     static void ClientMore(ServerLink server) {
         uint price = server.ReceiveLatestPublic<StockPrice>();
         var c = server.Connection<M>();
-        switch (c.ReceiveEarliest<Response>()) {
+        switch (c.ReceiveEarliest<IResponse>()) {
             case Won x: WriteLine("More won! :)"); break;
             case Lost x: WriteLine("More lost :("); break;
             default: Debug.Assert(false); break;
@@ -52,7 +52,7 @@ static class BinaryOptions {
     static void ClientLess(ServerLink server) {
         uint price = server.ReceiveLatestPublic<StockPrice>();
         var c = server.Connection<L>();
-        switch (c.ReceiveEarliest<Response>()) {
+        switch (c.ReceiveEarliest<IResponse>()) {
             case Won x: WriteLine("Less won! :)"); break;
             case Lost x: WriteLine("Less lost :("); break;
             default: Debug.Assert(false); break;

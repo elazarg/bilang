@@ -12,9 +12,9 @@ namespace Simultaneous {
     sealed class Reveal : Dir<S, E>, Dir<S, O> { }
     sealed class Choice : Args<Hiding<bool>>, Dir<O, S>, Dir<E, S> { internal Choice(Hiding<bool> _1) { _ = _1; } }
 
-    interface Response : Dir<S, O>, Dir<S, E> { }
-    sealed class Won : Response { }
-    sealed class Lost : Response { }
+    interface IResponse : Dir<S, O>, Dir<S, E> { }
+    sealed class Won : IResponse { }
+    sealed class Lost : IResponse { }
 
     static class Simultaneous {
         static void Server(PublicLink @public) {
@@ -44,7 +44,7 @@ namespace Simultaneous {
             var c = server.Connection<E, HChoice>(new HChoice(hchoice.Hidden(server.address)));
             c.ReceiveEarliest<Reveal>();
             c.SendAsync(new Choice(hchoice));
-            switch (c.ReceiveEarliest<Response>()) {
+            switch (c.ReceiveEarliest<IResponse>()) {
                 case Won x: WriteLine("Even won! :)"); break;
                 case Lost x: WriteLine("Even lost :("); break;
                 default: Debug.Assert(false); break;
@@ -57,7 +57,7 @@ namespace Simultaneous {
             var c = server.Connection<O, HChoice>(new HChoice(hchoice.Hidden(server.address)));
             c.ReceiveEarliest<Reveal>();
             c.SendAsync(new Choice(hchoice));
-            switch (c.ReceiveEarliest<Response>()) {
+            switch (c.ReceiveEarliest<IResponse>()) {
                 case Won x: WriteLine("Odd won! :)"); break;
                 case Lost x: WriteLine("Odd lost :("); break;
                 default: Debug.Assert(false); break;
