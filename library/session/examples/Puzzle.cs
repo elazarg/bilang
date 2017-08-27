@@ -17,11 +17,11 @@ static class Puzzle {
     private sealed class Rejected : Response { }
 
 
-    static async void Server(PublicLink @public) {
-        (var asker, int riddle) = await @public.Connection<Question, Q>();
+    static void Server(PublicLink @public) {
+        (var asker, int riddle) = @public.Connection<Question, Q>().Accept();
         @public.Publish(new Question(riddle));
         while (true) {
-            var (solver, (m, n)) = await @public.Connection<Answer, A>();
+            var (solver, (m, n)) = @public.Connection<Answer, A>().Accept();
             if (m * n == riddle) {
                 asker.Send(new Answer(3, 5));
                 solver.Send(new Accepted());
@@ -32,19 +32,19 @@ static class Puzzle {
         }
     }
 
-    static async void ClientQuestion(ServerLink server) {
+    static void ClientQuestion(ServerLink server) {
         int q = 15;
-        var c = await server.Connection<Q, Question>(new Question(q));
+        var c = server.Connection<Q, Question>(new Question(q));
         WriteLine($"Question: factor {q}");
-        var (m, n) = await c.ReceiveEarliest<Answer>();
+        var (m, n) = c.ReceiveEarliest<Answer>();
         WriteLine($"Answer {m} * {n} == {q}");
     }
 
-    static async void ClientAnswer(ServerLink server) {
-        int riddle = await server.ReceiveLatestPublic<Question>();
+    static void ClientAnswer(ServerLink server) {
+        int riddle = server.ReceiveLatestPublic<Question>();
         // pretend we are solving the problem, then...
-        var c = await server.Connection<A, Answer>(new Answer(3, 5));
-        switch (await c.ReceiveEarliest<Response>()) {
+        var c = server.Connection<A, Answer>(new Answer(3, 5));
+        switch (c.ReceiveEarliest<Response>()) {
             case Accepted x: WriteLine("Good answer"); break;
             case Rejected x: WriteLine("Bad answer" ); break;
             default: Debug.Assert(false); break;

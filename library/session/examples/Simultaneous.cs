@@ -17,13 +17,13 @@ sealed class Won : Response { }
 sealed class Lost : Response { }
 
 static class Simultaneous {    
-    static async Task Server(PublicLink @public) {
-        var ((even, even_hchoice), (odd, odd_hchoice)) = await Parallel(
+    static void Server(PublicLink @public) {
+        var ((even, even_hchoice), (odd, odd_hchoice)) = Parallel(
             @public.Connection<HChoice, E>(),
             @public.Connection<HChoice, O>()
         );
         even.Send(new Reveal()); odd.Send(new Reveal());
-        (Hiding<bool> even_choice, Hiding<bool> odd_choice) = await Parallel(even.Receive<Choice>(), odd.Receive<Choice>());
+        (Hiding<bool> even_choice, Hiding<bool> odd_choice) = Parallel(even.Receive<Choice>(), odd.Receive<Choice>());
         bool even_honest = even_choice.Hidden((uint)even.target) == even_hchoice;
         bool odd_honest = odd_choice.Hidden((uint)odd.target) == odd_hchoice;
         if (!even_honest && !odd_honest) {
@@ -38,36 +38,36 @@ static class Simultaneous {
         }
     }
 
-    static async Task ClientEven(ServerLink server) {
+    static void  ClientEven(ServerLink server) {
         bool choice = true;
         var hchoice = new Hiding<bool>(choice, salt: 0x78573264);
-        var c = await server.Connection<E, HChoice>(new HChoice(hchoice.Hidden(server.address)));
-        await c.ReceiveEarliest<Reveal>();
-        await c.SendAsync(new Choice(hchoice));
-        switch (await c.ReceiveEarliest<Response>()) {
+        var c = server.Connection<E, HChoice>(new HChoice(hchoice.Hidden(server.address)));
+        c.ReceiveEarliest<Reveal>();
+        c.SendAsync(new Choice(hchoice));
+        switch (c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("Even won! :)"); break;
             case Lost x: WriteLine("Even lost :("); break;
             default: Debug.Assert(false); break;
         }
     }
 
-    static async Task ClientOdd(ServerLink server) {
+    static void ClientOdd(ServerLink server) {
         bool choice = true;
         var hchoice = new Hiding<bool>(choice, salt: 0x78543564);
-        var c = await server.Connection<O, HChoice>(new HChoice(hchoice.Hidden(server.address)));
-        await c.ReceiveEarliest<Reveal>();
-        await c.SendAsync(new Choice(hchoice));
-        switch (await c.ReceiveEarliest<Response>()) {
+        var c = server.Connection<O, HChoice>(new HChoice(hchoice.Hidden(server.address)));
+        c.ReceiveEarliest<Reveal>();
+        c.SendAsync(new Choice(hchoice));
+        switch (c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("Odd won! :)"); break;
             case Lost x: WriteLine("Odd lost :("); break;
             default: Debug.Assert(false); break;
         }
     }
 
-    internal static Task[] Players(BC bc) => new Task[] {
-        Server(new PublicLink(bc, 0)),
-        ClientOdd(new ServerLink(bc, 2)),
-        ClientEven(new ServerLink(bc, 1))
+    internal static Action[] Players(BC bc) => new Action[] {
+        () => Server(new PublicLink(bc, 0)),
+        () =>ClientOdd(new ServerLink(bc, 2)),
+        () =>ClientEven(new ServerLink(bc, 1))
     };
 
 }

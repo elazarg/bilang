@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using static System.Console;
 using static Combinators;
-
+using System;
 
 static class BinaryOptions {
 
@@ -18,12 +18,12 @@ static class BinaryOptions {
     private sealed class Lost : Response { }
 
 
-    static async Task Server(PublicLink @public) {
-        (var oracle, uint firstStockPrice) = await @public.Connection<StockPrice, Oracle>();
+    static void Server(PublicLink @public) {
+        (var oracle, uint firstStockPrice) = @public.Connection<StockPrice, Oracle>().Accept();
         @public.Publish(new StockPrice(firstStockPrice));
-        var ((more, _), (less, _)) = await Parallel(@public.Connection<M>(), @public.Connection<L>());
+        var ((more, _), (less, _)) = Parallel(@public.Connection<M>(), @public.Connection<L>());
         oracle.Send(new Ready());
-        uint secondStockPrice = await oracle.Receive<StockPrice>();
+        uint secondStockPrice = oracle.Receive<StockPrice>().Accept();
         if (secondStockPrice > firstStockPrice) {
             more.Send(new Won());
             less.Send(new Lost());
@@ -33,16 +33,16 @@ static class BinaryOptions {
         }
     }
 
-    static async Task ClientOracle(UpLink<Oracle> server) {
+    static void ClientOracle(UpLink<Oracle> server) {
         server.Send(new StockPrice(16));
-        await server.ReceiveEarliest<Ready>();
-        await server.SendAsync(new StockPrice(18));
+        server.ReceiveEarliest<Ready>();
+        server.SendAsync(new StockPrice(18));
     }
 
-    static async Task ClientMore(ServerLink server) {
-        uint price = await server.ReceiveLatestPublic<StockPrice>();
-        var c = await server.Connection<M>();
-        switch (await c.ReceiveEarliest<Response>()) {
+    static void ClientMore(ServerLink server) {
+        uint price = server.ReceiveLatestPublic<StockPrice>();
+        var c = server.Connection<M>();
+        switch (c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("More won! :)"); break;
             case Lost x: WriteLine("More lost :("); break;
             default: Debug.Assert(false); break;
@@ -50,21 +50,21 @@ static class BinaryOptions {
     }
 
     // Exact copy of Client more up to s/M/L/
-    static async Task ClientLess(ServerLink server) {
-        uint price = await server.ReceiveLatestPublic<StockPrice>();
-        var c = await server.Connection<L>();
-        switch (await c.ReceiveEarliest<Response>()) {
+    static void ClientLess(ServerLink server) {
+        uint price = server.ReceiveLatestPublic<StockPrice>();
+        var c = server.Connection<L>();
+        switch (c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("Less won! :)"); break;
             case Lost x: WriteLine("Less lost :("); break;
             default: Debug.Assert(false); break;
         }
     }
 
-    internal static Task[] Players(BC bc) => new Task[] {
-        Server(new PublicLink(bc, 0)),
-        ClientOracle(new UpLink<Oracle>(bc, 1, 0)),
-        ClientMore(new ServerLink(bc, 2)),
-        ClientLess(new ServerLink(bc, 3))
+    internal static Action[] Players(BC bc) => new Action[] {
+        () => Server(new PublicLink(bc, 0)),
+        () => ClientOracle(new UpLink<Oracle>(bc, 1, 0)),
+        () => ClientMore(new ServerLink(bc, 2)),
+        () => ClientLess(new ServerLink(bc, 3))
     };
 
 }

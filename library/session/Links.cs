@@ -38,7 +38,7 @@ class ServerLink: Link {
         //bc.requests.Register(address);
     }
 
-    public async Task<T> ReceiveLatestPublic<T>() {
+    public T ReceiveLatestPublic<T>() {
         // retrieves the newest message
         while (true) {
             bc.Yield(address, $"Receive latest public {typeof(T)}");
@@ -54,15 +54,15 @@ class ServerLink: Link {
         }
     }
 
-    public async Task<UpLink<Role>> Connection<Role, T>(T payload) {
+    public UpLink<Role> Connection<Role, T>(T payload) {
         bc.requests.SendRequest(address, (new ConnectionRequest<Role>(), payload));
         var res = new UpLink<Role>(bc, address, 0);
-        await res.ReceiveEarliest<ConnectionConfirmed<Role>>();
+        res.ReceiveEarliest<ConnectionConfirmed<Role>>();
         return res;
     }
 
-    public async Task<UpLink<Role>> Connection<Role>() {
-        return await Connection<Role, Nothing>(new Nothing());
+    public UpLink<Role> Connection<Role>() {
+        return Connection<Role, Nothing>(new Nothing());
     }
 }
 
@@ -72,7 +72,7 @@ class UpLink<Role> : Link {
     public UpLink(BC bc, uint address, uint target) : base(address, target, bc) {
     }
 
-    public async Task<T> ReceiveEarliest<T>() where T : Dir<S, Role> {
+    public T ReceiveEarliest<T>() where T : Dir<S, Role> {
         // retrieves the oldest message since the last one received
         // Console.WriteLine($"Client {address} receives");
         while (true) {
@@ -91,11 +91,11 @@ class UpLink<Role> : Link {
         }
     }
 
-    public async Task SendAsync<T>(T payload) where T : Dir<Role, S> {
-        await bc.requests.SendRequestAsync(address, payload);
+    public void SendAsync<T>(T payload) where T : Dir<Role, S> {
+        bc.requests.SendRequestAsync(address, payload);
     }
-    public async Task SendAsync() {
-        await bc.requests.SendRequestAsync(address, new Nothing());
+    public void SendAsync() {
+        bc.requests.SendRequestAsync(address, new Nothing());
     }
     public void Send<T>(T payload) where T : Dir<Role, S> {
         bc.requests.SendRequest(address, payload);
@@ -117,20 +117,15 @@ abstract class Acceptor<T> {
     public Link link;
     public abstract (bool, T) TryAccept(uint sender, object payload);
 
-    private async Task<T> Accept() {
+    public T Accept() {
         while (true) {
-            var p = await link.bc.requests.ReceiveRequest();
+            var p = link.bc.requests.ReceiveRequest();
             var (ok, res) = TryAccept(p.sender, p.payload);
             if (!ok)
                 continue;
             return res;
         }
     }
-
-    public System.Runtime.CompilerServices.TaskAwaiter<T> GetAwaiter() {
-        return Accept().GetAwaiter();
-    }
-
 }
 
 class Connector<T, Role> : Acceptor<(DownLink<Role>, T)> {
@@ -160,12 +155,12 @@ class Receiver<T> : Acceptor<T> {
 
 
 static class Combinators {
-    public static async Task<(T1, T2)> Parallel<T1, T2>(Acceptor<T1> t1, Acceptor<T2> t2) {
+    public static (T1, T2) Parallel<T1, T2>(Acceptor<T1> t1, Acceptor<T2> t2) {
         BC bc = t1.link.bc;
         T1 left = default;        bool doneLeft = false;
         T2 right = default;       bool doneRight = false;
         while (!doneLeft || !doneRight) {
-            var p = await bc.requests.ReceiveRequest();
+            var p = bc.requests.ReceiveRequest();
             var (ok1, p1) = t1.TryAccept(p.sender, p.payload);
             var (ok2, p2) = t2.TryAccept(p.sender, p.payload);
             if (ok1 && !doneLeft) {

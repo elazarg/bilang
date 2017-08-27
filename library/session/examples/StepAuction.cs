@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using static System.Console;
 
@@ -19,22 +20,22 @@ static class StepAuction {
     private sealed class AnotherRound : Result { }
 
 
-    static async Task Server(PublicLink @public) {
+    static void Server(PublicLink @public) {
         WriteLine($"Server awaiting Connection");
-        (var host, uint minimal) = await @public.Connection<StartAuction, H>();
+        (var host, uint minimal) = @public.Connection<StartAuction, H>().Accept();
         uint currentOffer = minimal;
         WriteLine($"Server publishing");
         @public.Publish(new Offer(currentOffer));
         DownLink<B> bidder = null;
         while (true) {
             WriteLine($"Server awaiting offer");
-            (var newBidder, uint newOffer) = await @public.Connection<Offer, B>();
+            (var newBidder, uint newOffer) = @public.Connection<Offer, B>().Accept();
             WriteLine($"Server received offer {newOffer} from {newBidder.address}. Publishing");
             @public.Publish(new Offer(currentOffer));
             if (newOffer > currentOffer) {
                 currentOffer = newOffer;
                 bidder = newBidder;
-                switch (await host.Receive<Response>()) {
+                switch (host.Receive<Response>().Accept()) {
                     case Stop x:
                         bidder.Send(new Accepted());
                         goto exit;
@@ -48,12 +49,12 @@ static class StepAuction {
         exit:;
     }
 
-    static async Task ClientHost(ServerLink server) {
+    static void ClientHost(ServerLink server) {
         WriteLine($"Host connecting");
-        var c = await server.Connection<H, StartAuction>(new StartAuction(50));
+        var c = server.Connection<H, StartAuction>(new StartAuction(50));
         while (true) {
             WriteLine($"Host Receiving");
-            uint currentPrice = await server.ReceiveLatestPublic<Offer>();
+            uint currentPrice = server.ReceiveLatestPublic<Offer>();
             WriteLine($"Host Received {currentPrice}");
             if (currentPrice > 80) {
                 c.Send(new Stop());
@@ -63,16 +64,16 @@ static class StepAuction {
         }
     }
     
-    static async Task ClientBidder(ServerLink server) {
+    static void ClientBidder(ServerLink server) {
         uint mylast = 0;
         while (true) {
             WriteLine($"Client receiving");
-            uint currentOffer = await server.ReceiveLatestPublic<Offer>();
+            uint currentOffer = server.ReceiveLatestPublic<Offer>();
             WriteLine($"Bid {currentOffer}");
             if (currentOffer < 90 && currentOffer != mylast) {
                 mylast = currentOffer + 5;
-                var c = await server.Connection<B, Offer>(new Offer(mylast));
-                switch (await c.ReceiveEarliest<Result>()) {
+                var c = server.Connection<B, Offer>(new Offer(mylast));
+                switch (c.ReceiveEarliest<Result>()) {
                     case Accepted x: goto exit;
                     case AnotherRound x: break;
                     default: Debug.Assert(false); break;
@@ -83,11 +84,11 @@ static class StepAuction {
         WriteLine($"Finish at {mylast}");
     }
 
-    internal static Task[] Players(BC bc) => new Task[] {
-        Server(new PublicLink(bc, 0)),
-        ClientHost(new ServerLink(bc, 1)),
-        ClientBidder(new ServerLink(bc, 2)),
-        ClientBidder(new ServerLink(bc, 3))
+    internal static Action[] Players(BC bc) => new Action[] {
+        () => Server(new PublicLink(bc, 0)),
+        () => ClientHost(new ServerLink(bc, 1)),
+        () => ClientBidder(new ServerLink(bc, 2)),
+        () => ClientBidder(new ServerLink(bc, 3))
     };
 
 }

@@ -85,15 +85,15 @@ class Requests {
         bc.Yield(sender, $"Sent {payload}");
     }
 
-    public async Task<bool> SendRequestAsync(uint sender, object payload) {
-        var res = await requests[sender].SendAsync(payload);
+    public bool SendRequestAsync(uint sender, object payload) {
+        var res = requests[sender].Post(payload);
         bc.Yield(sender, $"Sending {payload}");
         return res;
     }
 
-    public async Task<Packet> ReceiveRequest() {
+    public Packet ReceiveRequest() {
         // this is an actual "method call" execution
         bc.Yield(0, $"Receiving");
-        return await server.ReceiveAsync();
+        return server.Receive();
     }
 }
