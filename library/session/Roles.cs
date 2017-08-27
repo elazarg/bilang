@@ -1,5 +1,5 @@
 ﻿
-interface Dir<out From, in To> { } // "in" since we want to be covariant
+interface Dir<in From, out To> { } // "in" since we want to be covariant
 interface Client { }
 interface S { }
 

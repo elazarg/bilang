@@ -13,17 +13,16 @@ class BC {
 
     readonly OrderedTaskScheduler scheduler = new OrderedTaskScheduler();
     public void Start(params Task[] ts) {
-        TaskFactory factory = new TaskFactory(scheduler);
+        TaskFactory factory = new TaskFactory();
         foreach (var t in ts)
             factory.StartNew(t.RunSynchronously);
     }
 }
 
 struct Packet {
-    internal uint? sender;
+    internal uint sender;
     internal object payload;
-    internal Packet(uint? _1, object _2) { sender = _1; payload = _2; }
-    public void Deconstruct(out uint? _1, out object _2) {
+    public void Deconstruct(out uint _1, out object _2) {
         _1 = sender; _2 = payload;
     }
     public override string ToString() {
@@ -41,7 +40,7 @@ class Requests {
         var block = new BufferBlock<object>();
         requests[sender] = block;
         // TODO: make sure we still have all possible races
-        var t = new TransformBlock<object, Packet>(payload => new Packet(sender, payload));
+        var t = new TransformBlock<object, Packet>(payload => new Packet() { sender = sender, payload = payload });
         block.LinkTo(t);
         t.LinkTo(server);
     }

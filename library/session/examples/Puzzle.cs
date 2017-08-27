@@ -5,10 +5,10 @@ using static System.Console;
 
 static class Puzzle {
 
-    private interface Q : Client { }
-    private interface A : Client { }
+    private struct Q : Client { }
+    private struct A : Client { }
 
-    private sealed class Question : Args<int>, Dir<Q, S>, Dir<S, Client> { internal Question(int _1) { _ = _1; } }
+    private sealed class Question : Args<int>, Dir<Q, S>, Dir<S, Client>, Dir<S, A> { internal Question(int _1) { _ = _1; } }
     private sealed class Answer : Args<(int, int)>, Dir<A, S>, Dir<S, Q> { internal Answer(int _1, int _2) { _ = (_1, _2); } }
 
     private interface Response : Dir<S, A> { }
@@ -31,19 +31,19 @@ static class Puzzle {
         }
     }
 
-    static async Task ClientQuestion(UpLink<Q> server) {
+    static async Task ClientQuestion(ServerLink server) {
         int q = 15;
-        await server.SendAsync(new Question(q));
+        var c = await server.Connection<Q, Question>(new Question(q));
         WriteLine($"Question: factor {q}");
-        var (m, n) = await server.ReceiveEarliest<Answer>();
+        var (m, n) = await c.ReceiveEarliest<Answer>();
         WriteLine($"Answer {m} * {n} == {q}");
     }
 
-    static async Task ClientAnswer(UpLink<A> server) {
-        int riddle = await server.ReceiveEarliest<Question>(@public: true);
+    static async Task ClientAnswer(ServerLink server) {
+        int riddle = await server.ReceiveLatestPublic<Question>();
         // pretend we are solving the problem, then...
-        await server.SendAsync(new Answer(3, 5));
-        switch (await server.ReceiveEarliest<Response>()) {
+        var c = await server.Connection<A, Answer>(new Answer(3, 5));
+        switch (await c.ReceiveEarliest<Response>()) {
             case Accepted x: WriteLine("Good answer"); break;
             case Rejected x: WriteLine("Bad answer" ); break;
             default: Debug.Assert(false); break;
@@ -52,8 +52,8 @@ static class Puzzle {
 
     internal static Task[] Players(BC bc) => new Task[] {
         Server(new PublicLink(bc, 0)),
-        ClientQuestion(new UpLink<Q>(bc, 1, 0)),
-        ClientAnswer(new UpLink<A>(bc, 2, 0))
+        ClientQuestion(new ServerLink(bc, 1)),
+        ClientAnswer(new ServerLink(bc, 2))
     };
 
 }

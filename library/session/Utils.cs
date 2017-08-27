@@ -7,9 +7,6 @@ using System.Linq;
  * Helper library - has nothing special to do with the blockchain
  */
 public static class Utils {
-
-    public struct Nothing { }
-
     public struct Hidden<T> where T : struct {
         public readonly int hash;
 

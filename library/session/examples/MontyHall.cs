@@ -7,8 +7,8 @@ using static Utils;
 static class MontyHall {
     public enum Door { a, b, c }
 
-    interface H { }
-    interface G { }
+    struct H { }
+    struct G { }
 
     private sealed class HCar : Args<int>, Dir<H, S> { internal HCar(int _1) { _ = _1; } }
     private sealed class Goat : Args<Door>, Dir<H, S>, Dir<S, G> { internal Goat(Door _1) { _ = _1; } }

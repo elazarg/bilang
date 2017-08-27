@@ -3,47 +3,12 @@ using System.Threading.Tasks;
 
 struct Nothing { }
 
-class UpLink<From> {
-    public readonly uint address;
-    readonly BC bc;
-    private int last = 0;
+struct ConnectionRequest<Role> : Dir<S, Role> { }
+struct ConnectionConfirmed<Role> : Dir<S, Role> { }
 
-    public UpLink(BC bc, uint address, uint target) {
-        this.address = address;
-        this.bc = bc;
-        bc.requests.Register(address);
-    }
-
-    public async Task<T> ReceiveEarliest<T>(bool @public=false) where T : Dir<S, From> {
-        // retrieves the oldest message since the last one received
-        //Console.WriteLine($"Client {address} receives");
-        while (true) {
-            for (; last < bc.events.Count; last++) {
-                object obj_payload = bc.events[last];
-                try {
-                    (uint? to, object payload) = (Packet)obj_payload;
-                    if (to == address || @public && to == null) {
-                        last++;
-                        return (T)payload;
-                    } else {
-                    }
-                } catch (InvalidCastException) {
-                }
-            }
-            await Task.Yield();
-        }
-    }
-
-    public async Task SendAsync<T>(T payload) where T : Dir<From, S> {
-        await bc.requests.SendRequestAsync(address, payload);
-    }
-    public async Task SendAsync() {
-        await bc.requests.SendRequestAsync(address, new Nothing());
-    }
-    public void Send<T>(T payload) where T : Dir<From, S> {
-        bc.requests.SendRequest(address, payload);
-    }
-}
+/// A blockchain event, possibly targeted at specific client. unlike packet, it's target
+struct Mail<T> { internal uint target; internal T payload; }
+struct PublicMail<T> { internal T payload; }
 
 
 abstract class Link {
@@ -58,33 +23,101 @@ abstract class Link {
 }
 
 class PublicLink : Link {
-    public PublicLink(BC bc, uint address) : base(address, null, bc) {    }
-    public Connector<T, To> Connection<T, To>() => new Connector<T, To>(){link = this};
-    public Connector<Nothing, To> Connection<To>() => Connection<Nothing, To>();
+    public PublicLink(BC bc, uint address) : base(address, null, bc) { }
+    public Connector<T, Role> Connection<T, Role>() => new Connector<T, Role>() { link = this };
+    public Connector<Nothing, Role> Connection<Role>() => Connection<Nothing, Role>();
 
     public void Publish<T>(T payload) where T : Dir<S, Client> {
-        bc.events.Add(new Packet(null, payload));
+        bc.events.Add(new PublicMail<T>() { payload = payload });
     }
 }
 
-class DownLink<To> : Link {
+class ServerLink: Link {
+    public ServerLink(BC bc, uint address) : base(address, null, bc) {
+        bc.requests.Register(address);
+    }
+
+    public async Task<T> ReceiveLatestPublic<T>() {
+        // retrieves the newest message
+        while (true) {
+            try {
+                var mail = (PublicMail<T>)bc.events.FindLast(x => {
+                    return typeof(PublicMail<T>).IsAssignableFrom(x.GetType());
+                });
+                return mail.payload;
+            } catch (InvalidCastException) {
+                Console.WriteLine("Dropped");
+            }
+            await Task.Yield();
+        }
+    }
+
+    public async Task<UpLink<Role>> Connection<Role, T>(T payload) {
+        bc.requests.SendRequest(address, (new ConnectionRequest<Role>(), payload));
+        var res = new UpLink<Role>(bc, address, 0);
+        await res.ReceiveEarliest<ConnectionConfirmed<Role>>();
+        return res;
+    }
+
+    public async Task<UpLink<Role>> Connection<Role>() {
+        return await Connection<Role, Nothing>(new Nothing());
+    }
+}
+
+class UpLink<Role> : Link {
+    private int last = 0;
+
+    public UpLink(BC bc, uint address, uint target) : base(address, target, bc) {
+    }
+
+    public async Task<T> ReceiveEarliest<T>() where T : Dir<S, Role> {
+        // retrieves the oldest message since the last one received
+        // Console.WriteLine($"Client {address} receives");
+        while (true) {
+            for (; last < bc.events.Count; last++) {
+                try {
+                    var mail = (Mail<T>)bc.events[last];
+                    if (mail.target == address) {
+                        last++;
+                        return mail.payload;
+                    } else {
+                    }
+                } catch (InvalidCastException) {
+                }
+            }
+            await Task.Yield();
+        }
+    }
+
+    public async Task SendAsync<T>(T payload) where T : Dir<Role, S> {
+        await bc.requests.SendRequestAsync(address, payload);
+    }
+    public async Task SendAsync() {
+        await bc.requests.SendRequestAsync(address, new Nothing());
+    }
+    public void Send<T>(T payload) where T : Dir<Role, S> {
+        bc.requests.SendRequest(address, payload);
+    }
+}
+
+class DownLink<Role> : Link {
     public DownLink(BC bc, uint address, uint target) : base(address, target, bc) {
     }
 
-    public Receiver<T> Receive<T>() where T : Dir<To, S> => new Receiver<T>() { link=this };
+    public Receiver<T> Receive<T>() where T : Dir<Role, S> => new Receiver<T>() { link=this };
 
-    public void Send<T>(T payload) where T : Dir<S, To> {
-        bc.events.Add(new Packet(target, payload));
+    public void Send<T>(T payload) where T : Dir<S, Role> {
+        bc.events.Add( new Mail<T>() { target = (uint)target, payload=payload }) ;
     }
 }
 
 abstract class Acceptor<T> {
     public Link link;
-    public abstract (bool, T) TryAccept(uint? sender, object payload);
+    public abstract (bool, T) TryAccept(uint sender, object payload);
 
     private async Task<T> Accept() {
         while (true) {
-            (uint? sender, object payload) = await link.bc.requests.ReceiveRequest();
+            (uint sender, object payload) = await link.bc.requests.ReceiveRequest();
             var (ok, res) = TryAccept(sender, payload);
             if (!ok)
                 continue;
@@ -95,12 +128,16 @@ abstract class Acceptor<T> {
     public System.Runtime.CompilerServices.TaskAwaiter<T> GetAwaiter() {
         return Accept().GetAwaiter();
     }
+
 }
 
-class Connector<T, To>: Acceptor<(DownLink<To>, T)> {
-    public override (bool, (DownLink<To>, T)) TryAccept(uint? sender, object payload) {
+class Connector<T, Role> : Acceptor<(DownLink<Role>, T)> {
+    public override (bool, (DownLink<Role>, T)) TryAccept(uint sender, object payload) {
         try {
-            return (true, (new DownLink<To>(link.bc, link.address, (uint)sender), (T)payload));
+            var (connok, res) = ((ConnectionRequest<Role>, T))payload;
+            var dlink = new DownLink<Role>(link.bc, link.address, sender);
+            dlink.Send(new ConnectionConfirmed<Role>());
+            return (true, (dlink, res));
         } catch (InvalidCastException) {
         }
         return (false, default);
@@ -108,7 +145,7 @@ class Connector<T, To>: Acceptor<(DownLink<To>, T)> {
 }
 
 class Receiver<T> : Acceptor<T> {
-    public override (bool, T) TryAccept(uint? sender, object payload) {
+    public override (bool, T) TryAccept(uint sender, object payload) {
         try {
             if (sender == link.target) {
                 return (true, (T)payload);
@@ -126,7 +163,7 @@ static class Combinators {
         T1 left = default;        bool doneLeft = false;
         T2 right = default;       bool doneRight = false;
         while (!doneLeft || !doneRight) {
-            (uint? sender, object payload) = await bc.requests.ReceiveRequest();
+            (uint sender, object payload) = await bc.requests.ReceiveRequest();
             var (ok1, p1) = t1.TryAccept(sender, payload);
             var (ok2, p2) = t2.TryAccept(sender, payload);
             if (ok1 && !doneLeft) {

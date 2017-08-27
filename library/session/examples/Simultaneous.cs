@@ -5,23 +5,24 @@ using static System.Console;
 using static Combinators;
 using static Utils;
 
-static class Simultaneous {
-    
-    private interface O : Client { }
-    private interface E : Client { }
+struct O : Client { }
+struct E : Client { }
 
-    private sealed class HChoice : Args<int>, Dir<O, S>, Dir<E, S> { internal HChoice(int _1) { _ = _1; } }
-    private sealed class Reveal : Dir<S, Client> { }
-    private sealed class Choice : Args<Hiding<bool>>, Dir<O, S>, Dir<E, S> { internal Choice(Hiding<bool> _1) { _ = _1; } }
+sealed class HChoice : Args<int>, Dir<O, S>, Dir<E, S> { internal HChoice(int _1) { _ = _1; } }
+sealed class Reveal : Dir<S, E>, Dir<S, O> { }
+sealed class Choice : Args<Hiding<bool>>, Dir<O, S>, Dir<E, S> { internal Choice(Hiding<bool> _1) { _ = _1; } }
 
-    private interface Response : Dir<S, O>, Dir<S, E> { }
-    private sealed class Won : Response { }
-    private sealed class Lost : Response { }
-    
+interface Response : Dir<S, O>, Dir<S, E> { }
+sealed class Won : Response { }
+sealed class Lost : Response { }
+
+static class Simultaneous {    
     static async Task Server(PublicLink @public) {
-        var (even, _) = await @public.Connection<E>();
-        var (odd, _) = await @public.Connection<O>();
-        (int even_hchoice, int odd_hchoice) = await Parallel(even.Receive<HChoice>(), odd.Receive<HChoice>());
+        var ((even, even_hchoice), (odd, odd_hchoice)) = await Parallel(
+            // FIX: does not seem to test for E/O
+            @public.Connection<HChoice, E>(),
+            @public.Connection<HChoice, O>()
+        );
         even.Send(new Reveal()); odd.Send(new Reveal());
         (Hiding<bool> even_choice, Hiding<bool> odd_choice) = await Parallel(even.Receive<Choice>(), odd.Receive<Choice>());
         bool even_honest = even_choice.Hidden((uint)even.target) == even_hchoice;
@@ -40,8 +41,6 @@ static class Simultaneous {
 
     static async Task ClientEven(UpLink<E> server) {
         bool choice = true;
-        await server.SendAsync();
-        WriteLine("E");
         var hchoice = new Hiding<bool>(choice, salt: 0x78573264);
         await server.SendAsync(new HChoice(hchoice.Hidden(server.address)));
         await server.ReceiveEarliest<Reveal>();
@@ -55,8 +54,6 @@ static class Simultaneous {
 
     static async Task ClientOdd(UpLink<O> server) {
         bool choice = true;
-        await server.SendAsync();
-        WriteLine("O");
         var hchoice = new Hiding<bool>(choice, salt: 0x78573264);
         await server.SendAsync(new HChoice(hchoice.Hidden(server.address)));
         await server.ReceiveEarliest<Reveal>();
@@ -70,8 +67,8 @@ static class Simultaneous {
 
     internal static Task[] Players(BC bc) => new Task[] {
         Server(new PublicLink(bc, 0)),
-        ClientEven(new UpLink<E>(bc, 1, 0)),
-        ClientOdd(new UpLink<O>(bc, 2, 0))
+        ClientOdd(new UpLink<O>(bc, 2, 0)),
+        ClientEven(new UpLink<E>(bc, 1, 0))
     };
 
 }

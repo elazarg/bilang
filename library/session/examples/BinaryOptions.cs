@@ -6,11 +6,11 @@ using static Combinators;
 
 static class BinaryOptions {
 
-    private interface Oracle : Client { }
-    private interface L : Client { }
-    private interface M : Client { }
+    private struct Oracle : Client { }
+    private struct L : Client { }
+    private struct M : Client { }
 
-    private sealed class StockPrice : Args<uint>, Dir<Oracle, S>, Dir<S, Client> { internal StockPrice(uint _1) { _ = _1; } }
+    private sealed class StockPrice : Args<uint>, Dir<Oracle, S>, Dir<S, Client>, Dir<S, L>, Dir<S, M> { internal StockPrice(uint _1) { _ = _1; } }
     private sealed class Ready : Dir<S, Oracle> { }
 
     private interface Response : Dir<S, M>, Dir<S, L> { }
@@ -39,10 +39,10 @@ static class BinaryOptions {
         await server.SendAsync(new StockPrice(18));
     }
 
-    static async Task ClientMore(UpLink<M> server) {
-        uint price = await server.ReceiveEarliest<StockPrice>(@public: true);
-        await server.SendAsync();
-        switch (await server.ReceiveEarliest<Response>()) {
+    static async Task ClientMore(ServerLink server) {
+        uint price = await server.ReceiveLatestPublic<StockPrice>();
+        var c = await server.Connection<M>();
+        switch (await c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("More won! :)"); break;
             case Lost x: WriteLine("More lost :("); break;
             default: Debug.Assert(false); break;
@@ -50,10 +50,10 @@ static class BinaryOptions {
     }
 
     // Exact copy of Client more up to s/M/L/
-    static async Task ClientLess(UpLink<L> server) {
-        uint price = await server.ReceiveEarliest<StockPrice>(@public: true);
-        await server.SendAsync();
-        switch (await server.ReceiveEarliest<Response>()) {
+    static async Task ClientLess(ServerLink server) {
+        uint price = await server.ReceiveLatestPublic<StockPrice>();
+        var c = await server.Connection<L>();
+        switch (await c.ReceiveEarliest<Response>()) {
             case Won x: WriteLine("Less won! :)"); break;
             case Lost x: WriteLine("Less lost :("); break;
             default: Debug.Assert(false); break;
@@ -63,8 +63,8 @@ static class BinaryOptions {
     internal static Task[] Players(BC bc) => new Task[] {
         Server(new PublicLink(bc, 0)),
         ClientOracle(new UpLink<Oracle>(bc, 1, 0)),
-        ClientMore(new UpLink<M>(bc, 2, 0)),
-        ClientLess(new UpLink<L>(bc, 3, 0))
+        ClientMore(new ServerLink(bc, 2)),
+        ClientLess(new ServerLink(bc, 3))
     };
 
 }
