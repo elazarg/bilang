@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
-
+﻿
 /***
  * Helper library - has nothing special to do with the blockchain
  */

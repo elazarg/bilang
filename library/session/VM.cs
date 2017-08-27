@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using System.Linq;
 using System.Threading;
 
 
@@ -15,7 +13,7 @@ class BC {
 
     internal readonly List<object> events = new List<object>();
 
-    object[] d = new object[5];
+    BufferBlock<bool>[] run = new BufferBlock<bool>[5];
 
     private void Prompt(string s) {
         Console.Write($"\r{s}\n>>> ");
@@ -24,31 +22,26 @@ class BC {
 
     public void Yield(uint address, object details) {
         Prompt($"Waiting - {address}: {details}");
-        Monitor.Wait(d[address]);
+        run[address].Receive();
         Prompt($"Running {address}");
     }
     
     public void Start(params Action[] ts) {
-        TaskFactory factory = new TaskFactory();
         uint i = 0;
         foreach (var t in ts) {
             var val = new object();
             requests.Register(i);
-            d[i] = val;
-            new Thread(() => { Monitor.Enter(val); t(); }).Start();
+            run[i] = new BufferBlock<bool>();
+            new Thread(() => t()).Start();
             i++;
         }
         while (true) {
             var s = Console.ReadLine();
             if (s == "exit")
                 return;
-            if (uint.TryParse(s, out uint num)) {
-                Console.WriteLine($"Take lock {num}");
-                lock (d[num]) {
-                    Console.WriteLine("send pulse");
-                    Monitor.Pulse(d[num]);
-                    Console.WriteLine("sent");
-                }
+            if (uint.TryParse(s, out uint address)) {
+                Console.WriteLine($"Wake {address}");
+                run[address].Post(true);
             }
         }
     }
