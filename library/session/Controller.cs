@@ -41,6 +41,8 @@ class Actor {
         run.Post(true);
     }
 
+    internal bool IsDone { get => state.Receive() == "Done"; }
+
     public Actor(string name, uint address, Action action) {
         this.address = address;
         this.thread = new Thread(() => { action(); state.Post("Done"); });
@@ -79,6 +81,8 @@ class Controller {
                 return;
             } else if (int.TryParse(s, out int address)) {
                 Wake(address);
+            } else if (s == "run") {
+                Run();
             } else if (RunCmd(s, out uint count)) {
                 Run(count);
             } else if (s != "") {
@@ -99,6 +103,12 @@ class Controller {
         foreach (var actor in actors) {
             var v = actor.state.Receive();
             Prompt($"{actor.address}: {v}");
+        }
+    }
+
+    private void Run() {
+        while (actors.Any(x=>!x.IsDone)) {
+            WakeRandom();
         }
     }
 

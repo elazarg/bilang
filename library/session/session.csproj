@@ -57,12 +57,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controller.cs" />
-    <Compile Include="examples\StepAuction.cs" />
     <Compile Include="examples\Simultaneous.cs" />
     <Compile Include="examples\Main.cs" />
     <Compile Include="examples\MontyHall.cs" />
     <Compile Include="examples\BinaryOptions.cs" />
     <Compile Include="examples\Puzzle.cs" />
+    <Compile Include="examples\StepAuction.cs" />
     <Compile Include="Links.cs" />
     <Compile Include="Roles.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

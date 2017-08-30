@@ -5,13 +5,14 @@ using System.Threading;
 
 class BC {
     internal readonly Requests requests;
-    internal readonly List<object> events = new List<object>();
+    internal readonly List<object> events = new List<object>() { "Header" };
+    readonly Controller controller;
+
     public BC(Controller c) {
         controller = c;
         requests = new Requests() { bc = this };
     }
 
-    private readonly Controller controller;
     public void Yield(uint address, object details) {
         controller.Yield(address, details);
     }

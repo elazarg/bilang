@@ -14,8 +14,24 @@ static class Puzzle {
     private interface IResponse : Dir<S, A> { }
     private sealed class Accepted : IResponse { }
     private sealed class Rejected : IResponse { }
-
-
+    /*
+        global protocol Puzzle(role S, role P) {
+            connect S to Q;
+            question(int) from Q to S;
+            question(int) from S to P;
+            rec loop {
+                connect S to A;
+                answer(int, int) from A to S;
+                choice at S {
+                    answer(int, int) from S to Q;
+                    accepted() from S to A;
+                } or {
+                    rejected() from S to A;
+                    continue loop;
+                }
+            }
+        }
+    */
     static void Server(PublicLink @public) {
         (var asker, int riddle) = @public.Connection<Question, Q>().Accept();
         @public.Publish(new Question(riddle));

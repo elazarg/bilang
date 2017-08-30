@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 struct Nothing { }
 
@@ -12,36 +13,50 @@ struct PublicMail { internal object payload; }
 
 abstract class Link {
     public readonly uint address;
-    public readonly uint? target;
     public readonly BC bc;
-    protected Link(uint address, uint? target, BC bc) {
+    protected Link(BC bc, uint address) {
         this.address = address;
-        this.target = target;
         this.bc = bc;
     }
 }
 
+abstract class PrivateLink : Link {
+    public readonly uint target;
+    protected PrivateLink(BC bc, uint address, uint target) : base(bc, address) {
+        this.target = target;
+    }
+}
+
 class PublicLink : Link {
-    public PublicLink(BC bc, uint address) : base(address, null, bc) { }
+    public PublicLink(BC bc, uint address) : base(bc, address) { }
+
+    internal long Now() {
+        return DateTime.Now.Ticks;
+    }
+
     public Connector<T, Role> Connection<T, Role>() => new Connector<T, Role>() { link = this };
     public Connector<Nothing, Role> Connection<Role>() => Connection<Nothing, Role>();
 
     public void Publish<T>(T payload) where T : Dir<S, Client> {
+        Console.WriteLine($"{address} publish {payload}");
         bc.events.Add(new PublicMail() { payload = payload });
     }
 }
 
-class ServerLink: Link {
-    public ServerLink(BC bc, uint address) : base(address, null, bc) {
+class ServerLink : Link {
+    int lastLength = 1;
+    public ServerLink(BC bc, uint address) : base(bc, address) {
         //bc.requests.Register(address);
     }
 
     public T ReceiveLatestPublic<T>() {
-        // retrieves the newest message
+        // retrieves the newest message not seen yet
         while (true) {
             bc.Yield(address, $"Receive latest public {typeof(T)}");
-            var events = new List<object>(bc.events);
-            events.Reverse();
+            while (bc.events.Count == lastLength)
+                bc.Yield(address, $"Waiting for events");
+            var events = bc.events.Skip(lastLength).Reverse().ToList();
+            lastLength = bc.events.Count;
             foreach (var e in events) {
                 try {
                     return (T)((PublicMail)e).payload;
@@ -59,16 +74,18 @@ class ServerLink: Link {
         res.ReceiveEarliest<ConnectionConfirmed<Role>>();
         return res;
     }
-
+    public void Send<Role, T>(T payload) {
+        bc.requests.SendRequest(address, (new ConnectionRequest<Role>(), payload));
+    }
     public UpLink<Role> Connection<Role>() {
         return Connection<Role, Nothing>(new Nothing());
     }
 }
 
-class UpLink<Role> : Link {
+class UpLink<Role> : PrivateLink {
     private int last = 0;
 
-    public UpLink(BC bc, uint address, uint target) : base(address, target, bc) {
+    public UpLink(BC bc, uint address, uint target) : base(bc, address, target) {
     }
 
     public T ReceiveEarliest<T>() where T : Dir<S, Role> {
@@ -104,19 +121,19 @@ class UpLink<Role> : Link {
     }
 }
 
-class DownLink<Role> : Link {
-    public DownLink(BC bc, uint address, uint target) : base(address, target, bc) {
+class DownLink<Role> : PrivateLink {
+    public DownLink(BC bc, uint address, uint target) : base(bc, address, target) {
     }
 
     public Receiver<T> Receive<T>() where T : Dir<Role, S> => new Receiver<T>() { link=this };
 
     public void Send<T>(T payload) where T : Dir<S, Role> {
-        bc.events.Add( new Mail() { target = (uint)target, payload=payload }) ;
+        bc.events.Add( new Mail() { target = target, payload=payload }) ;
     }
 }
 
-abstract class Acceptor<T> {
-    public Link link;
+abstract class Acceptor<T, L> where L: Link {
+    public L link;
     public abstract (bool, T) TryAccept(uint sender, object payload);
 
     public T Accept() {
@@ -130,11 +147,11 @@ abstract class Acceptor<T> {
     }
 }
 
-class Connector<T, Role> : Acceptor<(DownLink<Role>, T)> {
+class Connector<T, Role> : Acceptor<(DownLink<Role>, T), PublicLink> {
     public override (bool, (DownLink<Role>, T)) TryAccept(uint sender, object payload) {
+        var dlink = new DownLink<Role>(link.bc, link.address, sender);
         try {
             var (connok, res) = ((ConnectionRequest<Role>, T))payload;
-            var dlink = new DownLink<Role>(link.bc, link.address, sender);
             dlink.Send(new ConnectionConfirmed<Role>());
             return (true, (dlink, res));
         } catch (InvalidCastException) {
@@ -143,7 +160,7 @@ class Connector<T, Role> : Acceptor<(DownLink<Role>, T)> {
     }
 }
 
-class Receiver<T> : Acceptor<T> {
+class Receiver<T> : Acceptor<T, PrivateLink> {
     public override (bool, T) TryAccept(uint sender, object payload) {
         try {
             if (sender == link.target) {
@@ -157,7 +174,7 @@ class Receiver<T> : Acceptor<T> {
 
 
 static class Combinators {
-    public static (T1, T2) Parallel<T1, T2>(Acceptor<T1> t1, Acceptor<T2> t2) {
+    public static (T1, T2) Parallel<T1, L1, T2, L2>(Acceptor<T1, L1> t1, Acceptor<T2, L2> t2) where L1: Link where L2: Link {
         BC bc = t1.link.bc;
         T1 left = default;        bool doneLeft = false;
         T2 right = default;       bool doneRight = false;
@@ -176,5 +193,9 @@ static class Combinators {
             }
         }
         return (left, right);
+    }
+
+    public static T[] ParallelMany<T, L>(Acceptor<T, L> t) where L : Link {
+        throw new NotImplementedException();
     }
 }

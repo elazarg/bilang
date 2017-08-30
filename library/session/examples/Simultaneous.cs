@@ -5,27 +5,45 @@ using static Combinators;
 using static Utils;
 
 namespace Simultaneous {
-    struct O : Client { }
-    struct E : Client { }
+    /*
+        global protocol Simultaneous(role S, role E, role O) {
+            par {
+                hiddenChoice(int) from E to S;
+            } and {
+                hiddenChoice(int) from E to S;
+            }
 
-    sealed class HChoice : Args<int>, Dir<O, S>, Dir<E, S> { internal HChoice(int _1) { _ = _1; } }
-    sealed class Reveal : Dir<S, E>, Dir<S, O> { }
-    sealed class Choice : Args<Hiding<bool>>, Dir<O, S>, Dir<E, S> { internal Choice(Hiding<bool> _1) { _ = _1; } }
+            reveal() from S to E;
+            reveal() from S to O;
 
-    interface IResponse : Dir<S, O>, Dir<S, E> { }
-    sealed class Won : IResponse { }
-    sealed class Lost : IResponse { }
-
+            par {
+                choice(Hiding[bool]) from E to S;
+            } and {
+                choice(Hiding[bool]) from E to S;
+            }
+            choice at S {
+                won() from S to E;
+                lost() from S to O;
+            } or {
+                won() from S to O;
+                lost() from S to E;
+            }
+        }
+    */
     static class Simultaneous {
         static void Server(PublicLink @public) {
             var ((even, even_hchoice), (odd, odd_hchoice)) = Parallel(
                 @public.Connection<HChoice, E>(),
                 @public.Connection<HChoice, O>()
             );
-            even.Send(new Reveal()); odd.Send(new Reveal());
-            (Hiding<bool> even_choice, Hiding<bool> odd_choice) = Parallel(even.Receive<Choice>(), odd.Receive<Choice>());
-            bool even_honest = even_choice.Hidden((uint)even.target) == even_hchoice;
-            bool odd_honest = odd_choice.Hidden((uint)odd.target) == odd_hchoice;
+            even.Send(new Reveal());
+            odd.Send(new Reveal());
+            (Hiding<bool> even_choice, Hiding<bool> odd_choice) = Parallel(
+                even.Receive<Choice>(),
+                odd.Receive<Choice>()
+            );
+            bool even_honest = even_choice.Hidden(even.target) == even_hchoice;
+            bool odd_honest = odd_choice.Hidden(odd.target) == odd_hchoice;
             if (!even_honest && !odd_honest) {
                 even.Send(new Lost());
                 odd.Send(new Lost());
@@ -66,4 +84,14 @@ namespace Simultaneous {
 
         internal static Session Players = new Session(Server, ClientOdd, ClientEven);
     }
+    struct O : Client { }
+    struct E : Client { }
+
+    sealed class HChoice : Args<int>, Dir<O, S>, Dir<E, S> { internal HChoice(int _1) { _ = _1; } }
+    sealed class Reveal : Dir<S, E>, Dir<S, O> { }
+    sealed class Choice : Args<Hiding<bool>>, Dir<O, S>, Dir<E, S> { internal Choice(Hiding<bool> _1) { _ = _1; } }
+
+    interface IResponse : Dir<S, O>, Dir<S, E> { }
+    sealed class Won : IResponse { }
+    sealed class Lost : IResponse { }
 }

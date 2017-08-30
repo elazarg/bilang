@@ -4,19 +4,26 @@ using static Combinators;
 using System;
 
 static class BinaryOptions {
-
-    private struct Oracle : Client { }
-    private struct L : Client { }
-    private struct M : Client { }
-
-    private sealed class StockPrice : Args<uint>, Dir<Oracle, S>, Dir<S, Client>, Dir<S, L>, Dir<S, M> { internal StockPrice(uint _1) { _ = _1; } }
-    private sealed class Ready : Dir<S, Oracle> { }
-
-    private interface IResponse : Dir<S, M>, Dir<S, L> { }
-    private sealed class Won : IResponse { }
-    private sealed class Lost : IResponse { }
-
-
+    /*
+        global protocol BinaryOptions(role S, role Public, role Oracle, role More, role Less) {
+            stockPrice(uint) from Oracle to S;
+            stockPrice(uint) from S to Public;
+            par {
+                connect S to More;
+            } and {
+                connect S to Less;
+            }
+            ready() from S to Oracle;
+            stockPrice(uint) from Oracle to S;
+            choice at S {
+                won() from S to More;
+                lost() from S to Less;
+            } or {
+                won() from S to Less;
+                lost() from S to More;
+            }
+        }
+    */
     static void Server(PublicLink @public) {
         (var oracle, uint firstStockPrice) = @public.Connection<StockPrice, Oracle>().Accept();
         @public.Publish(new StockPrice(firstStockPrice));
@@ -60,4 +67,16 @@ static class BinaryOptions {
     }
 
     internal static Session Players = new Session(Server, ClientOracle, ClientMore, ClientLess);
+
+
+    private struct Oracle : Client { }
+    private struct L : Client { }
+    private struct M : Client { }
+
+    private sealed class StockPrice : Args<uint>, Dir<Oracle, S>, Dir<S, Client>, Dir<S, L>, Dir<S, M> { internal StockPrice(uint _1) { _ = _1; } }
+    private sealed class Ready : Dir<S, Oracle> { }
+
+    private interface IResponse : Dir<S, M>, Dir<S, L> { }
+    private sealed class Won : IResponse { }
+    private sealed class Lost : IResponse { }
 }
