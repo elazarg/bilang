@@ -11,7 +11,7 @@
 
 
 \usepackage{booktabs}
-\usepackage{subcaption} 
+\usepackage{subcaption}
 \usepackage{alltt}
 \usepackage{amsmath}
 \usepackage{amsthm}
@@ -31,6 +31,10 @@
 \usepackage{cleveref} % Must be loaded as last package
 \usepackage[nodayofweek]{datetime}
 \usepackage{todonotes}
+
+\usepackage{bussproofs}
+\usepackage[nounderscore]{syntax}
+\usepackage{cmll}
 
 
 
@@ -107,6 +111,77 @@
 
 \maketitle
 
+\setlength{\grammarindent }{2cm}
+
+\begin{align*}
+	E :& \text{ Append-only list} \\
+    R_i :& \text{ A Queue for actor } i
+\end{align*}
+
+\begin{grammar}
+	<cmd> ::= publish <V>
+         \alt yield; take <T>
+         \alt if * then <cmdList> else <cmdList>
+         \alt while * do <cmdList>
+\end{grammar}
+
+
+\begin{align*}
+\judge{TAKE}{
+	-
+}{
+	(E, (i, L, M)::R, \Sigma, \text{take L}.P) \reduce (E, R, \Sigma, P)
+}& \;\;\;\;
+\judge{PUB}{
+	\Sigma \vdash v \reduce x
+}{
+	(E, R, \Sigma, \text{publish v}.P)\reduce (x::E, R, \Sigma, P)
+}\\
+\\
+\judge{DROP}{
+	L' \neq L
+}{
+	(E, (i, L', M)::R, \Sigma, \text{take L}.P) \reduce (E, R, \Sigma, \text{take L}.P)
+} & \;\;\;\;
+\judge{YIELD}{
+	 \;
+}{
+	(E, R, \Sigma, \text{yield; take T}.P) \reduce (E, R, \Sigma, \text{takes T}.P)
+}
+\end{align*}
+
+\begin{grammar}
+	<cmd> ::= send <V>: <T>
+         \alt read latest <T>
+         \alt deq <T>
+         \alt if * then <cmdList> else <cmdList>
+         \alt while * do <cmdList>
+\end{grammar}
+
+\begin{align*}
+\judge{RL}{
+	\forall M', (L, M') \notin E'
+}{
+	(E'.(L, M).E, R_i, \Phi, \text{read latest L}.P) \reduce (E, R_i, \Phi, P)
+}& \;\;\;\;
+\judge{SEND}{
+	\Sigma \vdash v \reduce x
+}{
+	(E, R_i, \Phi, \text{send v: L}.P)\reduce (E, (i, L, x)::R_i, \Phi, P)
+}\\
+\\
+\judge{DEQ}{
+	\;
+}{
+	((T, M)::E, R_i, \Phi, \text{deq T}.P) \reduce (E, R_i, \Phi, P)
+} & \;\;\;\;
+\judge{YIELD}{
+	 -
+}{
+	-
+}
+\end{align*}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Paper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,11 +194,11 @@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Acknowledgments 
+%% Acknowledgments
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% \begin{acks}  
-% We would like to thank the teams at Validity Labs and Ambisafe that assisted us in analyzing their contracts, and to Validity Labs for referring us to the web Oyente tool. 
+% \begin{acks}
+% We would like to thank the teams at Validity Labs and Ambisafe that assisted us in analyzing their contracts, and to Validity Labs for referring us to the web Oyente tool.
 % \end{acks}
 
 

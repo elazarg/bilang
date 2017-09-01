@@ -4,34 +4,31 @@ using static System.Console;
 using static Utils;
 
 namespace MontyHall {
-    /*
-        global protocol MontyHall(role S, role P, role H, role G) {
-            hiddenCar(int) from H to S;
-            hiddenCar() from S to G;
+/*
+explicit global protocol MontyHall(role S, role H, role G) {
+    connect S to H;
+    connect S to G;
 
-            door1(int) from G to S;
-            door1(int) from S to H;
+    hiddenCar(int) from H to S;  hiddenCar() from S to G;
 
-            goat(int) from H to S;
-            goat(int) from S to G;
+    door1(int) from G to S;    door1(int) from S to H;
+    goat(int) from H to S;       goat(int) from S to G;
+    door2(int) from G to S;      door2(int) from S to H;
 
-            door2(int) from G to S;
-            door2(int) from S to H;
-
-            openCar(int) from H to S;
-            choice at S {
-                won() from S to G;
-                lost() from S to H;
-            } or {
-                won() from S to H;
-                lost() from S to G;
-            }
-        }
-    */
+    openCar(int) from H to S;
+    choice at S {
+        won() from S to G;
+        lost() from S to H;
+    } or {
+        won() from S to H;
+        lost() from S to G;
+    }
+}
+*/
     static class MontyHall {
         static void Server(PublicLink @public) {
             var ((host, _), (guest, _)) = Combinators.Parallel(@public.Connection<H>(), @public.Connection<G>());
-
+            
             int hiddenCar = host.Receive<HCar>().Accept();
             guest.Send(new HCar(hiddenCar));
 
@@ -55,7 +52,21 @@ namespace MontyHall {
                 host.Send(new Winner());
             }
         }
-
+/*
+local protocol MontyHall_H(role S, role H) {
+    () accept S;
+    hiddenCar(int) to S;
+    door1(int) from S;
+    goat(int) to S;
+    door2(int) from S;
+    openCar(int) to S;
+    choice at S {
+        lost() from S;
+    } or {
+        won() from S;
+    }
+}
+*/
         static void ClientHost(ServerLink server) {
             var c = server.Connection<H>();
             Door car = Door.a;
@@ -72,7 +83,20 @@ namespace MontyHall {
                 default: Debug.Assert(false); break;
             }
         }
-
+/*
+local protocol MontyHall_G(role S, role G) {
+    () accept S;
+    hiddenCar() from S;
+    door1(int) to S;
+    goat(int) from S;
+    door2(int) to S;
+    choice at S {
+        won() from S;
+    } or {
+        lost() from S;
+    }
+}
+*/
         static void ClientGuest(ServerLink server) {
             var c = server.Connection<G>();
             c.ReceiveEarliest<HCar>();

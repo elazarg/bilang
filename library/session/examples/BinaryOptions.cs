@@ -4,26 +4,27 @@ using static Combinators;
 using System;
 
 static class BinaryOptions {
-    /*
-        global protocol BinaryOptions(role S, role Public, role Oracle, role More, role Less) {
-            stockPrice(uint) from Oracle to S;
-            stockPrice(uint) from S to Public;
-            par {
-                connect S to More;
-            } and {
-                connect S to Less;
-            }
-            ready() from S to Oracle;
-            stockPrice(uint) from Oracle to S;
-            choice at S {
-                won() from S to More;
-                lost() from S to Less;
-            } or {
-                won() from S to Less;
-                lost() from S to More;
-            }
-        }
-    */
+/*
+explicit global protocol BinaryOptions(role S, role Oracle, role More, role Less) {
+    connect Oracle to S;
+    stockPrice() from Oracle to S;
+    par {
+        connect More to S;
+    } and {
+        connect Less to S;
+    }
+    
+    ready() from S to Oracle;
+    stockPrice() from Oracle to S;
+    choice at S {
+        won() from S to More;
+        lost() from S to Less;
+    } or {
+        won() from S to Less;
+        lost() from S to More;
+    }
+}
+*/
     static void Server(PublicLink @public) {
         (var oracle, uint firstStockPrice) = @public.Connection<StockPrice, Oracle>().Accept();
         @public.Publish(new StockPrice(firstStockPrice));

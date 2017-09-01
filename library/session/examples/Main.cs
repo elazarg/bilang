@@ -6,7 +6,7 @@ class MainTest {
         //c.Start(Puzzle.Players);
         //c.Start(MontyHall.MontyHall.Players);
         //c.Start(BinaryOptions.Players);
-        //c.Start(Simultaneous.Simultaneous.Players);
-        c.Start(StepAuction.Players);
+        c.Start(Simultaneous.Simultaneous.Players);
+        //c.Start(StepAuction.Players);
     }
 }

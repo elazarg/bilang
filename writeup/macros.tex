@@ -5,9 +5,6 @@
 
 \newcommand{\nrtodo}[1]{\color{red}\textbf{[NR:~#1]}\color{black}}
 \newcommand{\noam}[1]{\todo[inline]{NR: #1}}
-\newcommand{\shelly}[1]{\todo[inline]{SG: #1}}
-\newcommand{\yoni}[1]{\todo[inline]{YZ: #1}}
-\newcommand{\shellyold}[1]{}
 \newcommand{\red}[1]{\color{red}#1\color{black}}
 \newcommand{\blue}[1]{\color{blue}#1\color{black}}
 \newcommand{\purple}[1]{\color{purple}#1\color{black}}
@@ -172,8 +169,8 @@
 % \newcommand{\MutL}[0]{L}
 \newcommand{\SelEnv}{\reg}
 
-
-
+\newcommand{\judge}[3] {\frac{#2}{#3} #1}
+\newcommand{\reduce}[0] {\rightsquigarrow}
 
 
 % Semantic Domains - new
@@ -279,7 +276,7 @@
 \newcommand{\ostatedefault}{\langle \Stk,\store \rangle}
 \newcommand{\errorstate}{\lightning}
 \newcommand{\current}{\mathit{this}}
-\newcommand{\stack}{\mathit{Stack}}
+%\newcommand{\stack}{\mathit{Stack}}
 \newcommand{\store}{\sigma}
 \newcommand{\MCmd}{\operatorname{c}}
 \newcommand{\Tr}{\mathit{Tr}}
@@ -378,4 +375,4 @@
 \newcommand{\suffix}[1]{\it{suffix}(#1)}
 \newcommand{\Commute}[2]{#1\ensuremath{\leftrightarrows}#2}
 \newcommand{\nCommute}[2]{#1\ensuremath{\nleftrightarrows}#2}
-\newcommand{\hb}[2]{#1\ensuremath{\prec_{\it{Inv}}}#2}
+\newcommand{\hb}[2]{#1\ensuremath{\prec_{\it{Inv}}}#2} 

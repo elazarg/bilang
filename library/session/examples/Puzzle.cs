@@ -15,22 +15,26 @@ static class Puzzle {
     private sealed class Accepted : IResponse { }
     private sealed class Rejected : IResponse { }
     /*
-        global protocol Puzzle(role S, role P) {
-            connect S to Q;
-            question(int) from Q to S;
-            question(int) from S to P;
-            rec loop {
-                connect S to A;
-                answer(int, int) from A to S;
-                choice at S {
-                    answer(int, int) from S to Q;
-                    accepted() from S to A;
-                } or {
-                    rejected() from S to A;
-                    continue loop;
-                }
-            }
+explicit global protocol Puzzle(role S, role P, role Q, role A) {
+    connect S to P;
+    connect P to A;
+    
+    connect S to Q;
+    question(int) from Q to S;
+    question(int) from S to P;
+    rec loop {
+        connect S to A;
+        answer(int, int) from A to S;
+        choice at S {
+            answer(int, int) from S to Q;
+            accepted() from S to A;
+        } or {
+            rejected() from S to A;
+            disconnect S and A;
+            continue loop;
         }
+    }
+}
     */
     static void Server(PublicLink @public) {
         (var asker, int riddle) = @public.Connection<Question, Q>().Accept();
@@ -40,10 +44,11 @@ static class Puzzle {
             if (m * n == riddle) {
                 asker.Send(new Answer(3, 5));
                 solver.Send(new Accepted());
-                break;
             } else {
                 solver.Send(new Rejected());
+                continue;
             }
+            break;
         }
     }
 
