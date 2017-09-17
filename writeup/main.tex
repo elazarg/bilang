@@ -111,6 +111,31 @@
 
 \maketitle
 
+\begin{align*}
+types &: State, Event, TX \\
+\sigma &: State \\
+e &: \text{list of Event} \\
+q &: Agent \rightarrow \text{queue of TX} \; & \Sigma &: (State \times TX) \times (State \times Event) \\
+c &: Agent \rightarrow State \; & \Sigma_i &: (State \times \text{list of Event}) \times (State \times TX) \\
+\end{align*}
+
+\begin{align*}
+\judge{&SEND}{
+	((c_i, e), (c'_i, tx)) \in \Sigma_i
+}{
+	(c, q, \sigma, e) \leadsto (c', enque_i(q, tx), \sigma, e)
+}
+\\
+\\
+\judge{&PERFORM}{
+	((\sigma, peek(q_i)), (\sigma', e')) \in \Sigma
+}{
+	(c, q, \sigma, e) \leadsto (c, deque_i(q), \sigma', e'::e)
+}
+\end{align*}
+
+\pagebreak
+
 \setlength{\grammarindent }{2cm}
 
 \begin{align*}
