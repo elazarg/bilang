@@ -158,40 +158,52 @@ We define a language $SL$ whose programs $p\in SL$ has meaning \[\semfunc[p] \in
         \alt (i, *) => <cmd>; <case list>
 \end{grammar}
 
-The intention is that \texttt{yield} expressions will be the only entry points, and evaluation of such an expression always translates to the sequence (a)finish execution with $ev$ as an output event (b) wait for the network to send a request (c) inspect the request and continue execution.
+The intention is that \texttt{yield} expressions will be the only entry points, and evaluation of such an expression always translates to the sequence:
+\begin{enumerate}
+\item finish execution with $ev$ as an output event
+\item wait for the network to send a request 
+\item inspect the request and continue execution
+\end{enumerate}
 
-\begin{align*}
+\[
 \judge{Yield}{
 	-
 }{
-	\semfunc[\text{match yield ev Cs end}] = (Cs, ev)  % waiting for TX
-}& \;\;\;\;
-\judge{CaseGo}{
+	\semfunc[\text{match yield ev Cs end}] = (\text{match receive Cs end}, ev)  % waiting for TX
+}
+\]
+\begin{align*}
+\judge{&Then}{
 	-
+}{
+	\semfunc[\text{if * then C1 else C2}] = \semfunc[C1]
+}& \;\;\;\;
+\judge{&CaseGo}{
+	- % TODO: \text{match receive Cs end} and simply dispatch to the first successful match
 }{
 	\semfunc[\text{(i, *) => p; Cs}] = \semfunc[p]
 }\\
 \\
-\judge{WhileDone}{
+\judge{&Else}{
+	-
+}{
+	\semfunc[\text{if * then C1 else C2}] = \semfunc[C2]
+}& \;\;\;\;
+\judge{&CaseDrop}{
+	-
+}{
+	\semfunc[\text{(i, *) => p; Cs}] = \semfunc[Cs]
+}\\
+\\
+\judge{&WhileDone}{
 	-
 }{
 	\semfunc[\text{while * do p end; p'}] = \semfunc[p']
 }& \;\;\;\;
-\judge{While}{
+\judge{&While}{
 	\semfunc[p] = (p', ev)
 }{
 	\semfunc[\text{while * do p end}] = (\text{p'; while * do p end}, ev)
-}\\
-\\
-\judge{Then}{
-	-
-}{
-	\semfunc[\text{if * then C1 else C2}] = \semfunc[C1]
-} & \;\;\;\;
-\judge{Else}{
-	-
-}{
-	\semfunc[\text{if * then C1 else C2}] = \semfunc[C2]
 }
 \end{align*}
 
