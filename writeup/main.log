@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.17 (MiKTeX 2.9.6210 64-bit) (preloaded format=pdflatex 2017.1.22)  17 SEP 2017 14:33
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (MiKTeX 2.9.6210 64-bit) (preloaded format=pdflatex 2017.1.22)  17 SEP 2017 20:15
 entering extended mode
 **./main.tex
 (main.tex
@@ -1884,103 +1884,125 @@ Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
 Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
 (hyperref)                removing `math shift' on input line 112.
 
+LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
+(Font)              scaled to size 10.0pt on input line 114.
+LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/bx/n' in size <10> not av
+ailable
+(Font)              Font shape `T1/LinuxBiolinumT-TLF/b/n' tried instead on inp
+ut line 114.
+LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/b/n' will be
+(Font)              scaled to size 10.0pt on input line 114.
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 7.3pt on input line 120.
+(Font)              scaled to size 7.3pt on input line 124.
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 5.5pt on input line 120.
+(Font)              scaled to size 5.5pt on input line 124.
 
-Underfull \vbox (badness 4492) has occurred while \output is active []
+Underfull \vbox (badness 1521) has occurred while \output is active []
 
  [1.1{C:/Users/elazar/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}]
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/it' will be
-(Font)              scaled to size 10.0pt on input line 147.
+(Font)              scaled to size 10.0pt on input line 150.
+LaTeX Font Info:    Try loading font information for T1+zi4 on input line 161.
 
-Overfull \hbox (62.29265pt too wide) in paragraph at lines 176--176
+("C:\Users\elazar\AppData\Local\Programs\MiKTeX 2.9\tex\latex\inconsolata\t1zi4
+.fd"
+File: t1zi4.fd 2016/12/29 T1/zi4 (Inconsolata)
+)
+LaTeX Font Info:    Font shape `T1/zi4/m/n' will be
+(Font)              scaled to size 10.0pt on input line 161.
+Package microtype Info: Loading generic settings for font family
+(microtype)             `zi4' (encoding: T1).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `T1/zi4/m/n/10'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `T1/zi4/m/n/10'.
+(microtype)             Ignoring protrusion settings for this character.
+ [2.2]
+Overfull \hbox (62.29265pt too wide) in paragraph at lines 239--239
 [] 
  []
 
 
-Overfull \hbox (43.18828pt too wide) in paragraph at lines 208--208
+Overfull \hbox (43.18828pt too wide) in paragraph at lines 275--275
 [] 
  []
 
 (notations.tex
-LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
-(Font)              scaled to size 10.0pt on input line 3.
-LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/bx/n' in size <10> not av
-ailable
-(Font)              Font shape `T1/LinuxBiolinumT-TLF/b/n' tried instead on inp
-ut line 3.
-LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/b/n' will be
-(Font)              scaled to size 10.0pt on input line 3.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/m/it' will be
 (Font)              scaled to size 10.0pt on input line 14.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/m/it' will be
 (Font)              scaled to size 7.3pt on input line 14.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/m/it' will be
 (Font)              scaled to size 5.5pt on input line 14.
-) [2.2] (main.bbl
+) [3.3] (main.bbl
 
 Package natbib Warning: Empty `thebibliography' environment on input line 41.
 
-) [3.3]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 251.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 251.
+) [4.4]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 318.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 318.
  (main.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 251.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 251.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 318.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 318.
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 5900143F7AA02A041F6ECEE49A353299;139.
+(rerunfilecheck)             Checksum: 9F9C23FC2A0960A5FAF9F1C0D2C8C53D;332.
 
 
 LaTeX Font Warning: Size substitutions with differences
 (Font)              up to 0.5pt have occurred.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 251.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 318.
  )
 (\end occurred inside a group at level 1)
 
 ### simple group (level 1) entered at line 1061 ({)
 ### bottom level 
 Here is how much of TeX's memory you used:
- 32550 strings out of 493333
- 573744 string characters out of 3129709
+ 32583 strings out of 493333
+ 574343 string characters out of 3129709
  764916 words of memory out of 3000000
- 35080 multiletter control sequences out of 15000+200000
- 147523 words of font info for 250 fonts, out of 3000000 for 9000
+ 35101 multiletter control sequences out of 15000+200000
+ 148093 words of font info for 253 fonts, out of 3000000 for 9000
  1302 hyphenation exceptions out of 8191
- 62i,17n,94p,3238b,13485s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 62i,17n,94p,3238b,13492s stack positions out of 5000i,500n,10000p,200000b,50000s
 {C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dv
 ips/libertine/lbtn_xogrpz.enc}{C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.
-9/fonts/enc/dvips/newtx/libertinealt.enc}{C:/Users/elazar/AppData/Local/Program
-s/MiKTeX 2.9/fonts/enc/dvips/libertine/lbtn_c7kyj5.enc}{C:/Users/elazar/AppData
-/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/base/8r.enc}{C:/Users/elazar/AppData
-/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{C:/Users/
-elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/libertine/lbtn_nh77jq.
-enc}{C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/libertin
-e/lbtn_naooyc.enc}{C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/
-dvips/libertine/lbtn_76gpa5.enc}{C:/Users/elazar/AppData/Local/Programs/MiKTeX 
-2.9/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}<C:/Users/elazar/AppData/Local/Pr
-ograms/MiKTeX 2.9/fonts/type1/public/libertine/LinBiolinumT.pfb><C:/Users/elaza
-r/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/libertine/LinBiolinumTB.
-pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/liber
-tine/LinLibertineT.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts
-/type1/public/libertine/LinLibertineTB.pfb><C:/Users/elazar/AppData/Local/Progr
-ams/MiKTeX 2.9/fonts/type1/public/libertine/LinLibertineTI.pfb><C:/Users/elazar
-/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/
-Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/newtx/fxlri-7
-letters.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/publ
-ic/newtx/ntxsyralt.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts
-/type1/public/txfonts/rtxmi.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 
-2.9/fonts/type1/public/txfonts/rtxr.pfb><C:/Users/elazar/AppData/Local/Programs
-/MiKTeX 2.9/fonts/type1/public/txfonts/txsyb.pfb><C:/Users/elazar/AppData/Local
-/Programs/MiKTeX 2.9/fonts/type1/public/txfonts/txsyc.pfb><C:/Users/elazar/AppD
-ata/Local/Programs/MiKTeX 2.9/fonts/type1/public/newtx/txsys.pfb><C:/Users/elaz
-ar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/newtx/zxlr.pfb><C:/User
-s/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/newtx/zxlri.pfb>
-Output written on main.pdf (3 pages, 459024 bytes).
+9/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{C:/Users/elazar/AppData/Local/Progra
+ms/MiKTeX 2.9/fonts/enc/dvips/newtx/libertinealt.enc}{C:/Users/elazar/AppData/L
+ocal/Programs/MiKTeX 2.9/fonts/enc/dvips/libertine/lbtn_c7kyj5.enc}{C:/Users/el
+azar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/base/8r.enc}{C:/Users/el
+azar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/libertine/lbtn_7grukw.en
+c}{C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/libertine/
+lbtn_nh77jq.enc}{C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dv
+ips/libertine/lbtn_naooyc.enc}{C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.
+9/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{C:/Users/elazar/AppData/Local/Prog
+rams/MiKTeX 2.9/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}<C:/Users/elazar/AppD
+ata/Local/Programs/MiKTeX 2.9/fonts/type1/public/inconsolata/Inconsolata-zi4r.p
+fb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/libert
+ine/LinBiolinumT.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/t
+ype1/public/libertine/LinBiolinumTB.pfb><C:/Users/elazar/AppData/Local/Programs
+/MiKTeX 2.9/fonts/type1/public/libertine/LinLibertineT.pfb><C:/Users/elazar/App
+Data/Local/Programs/MiKTeX 2.9/fonts/type1/public/libertine/LinLibertineTB.pfb>
+<C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/libertine
+/LinLibertineTI.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/ty
+pe1/public/amsfonts/cm/cmr7.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 
+2.9/fonts/type1/public/newtx/fxlri-7letters.pfb><C:/Users/elazar/AppData/Local/
+Programs/MiKTeX 2.9/fonts/type1/public/newtx/ntxsyralt.pfb><C:/Users/elazar/App
+Data/Local/Programs/MiKTeX 2.9/fonts/type1/public/txfonts/rtxmi.pfb><C:/Users/e
+lazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/txfonts/rtxr.pfb><C:
+/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/hoekwater/st
+mary10.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/publi
+c/txfonts/txsyb.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9/fonts/ty
+pe1/public/txfonts/txsyc.pfb><C:/Users/elazar/AppData/Local/Programs/MiKTeX 2.9
+/fonts/type1/public/newtx/txsys.pfb><C:/Users/elazar/AppData/Local/Programs/MiK
+TeX 2.9/fonts/type1/public/newtx/zxlr.pfb><C:/Users/elazar/AppData/Local/Progra
+ms/MiKTeX 2.9/fonts/type1/public/newtx/zxlri.pfb>
+Output written on main.pdf (4 pages, 486483 bytes).
 PDF statistics:
- 115 PDF objects out of 1000 (max. 8388607)
- 7 named destinations out of 1000 (max. 500000)
- 48165 words of extra memory for PDF output out of 51595 (max. 10000000)
+ 140 PDF objects out of 1000 (max. 8388607)
+ 11 named destinations out of 1000 (max. 500000)
+ 48701 words of extra memory for PDF output out of 51595 (max. 10000000)
 

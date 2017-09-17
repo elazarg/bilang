@@ -111,24 +111,28 @@
 
 \maketitle
 
+\section{Network Semantics}
+
+We define the valid transitions on the entire system, assuming abstract specification of the clients and the (single) server.
+
 \begin{align*}
-types &: State, Event, TX \\
+types &: State, Event, TX; \;\; i \in Agent \\
+c_i &: State \; & \Sigma^{c}_{i} &: State \times \text{list of Event} \times (State \times TX) \\
+q_i &: \text{queue of TX} \; & \Sigma^{s} &: State \times (Agent \times TX) \rightarrow (State \times Event) \\
 \sigma &: State \\
 e &: \text{list of Event} \\
-q &: Agent \rightarrow \text{queue of TX} \; & \Sigma &: (State \times TX) \times (State \times Event) \\
-c &: Agent \rightarrow State \; & \Sigma_i &: (State \times \text{list of Event}) \times (State \times TX) \\
 \end{align*}
 
 \begin{align*}
-\judge{&SEND}{
-	((c_i, e), (c'_i, tx)) \in \Sigma_i
+\judge{&Send}{
+	(c_i, e, (c'_i, tx)) \in \Sigma^{c}_i \;\;\; \forall i\neq j, c_j=c'_j
 }{
 	(c, q, \sigma, e) \leadsto (c', enque_i(q, tx), \sigma, e)
 }
 \\
 \\
-\judge{&PERFORM}{
-	((\sigma, peek(q_i)), (\sigma', e')) \in \Sigma
+\judge{&Perform}{
+    \Sigma^{s}(\sigma, (i, peek(q_i) ) = (\sigma', e')
 }{
 	(c, q, \sigma, e) \leadsto (c, deque_i(q), \sigma', e'::e)
 }
@@ -137,6 +141,65 @@ c &: Agent \rightarrow State \; & \Sigma_i &: (State \times \text{list of Event}
 \pagebreak
 
 \setlength{\grammarindent }{2cm}
+
+\subsection{Server Language}
+
+We define a language $SL$ whose programs $p\in SL$ has meaning \[\semfunc[p] \in State \times (Agent \times TX) \rightarrow (State \times Event)\]
+
+\begin{grammar}
+	<cmd> ::= match yield ev <case list> end   % external choice
+         \alt if * then <cmd> else <cmd> end   % internal choice
+         \alt while * do <cmd> end             % recursion
+         \alt proc(); <cmd>
+         \alt fail
+         \alt require *; <cmd>
+
+    <case list> ::= \_ => end
+        \alt (i, *) => <cmd>; <case list>
+\end{grammar}
+
+The intention is that \texttt{yield} expressions will be the only entry points, and evaluation of such an expression always translates to the sequence (a)finish execution with $ev$ as an output event (b) wait for the network to send a request (c) inspect the request and continue execution.
+
+\begin{align*}
+\judge{Yield}{
+	-
+}{
+	\semfunc[\text{match yield ev Cs end}] = (Cs, ev)  % waiting for TX
+}& \;\;\;\;
+\judge{CaseGo}{
+	-
+}{
+	\semfunc[\text{(i, *) => p; Cs}] = \semfunc[p]
+}\\
+\\
+\judge{WhileDone}{
+	-
+}{
+	\semfunc[\text{while * do p end; p'}] = \semfunc[p']
+}& \;\;\;\;
+\judge{While}{
+	\semfunc[p] = (p', ev)
+}{
+	\semfunc[\text{while * do p end}] = (\text{p'; while * do p end}, ev)
+}\\
+\\
+\judge{Then}{
+	-
+}{
+	\semfunc[\text{if * then C1 else C2}] = \semfunc[C1]
+} & \;\;\;\;
+\judge{Else}{
+	-
+}{
+	\semfunc[\text{if * then C1 else C2}] = \semfunc[C2]
+}
+\end{align*}
+
+\vfill
+\pagebreak
+
+
+
 
 \begin{align*}
 	E :& \text{ Append-only list} \\
@@ -174,6 +237,10 @@ c &: Agent \rightarrow State \; & \Sigma_i &: (State \times \text{list of Event}
 	(E, R, \Sigma, \text{yield; take T}.P) \reduce (E, R, \Sigma, \text{takes T}.P)
 }
 \end{align*}
+
+\subsection{Client Language}
+
+We define a language $CL$ whose programs $p\in CL$ has meaning \[\semfunc[p] \in State \times \text{list of Event} \times (State \times TX)\]
 
 \begin{grammar}
 	<cmd> ::= send <V>: <T>
