@@ -113,7 +113,7 @@
 
 \section{Network Semantics}
 
-We define the valid transitions on the entire system, assuming abstract specification of the clients and the (single) server.
+We define the valid transitions on the entire system, assuming abstract specification of the clients and the (single) server. The network behavior is simple: a client can enqueue messages in its own queue. The miner dequeues a tx from some arbitrary queue, executes it, and appends the resulting event (assumed to be a single item) to the list of events.
 
 \begin{align*}
 types &: State, Event, TX; \;\; i \in Agent \\
@@ -147,7 +147,11 @@ e &: \text{list of Event} \\
 We define a language $SL$ whose programs $p\in SL$ has meaning \[\semfunc[p] \in State \times (Agent \times TX) \rightarrow (State \times Event)\]
 
 \begin{grammar}
-	<cmd> ::= match yield ev <case list> end   % external choice
+    <prog> ::= done
+         \alt receive (i, tx) <case list> end   % external choice
+         \alt par <prog> and <prog> end
+    
+	<cmd> ::= yield ev; <prog>                 % yield + external choice
          \alt if * then <cmd> else <cmd> end   % internal choice
          \alt while * do <cmd> end             % recursion
          \alt proc(); <cmd>
@@ -158,20 +162,40 @@ We define a language $SL$ whose programs $p\in SL$ has meaning \[\semfunc[p] \in
         \alt (i, *) => <cmd>; <case list>
 \end{grammar}
 
-The intention is that \texttt{yield} expressions will be the only entry points, and evaluation of such an expression always translates to the sequence:
+The intention is that \texttt{yield} expressions will be the only suspension points, and evaluation of such an expression always translates to the sequence:
 \begin{enumerate}
 \item finish execution with $ev$ as an output event
 \item wait for the network to send a request 
 \item inspect the request and continue execution
 \end{enumerate}
 
-\[
-\judge{Yield}{
+We use a function $\semfunc[p] \in State \rightarrow (State \times Event)$ to define the internal state change, without explicitly referring to the input $(i, tx)$ after its binding in the \texttt{match} construct.
+
+\begin{align*}
+\judge{&Receive}{
 	-
 }{
-	\semfunc[\text{match yield ev Cs end}] = (\text{match receive Cs end}, ev)  % waiting for TX
+	\semfunc[\text{match (i, tx) Cs end}, (i', tx')] = \semfunc[\text{Cs[i/i', tx/tx']}]  % receiving TX
+}\\
+\\
+\judge{&Yield}{
+	-
+}{
+	\semfunc[\text{yield ev; p}] = (p, ev)  % waiting for TX
+}\\
+\\
+\judge{&ParallelLeft\text{ and symmetrically for p2}}{  % decision: fork a new address? this will be visible to the client
+	\semfunc[p1, (i, tx)] = (p1', ev1)
+}{
+	\semfunc[\text{par p1 and p2 end}, (i, tx)] = (\text{par p1' and p2 end}, ev1)
+}\\
+\\
+\judge{&ParallelDone\text{ and symmetrically for p2}}{
+    -
+}{
+	\semfunc[\text{par done and p2 end}] = (p2, ev1)
 }
-\]
+\end{align*}
 \begin{align*}
 \judge{&Then}{
 	-
