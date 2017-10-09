@@ -17,3 +17,12 @@ library/session/packages/
 /writeup/main.aux
 /writeup/main.fdb_latexmk
 /writeup/main.synctex.gz
+/.DS_Store
+/writeup
+/writeup/.texpadtmp
+/writeup/.texpadtmp/main.aux
+/writeup/.texpadtmp/main.blg
+/writeup/.texpadtmp/main.synctex.gz
+/writeup/.texpadtmp/main.bbl
+/writeup/.texpadtmp/main.out
+/writeup/.texpadtmp/main.log
