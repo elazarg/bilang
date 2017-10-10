@@ -3,6 +3,11 @@
 def solves((m,n), q):
     return m * n == q
 
+Sugar:
+    (0, riddle) = yield
+    (1, solution) = yield riddle
+    assume solves(solution, riddle)
+
 Server:
     start = publish
 

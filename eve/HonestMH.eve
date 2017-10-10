@@ -12,9 +12,7 @@ def winner():
     else:
         return Host
 
-Server:
-    start = 1
-
+Sugar:
     h = msg_1(Host, Guest)
     door1 = msg_2(Guest, Host)
     goat = msg_3(Host, Guest)

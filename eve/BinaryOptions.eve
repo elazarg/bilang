@@ -1,4 +1,12 @@
-program HonestSimultaneus
+program HonestBinary
+
+Sugar:
+    (0, val) = yield
+    emit val
+    ((less, ()), (more, ())) = (yield for "Less", yield for "More")
+    (0, newval) = yield (less, more)
+    winner = more if newval > val else less
+    emit (winner, new_val)
 
 Server:
     # client 0 is oracle

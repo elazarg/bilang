@@ -1,5 +1,11 @@
 program HonestSimultaneus
 
+Sugar:
+    ((odd, odd_choice), (even, even_choice)) = (yield for "odd", yield for "even")
+    (_, ()) = yield ()
+    winner = more if newval > val else less
+    emit (winner, new_val)
+
 Server:
     # client 0 is odd
     # client 1 is even
