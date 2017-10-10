@@ -1,0 +1,47 @@
+program HonestSimultaneus
+
+Server:
+    # client 0 is oracle
+    # client 1 is less
+    # client 2 is more
+
+    var c : int[2]
+    start 0 = Choice
+    start 1 = Choice
+    on start(0, msg):
+        val = msg
+        emit val
+        next put_1
+
+    on put_less(id):
+        less = id
+        next put_more
+
+    on put_2(id):
+        more = id
+        next reveal
+    
+    on reveal(0, msg):
+        new_val = msg
+        winner = more if msg > val else less
+        emit (winner, val, new_val)
+        end
+
+Client Oracle:
+    send input()
+    asssumen size(log) == 3
+    send input()
+
+Client BetLess:
+    assume size(log) == 1
+    # race here: might play as either, or not at all
+    send
+    assume size(log) == 4
+    print log[3]
+
+Client BetMore:
+    assume size(log) == 2
+    # race here: might not play
+    send
+    assume size(log) == 4
+    print log[3]

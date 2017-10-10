@@ -1,0 +1,34 @@
+@program HonestPuzzle
+
+def solves((m,n), q):
+    return m * n == q
+
+Server:
+    start = publish
+
+    on publish(0, msg):
+        riddle = msg
+        emit q
+        next answer
+
+    on answer(id, msg):
+        # ignore race
+        assume solves(msg, riddle)
+        emit id
+        end
+
+
+Client Asker:
+    send input()
+    wait log[1]
+    print log[1]
+
+
+Client Solver:
+    assume size(log) == 1
+    print(log[0])
+    solution = input()
+    send solution
+    assume size(log) == 3
+    winner = log[2]
+    print(winner)
