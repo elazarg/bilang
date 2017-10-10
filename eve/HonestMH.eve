@@ -1,0 +1,45 @@
+@program HonestMontyHall
+
+macro "@varname = msg_{id}(s, t)":
+    on id(s, msg):
+        @varname = msg
+        emit (t, res)
+        next id + 1
+
+def winner():
+    if hash(car) != h or goat == car or goat == door1 or door2 == car:
+        return Guest
+    else:
+        return Host
+
+Server:
+    start = 1
+
+    h = msg_1(Host, Guest)
+    door1 = msg_2(Guest, Host)
+    goat = msg_3(Host, Guest)
+    door2 = msg_4(Guest, Host)
+    car = msg_5(Host, Guest)
+    emit winner()
+
+Client Host:
+    car = input()
+    send hash(car)
+    door1 = wait log[1]
+    goat = input()
+    send goat
+    door2 = wait log[3]
+    send car
+    winner = log[5]
+    print(winner)
+
+Client Guest:
+    h = log[0]
+    door1 = input()
+    send door1
+    goat = log[2]
+    door2 = input()
+    send door2
+    car = log[4]
+    winner = log[5]
+    print(winner)
