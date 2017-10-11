@@ -23,10 +23,12 @@ Server:
 
     on put_less(id):
         less = id
+        emit ()
         next put_more
 
-    on put_2(id):
+    on put_more(id):
         more = id
+        emit ()
         next reveal
     
     on reveal(0, msg):

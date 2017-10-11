@@ -4,7 +4,7 @@ def solves((m,n), q):
     return m * n == q
 
 Sugar:
-    (0, riddle) = yield
+    (0, riddle) = yield ()
     (1, solution) = yield riddle
     assume solves(solution, riddle)
 
@@ -18,10 +18,13 @@ Server:
 
     on answer(id, msg):
         # ignore race
-        assume solves(msg, riddle)
+        require solves(msg, riddle)
         emit id
         end
 
+# TODO: encode both solutions:
+# 1. commit then reveal
+# 2. pay for denying progress
 
 Client Asker:
     send input()

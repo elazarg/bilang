@@ -1,11 +1,5 @@
 @program HonestMontyHall
 
-macro "@varname = msg_{id}(s, t)":
-    on id(s, msg):
-        @varname = msg
-        emit (t, res)
-        next id + 1
-
 def winner():
     if hash(car) != h or goat == car or goat == door1 or door2 == car:
         return Guest
@@ -13,31 +7,23 @@ def winner():
         return Host
 
 Sugar:
-    h = msg_1(Host, Guest)
-    door1 = msg_2(Guest, Host)
-    goat = msg_3(Host, Guest)
-    door2 = msg_4(Guest, Host)
-    car = msg_5(Host, Guest)
+    on (0, msg): h = msg;     emit msg
+    on (1, msg): door1 = msg; emit msg
+    on (0, msg): goat = msg;  emit msg
+    on (1, msg): door2 = msg; emit msg
+    on (0, msg): car = msg
     emit winner()
 
 Client Host:
-    car = input()
-    send hash(car)
-    door1 = wait log[1]
-    goat = input()
-    send goat
-    door2 = wait log[3]
+    car = input();  send hash(car);  door1 = await log[1]
+    goat = input()  send goat;       door2 = await log[3]
     send car
-    winner = log[5]
+    winner = await log[4]
     print(winner)
 
 Client Guest:
-    h = log[0]
-    door1 = input()
-    send door1
-    goat = log[2]
-    door2 = input()
-    send door2
-    car = log[4]
-    winner = log[5]
+    await log[0]
+    door1 = input();  send door1; goat = await log[2]; print(goat)
+    door2 = input();  send door2
+    winner = await log[4]
     print(winner)
