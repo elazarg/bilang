@@ -17,3 +17,4 @@ library/session/packages/
 /writeup/main.aux
 /writeup/main.fdb_latexmk
 /writeup/main.synctex.gz
+coq/#*.v#
