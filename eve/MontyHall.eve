@@ -1,4 +1,4 @@
-@program HonestMontyHall
+@program MontyHall
 
 def winner():
     if hash(car) != h or goat == car or goat == door1 or door2 == car:
@@ -6,13 +6,13 @@ def winner():
     else:
         return Host
 
-Sugar:
-    on (0, msg): h = msg;     emit msg
-    on (1, msg): door1 = msg; emit msg
-    on (0, msg): goat = msg;  emit msg
-    on (1, msg): door2 = msg; emit msg
-    on (0, msg): car = msg
-    emit winner()
+Server:
+    0: on (0, msg): h = msg;     emit msg; next 1
+    1: on (1, msg): door1 = msg; emit msg; next 2
+    2: on (0, msg): goat = msg;  emit msg; next 3
+    3: on (1, msg): door2 = msg; emit msg; next 4
+    4: on (0, msg): car = msg; next 5
+    5: emit winner(); end
 
 Client Host:
     car = input();  send hash(car);  door1 = await log[1]

@@ -1,0 +1,58 @@
+@program HonestPuzzle
+
+def solves((m,n), q):
+    return m * n == q
+
+Sugar:
+    (0, riddle) = yield ()
+    (1, solution) = yield riddle
+    assume solves(solution, riddle)
+
+Server:
+    start = publish
+
+    on publish(0, riddle):
+        0.riddle = riddle
+        emit q
+        next 0 noDecls
+        next declareAnswer
+
+    on declareAnswer(id, hidden):
+        id.hidden = hidden
+        next id reveal
+    
+    on noDecls(0):
+        emit "no decls"
+        next allowReveal
+    
+    on allowReveal(0):
+        emit "reveal"
+        
+    on reveal(id, solution):
+        require sha(id, solution)== id.hidden
+        require solves(solution, riddle)
+        if not 0.revealed:
+            emit id, "won"
+        else:
+            delete id.hidden
+            emit id, "lost"
+        end
+
+# TODO: encode both solutions:
+# V1. commit then reveal
+# 2. pay for denying progress
+
+Client Asker:
+    send input()
+    wait log[1]
+    print log[1]
+
+
+Client Solver:
+    assume size(log) == 1
+    print(log[0])
+    solution = input()
+    send solution
+    assume size(log) == 3
+    winner = log[2]
+    print(winner)
