@@ -1,29 +1,32 @@
 @program MontyHall
 
 def winner():
-    if hash(car) != h or goat == car or goat == door1 or door2 == car:
+    if hash(car) != h or goat == car or goat == door1:
+        return Guest
+    if door2 == car:
         return Guest
     else:
         return Host
 
 Server:
-    0: on (0, msg): h = msg;     emit msg; next 1
-    1: on (1, msg): door1 = msg; emit msg; next 2
-    2: on (0, msg): goat = msg;  emit msg; next 3
-    3: on (1, msg): door2 = msg; emit msg; next 4
-    4: on (0, msg): car = msg; next 5
-    5: emit winner(); end
+    var h, door1, goat, door2, car
+    0: on (0, msg): h = msg;     emit h;        next 1
+    1: on (1, msg): door1 = msg; emit door1;    next 2
+    2: on (0, msg): goat = msg;  emit goat;     next 3
+    3: on (1, msg): door2 = msg; emit door2;    next 4
+    4: on (0, msg): car = msg;                  next 5
+    5:                           emit winner(); end
 
 Client Host:
     car = input();  send hash(car);  door1 = await log[1]
     goat = input()  send goat;       door2 = await log[3]
     send car
     winner = await log[4]
-    print(winner)
+    print winner
 
 Client Guest:
     await log[0]
     door1 = input();  send door1; goat = await log[2]; print(goat)
     door2 = input();  send door2
     winner = await log[4]
-    print(winner)
+    print winner
