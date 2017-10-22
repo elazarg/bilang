@@ -1,10 +1,13 @@
-Require Import List.
-Import ListNotations.
+Require Import Common.
 
-Variable ServState: Set.
-Variable ClState: Set.
-Variable Event: Set.
-Variable Msg: Set.
+Module NetSem.
+
+Parameter ServState: Set.
+Parameter server_eval : (ServState * Packet) -> (ServState * Event).
+
+Parameter ClState: Set.
+Parameter client_step : (ClState * list Event) -> (ClState * Msg) -> Prop.
+
 
 Record State : Set := mkSt {
   K: nat -> ClState;
@@ -12,14 +15,6 @@ Record State : Set := mkSt {
   ST: ServState;
   ES: list Event
 }.
-
-Definition Packet: Type := (nat * Msg).
-Variable client_step : (ClState * list Event) -> (ClState * Msg) -> Prop.
-Variable server_eval : (ServState * Packet) -> (ServState * Event).
-
-Definition update {T: Type} f (id: nat) (v: T) id' :=
-  if Nat.eqb id id' then v
-  else f id.
 
 Notation "'[' a | b '|->' c ']'" := (update a b c) (at level 9, no associativity).
 Notation "a '~>' b" := (client_step a b) (at level 81, no associativity).
@@ -38,3 +33,5 @@ Inductive Step : State -> State -> Prop :=
              ->
              Step (mkSt K Q s es) (mkSt K [Q| id |-> removelast (Q id)] s' (e::es))
 .
+
+End NetSem.
