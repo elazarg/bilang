@@ -45,7 +45,8 @@ Definition Monty := [
   proc (receive guest 0) [call var_compute_winner var_winner]  (emit var_winner)
 ].
 
-Definition ServState := var -> nat.
+Definition Env := var -> nat.
+Definition ServState: Set := Env * Prog.
 
 
 Definition guest_winner (hcar door1 goat door2 car : nat) : bool :=
@@ -55,32 +56,35 @@ Definition guest_winner (hcar door1 goat door2 car : nat) : bool :=
   || Nat.eqb car door2
   .
 
-Definition server_eval_cmd (st: ServState) (cmd: Cmd) : ServState :=
+Definition server_eval_cmd (env: var -> nat) (cmd: Cmd) : Env :=
   match cmd with
   | call var_compute_winner v1 =>
     let winner := 
-      if guest_winner (st var_hcar) (st var_door1) (st var_goat) (st var_door2) (st var_car) then
+      if guest_winner (env var_hcar) (env var_door1) (env var_goat) (env var_door2) (env var_car) then
         1
       else
         0
-    in (update st v1 winner)
+    in (update env v1 winner)
   end
 .
 
-Fixpoint server_eval_cmds (st: ServState) (cmds: list Cmd) : ServState :=
+Fixpoint server_eval_cmds (env: Env) (cmds: list Cmd) : Env :=
   match cmds with
-  | [] => st
-  | cmd::cmds => server_eval_cmds (server_eval_cmd st cmd) cmds
+  | [] => env
+  | cmd::cmds => server_eval_cmds (server_eval_cmd env cmd) cmds
   end.
 
-Definition server_eval (st: ServState) (p: Packet) (m: Method)  : (ServState * option Event) :=
-  match (m, p) with 
-  | (proc (receive expected v1) cmds (emit v2), (actual, NAT m)) =>
+Definition server_eval (st: ServState) (p: Packet) : (ServState * option Event) :=
+  let '(env, prog) := st in
+  match (prog, p) with 
+  | (proc (receive expected v1) cmds (emit v2)::ms, (actual, NAT m)) =>
       if Nat.eqb expected actual then
-        let st' := update st v1 m in
-        let st'' := server_eval_cmds st' cmds in
-        (st'', Some (NAT (st'' v2)))
+        let env' := update env v1 m in
+        let env'' := server_eval_cmds env' cmds in
+        ((env'', ms), Some (NAT (env'' v2)))
       else
+        (st, None)
+  | ([], _) => 
         (st, None)
   end
 .

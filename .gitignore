@@ -5,8 +5,8 @@ __pycache__
 library/session/.vs/
 library/session/obj/
 library/session/bin/
-.vscode/
 library/session/packages/
+.vscode/
 /writeup/main.out
 /writeup/main.bbl
 /writeup/main.pdf
@@ -17,7 +17,6 @@ library/session/packages/
 /writeup/main.aux
 /writeup/main.fdb_latexmk
 /writeup/main.synctex.gz
-coq/#*.v#
 /.DS_Store
 /writeup
 /writeup/.texpadtmp
@@ -27,3 +26,7 @@ coq/#*.v#
 /writeup/.texpadtmp/main.bbl
 /writeup/.texpadtmp/main.out
 /writeup/.texpadtmp/main.log
+coq/#*.v#
+coq/*.aux
+coq/*.glob
+coq/*.vo
