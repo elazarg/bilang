@@ -3,8 +3,6 @@ Require Import Common.
 
 Definition var := nat.
 
-Module ServerSyntax.
-
 Inductive Receive :=
   | receive (i: nat) (lval: var)
 .
@@ -58,13 +56,14 @@ Definition guest_winner (hcar door1 goat door2 car : nat) : bool :=
 
 Definition server_eval_cmd (env: Env) (cmd: Cmd) : Env :=
   match cmd with
-  | call var_compute_winner v1 =>
+  | call 6 v1 =>
     let winner := 
       if guest_winner (env var_hcar) (env var_door1) (env var_goat) (env var_door2) (env var_car) then
         1
       else
         0
     in (update env v1 winner)
+  | call _ v1 => env
   end
 .
 
@@ -74,7 +73,7 @@ Fixpoint server_eval_cmds (env: Env) (cmds: list Cmd) : Env :=
   | cmd::cmds => server_eval_cmds (server_eval_cmd env cmd) cmds
   end.
 
-Definition server_eval (st: ServState) (p: Packet) : (ServState * Event) :=
+Definition server_eval '(st, p) : (ServState * Event) :=
   let '(env, prog) := st in
   match (prog, p) with
   | (proc (receive expected v1) cmds (emit v2)::ms, (actual, M_nat m)) =>
@@ -88,8 +87,3 @@ Definition server_eval (st: ServState) (p: Packet) : (ServState * Event) :=
         (st, M_empty)
   end
 .
-
-End ServerSyntax.
-
-
-

@@ -2,7 +2,6 @@ Require Import Common.
 
 Definition var := nat.
 
-Module ClientSyntax.
 
 Inductive ClientCmd :=
   | drop
@@ -87,7 +86,7 @@ Definition client_cmd_step (env: Env) (cmd: ClientCmd) (logindex: nat) (log: opt
   end
 .
 
-Definition client_step (st: ClState) (log: list Event) (st': ClState) (m: option Msg) : Prop :=
+Definition client_step' (st: ClState) (log: list Event) (st': ClState) (m: option Msg) : Prop :=
   let 'mkSt env prog logindex := st in
   let 'mkSt env' prog' logindex' := st' in
   match prog with
@@ -97,4 +96,6 @@ Definition client_step (st: ClState) (log: list Event) (st': ClState) (m: option
   end
 .
 
-End ClientSyntax.
+Definition client_step '(st, log) '(st', m) : Prop :=
+  client_step' st log st' (head m).
+
