@@ -14,7 +14,7 @@ Inductive Emit :=
 .
 
 Inductive Cmd :=
-  | call (nat var2: var)
+  | call (func v: var)
 .
 
 Inductive Method :=
@@ -31,16 +31,16 @@ Definition var_winner := 4.
 Definition var_hcar := 5.
 Definition var_compute_winner := 6.
 
-Definition rec_emit role var :=  proc (receive role var) [] (emit var).
+Definition receive_emit role var :=  proc (receive role var) [] (emit var).
 
 Definition host := 0.
 Definition guest := 1.
 
 Definition Monty := [
-  rec_emit host  var_hcar;
-  rec_emit guest var_door1;
-  rec_emit host  var_goat;
-  rec_emit guest var_door2;
+  receive_emit host  var_hcar;
+  receive_emit guest var_door1;
+  receive_emit host  var_goat;
+  receive_emit guest var_door2;
   proc (receive host var_car) [] (emit var_hcar);
   proc (receive guest 0) [call var_compute_winner var_winner]  (emit var_winner)
 ].
@@ -56,7 +56,7 @@ Definition guest_winner (hcar door1 goat door2 car : nat) : bool :=
   || Nat.eqb car door2
   .
 
-Definition server_eval_cmd (env: var -> nat) (cmd: Cmd) : Env :=
+Definition server_eval_cmd (env: Env) (cmd: Cmd) : Env :=
   match cmd with
   | call var_compute_winner v1 =>
     let winner := 
@@ -74,18 +74,18 @@ Fixpoint server_eval_cmds (env: Env) (cmds: list Cmd) : Env :=
   | cmd::cmds => server_eval_cmds (server_eval_cmd env cmd) cmds
   end.
 
-Definition server_eval (st: ServState) (p: Packet) : (ServState * option Event) :=
+Definition server_eval (st: ServState) (p: Packet) : (ServState * Event) :=
   let '(env, prog) := st in
-  match (prog, p) with 
-  | (proc (receive expected v1) cmds (emit v2)::ms, (actual, NAT m)) =>
+  match (prog, p) with
+  | (proc (receive expected v1) cmds (emit v2)::ms, (actual, M_nat m)) =>
       if Nat.eqb expected actual then
         let env' := update env v1 m in
         let env'' := server_eval_cmds env' cmds in
-        ((env'', ms), Some (NAT (env'' v2)))
+        ((env'', ms), M_nat (env'' v2))
       else
-        (st, None)
-  | ([], _) => 
-        (st, None)
+        (st, M_empty)
+  | (_, _) =>
+        (st, M_empty)
   end
 .
 
