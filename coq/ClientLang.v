@@ -65,26 +65,25 @@ Record ClState : Set := mkSt {
   Clog_index: nat
 }.
 
-Definition client_cmd_step (env: Env) (cmd: ClientCmd) (logindex: nat) (log: option Event)
-                           (env': Env) (m: option Msg) (logindex': nat)  : Prop :=
-  let nop := env = env' /\ m = None in
-  let assign := fun lval x => env' = update env lval x in
-  let assign_arbitrary := fun lval => exists x, assign lval x in
-  let deque := logindex' = 1 + logindex in
-  let nodeque := logindex' = logindex in
-  match cmd with
-  | drop => nop /\ deque
-  | receive lval => match log with
-                    | Some (M_nat x) => assign lval x  /\ deque
-                    | Some Empty => nop
-                    | None => nop
-                    end
-  | send lval => env = env' /\ m = Some (M_nat (env lval)) /\ nodeque
-  | input lval => m = None /\ assign_arbitrary lval /\ nodeque
-  | print lval => nop /\ nodeque
-  | hash lval rval => m = None /\ assign_arbitrary lval /\ nodeque
-  end
+Section X.
+
+Variables (env: Env) (n: nat) (log: option Event).
+
+Inductive client_cmd_step : ClientCmd -> Env * option Msg * nat -> Prop :=
+  | is_drop : client_cmd_step drop (env, None, S n)
+  | is_receive : forall lval x, log = (Some (M_nat x)) ->
+                client_cmd_step (receive lval) ((update env lval x), None, S n)
+  | is_send : forall lval,
+                client_cmd_step (send lval) (env, Some (M_nat (env lval)), n)
+  | is_hash : forall lval rval,
+                client_cmd_step (hash lval rval) ((update env lval rval), None, n)
+  | is_print : forall lval,
+                client_cmd_step (print lval) (env, None, n)
+  | is_input : forall lval x,
+                client_cmd_step (input lval) ((update env lval x), None, n)
 .
+
+End X.
 
 Definition client_step' (st: ClState) (log: list Event) (st': ClState) (m: option Msg) : Prop :=
   let 'mkSt env prog logindex := st in
@@ -92,10 +91,10 @@ Definition client_step' (st: ClState) (log: list Event) (st': ClState) (m: optio
   match prog with
   | [] => False
   | cmd::cmds =>  prog' = cmds
-                  /\ client_cmd_step env cmd logindex (nth_error log logindex) env' m logindex'
+                  /\ client_cmd_step env logindex (nth_error log logindex) cmd (env', m, logindex')
   end
 .
 
 Definition client_step '(st, log) '(st', m) : Prop :=
-  client_step' st log st' (head m).
+  client_step' st log st' m.
 

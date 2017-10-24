@@ -3,7 +3,8 @@ Export ListNotations.
 
 Inductive Content :=
   | M_empty
-  | M_nat : nat -> Content
+  | M_nat (n: nat)
+  | M_hashed (h: nat)
 .
 
 Definition ClientId := nat.

@@ -1,16 +1,19 @@
 Require Import Common.
 
 Require Import ClientLang.
-Require Import ServerLang.
-
-Module NetSem.
 (*
 Parameter ServState: Set.
 Parameter server_eval : (ServState * Packet) -> (ServState * Event).
+*) 
 
+
+Require Import ServerLang.
+(*
 Parameter ClState: Set.
-Parameter client_step : (ClState * list Event) -> (ClState * Msg) -> Prop.
+Parameter client_step : (ClState * list Event) -> (ClState * option Msg) -> Prop.
 *)
+
+Module NetSem.
 
 Record State : Set := mkSt {
   S_K: nat -> ClState;
@@ -30,7 +33,13 @@ Inductive Step : State -> State -> Prop :=
              ->
              Step (mkSt K Q s es) (mkSt [K| id |-> k'] [Q| id |-> m::(Q id)] s es)
 
-  | Perform : forall id K Q es m s s' e,
+  | Local_step : forall id K Q es s k',
+
+             (K id, es) ~> (k', None)
+             ->
+             Step (mkSt K Q s es) (mkSt [K| id |-> k'] Q s es)
+
+  | Perform_transaction : forall id K Q es m s s' e,
 
              (s, (id, m)) \\ (s', e) 
              ->
