@@ -26,7 +26,7 @@ Definition var_winner := 4.
 Definition var_hcar := 5.
 
 
-Definition Host: Prog := [
+Definition mh_host : Prog := [
   input var_car;
   hash var_car var_hcar;
   send var_hcar;
@@ -43,7 +43,7 @@ Definition Host: Prog := [
   print var_winner
 ].
 
-Definition Guest: Prog := [
+Definition mh_guest : Prog := [
   receive var_hcar;
   input var_door1;
   send var_door1;
@@ -69,6 +69,7 @@ Section X.
 
 Variables (env: Env) (n: nat) (log: option Event).
 
+(* As defined here, this requires FunctionalExtensionality on update env *)
 Inductive client_cmd_step : ClientCmd -> Env * option Msg * nat -> Prop :=
   | is_drop : client_cmd_step drop (env, None, S n)
   | is_receive : forall lval x, log = (Some (M_nat x)) ->
@@ -98,3 +99,12 @@ Definition client_step' (st: ClState) (log: list Event) (st': ClState) (m: optio
 Definition client_step '(st, log) '(st', m) : Prop :=
   client_step' st log st' m.
 
+Definition init_env := (fun (x: var) => 0).
+Definition st := (mkSt init_env mh_host 0).
+Definition st' := (mkSt (update init_env var_car 0) (tail mh_host) 0).
+
+Example input_can_be_nop : (client_step' st [] st' None).
+  split.
+  * reflexivity.
+  * exact (is_input init_env 0 None var_car 0).
+Qed.

@@ -26,18 +26,20 @@ Notation "'[' a | b '|->' c ']'" := (update a b c) (at level 9, no associativity
 Notation "a '~>' b" := (client_step a b) (at level 81, no associativity).
 Notation "a '\\' b" := (server_eval a = b) (at level 81, no associativity).
 
+Definition inject_cons {T} (x: option T) xs :=
+  match x with
+    | Some x => x::xs
+    | None => xs
+  end.
+
+Notation "a '?::' b" := (inject_cons a b) (at level 40, left associativity).
+
 Inductive Step : State -> State -> Prop :=
-  | Send : forall id K Q es m s k',
+  | Perform_client : forall id K Q es m s k',
 
-             (K id, es) ~> (k', Some m)
+             (K id, es) ~> (k', m)
              ->
-             Step (mkSt K Q s es) (mkSt [K| id |-> k'] [Q| id |-> m::(Q id)] s es)
-
-  | Local_step : forall id K Q es s k',
-
-             (K id, es) ~> (k', None)
-             ->
-             Step (mkSt K Q s es) (mkSt [K| id |-> k'] Q s es)
+             Step (mkSt K Q s es) (mkSt [K| id |-> k'] [Q| id |-> m?::(Q id)] s es)
 
   | Perform_transaction : forall id K Q es m s s' e,
 
