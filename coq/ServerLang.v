@@ -3,20 +3,12 @@ Require Import Common.
 
 Definition var := nat.
 
-Inductive Receive :=
-  | receive (i: nat) (lval: var)
-.
-
-Inductive Emit :=
-  | emit (lval: var)
-.
-
 Inductive Cmd :=
   | call (func v: var)
 .
 
 Inductive Method :=
-  | proc (r: Receive) (cmds: list Cmd) (e: Emit)
+  | proc (i: nat) (lval: var) (cmds: list Cmd) (emit: var)
 .
 
 Definition Prog := list Method.
@@ -29,7 +21,7 @@ Definition var_winner := 4.
 Definition var_hcar := 5.
 Definition var_compute_winner := 6.
 
-Definition receive_emit role var :=  proc (receive role var) [] (emit var).
+Definition receive_emit role var :=  proc role var [] var.
 
 Definition host := 0.
 Definition guest := 1.
@@ -39,8 +31,8 @@ Definition Monty := [
   receive_emit guest var_door1;
   receive_emit host  var_goat;
   receive_emit guest var_door2;
-  proc (receive host var_car) [] (emit var_hcar);
-  proc (receive guest 0) [call var_compute_winner var_winner]  (emit var_winner)
+  receive_emit host  var_car;
+  proc guest 0 [call var_compute_winner var_winner] var_winner
 ].
 
 Definition Env := var -> nat.
@@ -73,11 +65,11 @@ Fixpoint server_eval_cmds (env: Env) (cmds: list Cmd) : Env :=
   | cmd::cmds => server_eval_cmds (server_eval_cmd env cmd) cmds
   end.
 
-Definition server_eval '(st, p) : (ServState * Event) :=
+Definition server_eval '(st, packet) : (ServState * Event) :=
   let '(env, prog) := st in
-  match (prog, p) with
-  | (proc (receive expected v1) cmds (emit v2)::ms, (actual, M_nat m)) =>
-      if Nat.eqb expected actual then
+  match (prog, packet) with
+  | (proc expected v1 cmds v2 :: ms, mkPkt actual (M_nat m)) =>
+      if Nat.eqb actual expected then
         let env' := update env v1 m in
         let env'' := server_eval_cmds env' cmds in
         ((env'', ms), M_nat (env'' v2))
@@ -87,3 +79,27 @@ Definition server_eval '(st, p) : (ServState * Event) :=
         (st, M_empty)
   end
 .
+
+Require Import EqNat.
+
+Definition owns_client (client: nat) st :=
+  forall actual content,
+    actual = client \/
+      fst (server_eval (st, mkPkt actual content)) = st.
+
+Lemma owns_receiver : forall id lval cmd emit env ms,
+  owns_client id (env, proc id lval cmd emit::ms).
+Proof.
+  unfold owns_client.
+  intros.
+  destruct (eq_nat_decide actual id).
+  * left. exact (eq_nat_eq actual id e).
+  * right. unfold not in n.
+    simpl.
+    destruct content; try reflexivity.
+    destruct (Nat.eqb actual id) eqn:EQ; try reflexivity.
+    exfalso.
+    apply beq_nat_true in EQ.
+    subst actual.
+    exact (n (eq_nat_refl id)).
+Qed.

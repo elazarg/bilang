@@ -48,4 +48,5 @@ Inductive Step : State -> State -> Prop :=
              Step (mkSt K Q s es) (mkSt K [Q| id |-> removelast (Q id)] s' (e::es))
 .
 
+
 End NetSem.
