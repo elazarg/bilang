@@ -1,36 +1,17 @@
 Require Import Common.
 
-Require Import ClientLang.
-(*
-Parameter ServState: Set.
-Parameter server_eval : (ServState * Packet) -> (ServState * Event).
-*) 
-
-
-Require Import ServerLang.
-(*
-Parameter ClState: Set.
-Parameter client_step : (ClState * list Event) -> (ClState * option Msg) -> Prop.
-*)
-
-Module NetSem.
+Module System (Client: ClientSem) (Server: ServerSem).
 
 Record State : Set := mkSt {
-  S_K: nat -> ClState;
+  S_K: nat -> Client.State;
   S_Q: nat -> list Msg;
-  S_ST: ServState;
+  S_ST: Server.State;
   S_ES: list Event
 }.
 
 Notation "'[' a | b '|->' c ']'" := (update a b c) (at level 9, no associativity).
-Notation "a '~>' b" := (client_step a b) (at level 81, no associativity).
-Notation "a '\\' b" := (server_eval a = b) (at level 81, no associativity).
-
-Definition inject_cons {T} (x: option T) xs :=
-  match x with
-    | Some x => x::xs
-    | None => xs
-  end.
+Notation "a '~>' b" := (Client.step a b) (at level 81, no associativity).
+Notation "a '\\' b" := (Server.eval a = b) (at level 81, no associativity).
 
 Notation "a '?::' b" := (inject_cons a b) (at level 40, left associativity).
 
@@ -41,12 +22,12 @@ Inductive Step : State -> State -> Prop :=
              ->
              Step (mkSt K Q s es) (mkSt [K| id |-> k'] [Q| id |-> m?::(Q id)] s es)
 
-  | Perform_transaction : forall id K Q es m s s' e,
+  | Perform_transaction : forall (id: ClientId) K Q es m s s' e,
 
-             (s, (id, m)) \\ (s', e) 
+             (s, (mkPkt id m)) \\ (s', e) 
              ->
              Step (mkSt K Q s es) (mkSt K [Q| id |-> removelast (Q id)] s' (e::es))
 .
 
 
-End NetSem.
+End System.
