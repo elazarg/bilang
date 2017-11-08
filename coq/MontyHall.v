@@ -1,6 +1,4 @@
 Require Import Common.
-Require Import NetSem.
-Require Import ServerLang.
 
 
 Definition var_car := 0.
@@ -15,7 +13,9 @@ Definition var_compute_winner := 6.
 Definition host := 0.
 Definition guest := 1.
 
-Section S.
+Section ServerCode.
+
+Require Import ServerLang.
 
 Definition guest_winner (env: Server.Env) : nat :=
   let eq := fun (v1 v2: nat) => Nat.eqb (env v1) (env v2) in
@@ -38,9 +38,9 @@ Definition prog := [
   Server.proc guest 0 [Server.call_coq var_compute_winner guest_winner] var_winner
 ].
 
-End S.
+End ServerCode.
 
-Section C.
+Section ClientCode.
 
 Require Import ClientLang.
 Import Client.
@@ -74,4 +74,4 @@ Definition mh_guest : Prog := [
   print var_winner
 ].
 
-End C.
+End ClientCode.

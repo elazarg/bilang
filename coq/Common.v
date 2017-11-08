@@ -4,6 +4,7 @@ Export ListNotations.
 Inductive Content :=
   | M_empty
   | M_nat (n: nat)
+  (* not used yet: *)
   | M_hashed (h: nat)
 .
 
@@ -12,8 +13,8 @@ Definition ClientId := nat.
 Definition Event: Set := Content.
 Definition Msg: Set := Content.
 Record Packet : Set := mkPkt {
-  sender: ClientId;
-  msgof: Msg
+(*  sender: ClientId; *)
+  payload: Msg
 }.
 
 Definition update {T: Type} f (id: nat) (v: T) id' :=

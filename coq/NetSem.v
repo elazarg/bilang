@@ -2,32 +2,39 @@ Require Import Common.
 
 Module System (Client: ClientSem) (Server: ServerSem).
 
-Record State : Set := mkSt {
-  S_K: nat -> Client.State;
-  S_Q: nat -> list Msg;
-  S_ST: Server.State;
-  S_ES: list Event
+(*
+Record State : Set := St {
+  client: Client.State;
+  inFlight: list Msg;
+  server: Server.State;
+  events: list Event
 }.
+*)
+Definition State : Set := Client.State * list Msg * Server.State * list Event.
 
-Notation "'[' a | b '|->' c ']'" := (update a b c) (at level 9, no associativity).
+Definition World := ClientId -> State.
+
+Notation " a '[' b '↦' c ']'" := (update a b c) (at level 9, no associativity).
 Notation "a '~>' b" := (Client.step a b) (at level 81, no associativity).
-Notation "a '\\' b" := (Server.eval a = b) (at level 81, no associativity).
-
+Notation "a '\\' b" := (Server.eval a = b) (at level 41, no associativity).
 Notation "a '?::' b" := (inject_cons a b) (at level 40, left associativity).
 
-Inductive Step : State -> State -> Prop :=
-  | Perform_client : forall id K Q es m s k',
+Inductive SessionStep : State -> State -> Prop :=
+  | Perform_client : forall s k k' m q es,
+      (k, es) ~> (k', m)
+      ->
+      SessionStep (k, q, s, es) (k', m?::q, s, es)
 
-             (K id, es) ~> (k', m)
-             ->
-             Step (mkSt K Q s es) (mkSt [K| id |-> k'] [Q| id |-> m?::(Q id)] s es)
-
-  | Perform_transaction : forall (id: ClientId) K Q es m s s' e,
-
-             (s, (mkPkt id m)) \\ (s', e) 
-             ->
-             Step (mkSt K Q s es) (mkSt K [Q| id |-> removelast (Q id)] s' (e::es))
+  | Perform_transaction : forall k es payload s s' e q',
+      (s, mkPkt payload) \\ (s', e)
+      ->
+      SessionStep (k, q' ++ [payload], s, es) (k, q', s', e::es)
 .
 
-
+(* TODO: additional semantics, for session creation, joining and intercommunication *)
+(* Sketch: each step
+    1. each session receive message from client; writes local summary
+    2. c' waits for all summaries, and then for the tempo-maker; then makes a global summary
+    3. each client draws global summary (maybe +local summary)
+*)
 End System.
