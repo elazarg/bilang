@@ -59,7 +59,7 @@ with await hidden(Host[int]) as car:
 
 if car is None or goat == car or door2 == car:
     declare("${Guest} won")
-else:
+else: 
     declare("${Host} won")
 
 #[Example: Auction]
