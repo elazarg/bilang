@@ -9,31 +9,36 @@ contract Bsp {
     uint public step;
     mapping(address => uint) finished_step;
 
-    function Bsp(Session evenSession, Session oddSession) public {
-        _evenSession = evenSession;
-        _oddSession = oddSession;
-        _count = 0;
-        next();
+    event StartSession(Session);
+
+    function Bsp() public {
+        // first count is for joiners
+        _count = total;
     }
 
     function joinEven() public {
+        address client = msg.sender;
         require(_even == address(0x0));
-        _even = msg.sender;
+        _even = client;
         _evenSession = new Session(_even, this);
+        _count--;
+        StartSession(_evenSession);
     }
 
     function done() public {
-        require(msg.sender == _even || msg.sender == _odd);
-        require(finished_step[msg.sender] == step - 1);
-        finished_step[msg.sender] = step;
-        require(msg.sender == address(_evenSession));
-        _count--; 
+        address subserver = msg.sender;
+        require(subserver == _even || subserver == _odd);
+        require(finished_step[subserver] == step - 1);
+        finished_step[subserver] = step;
+        require(subserver == address(_evenSession));
+        _count--;
         //updateGlobal(_evenState);
     }
 
     function next() public {
         require(_count == 0);
-        _count = 2;
+        _count = total;
+        step++;
     }
 }
 
@@ -41,7 +46,7 @@ contract Session {
   address _client;
   Bsp _server;
 
-  uint256 _step_1_h;
+  bytes32 _step_1_h;
   bool _step_2_choice;
 
   function Session(address client, Bsp server) public { 
@@ -49,7 +54,7 @@ contract Session {
     _server = server;
   }
 
-  function step_1(uint256 h) public {
+  function step_1(bytes32 h) public {
     require(_server.step() == 1);
     require(msg.sender == _client);
     
