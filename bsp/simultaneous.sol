@@ -1,36 +1,44 @@
 pragma solidity ^0.4.17;
+library P {
+    uint constant EVEN = 0;
+    uint constant ODD = 1;
+}
 
 contract Bsp {
-    Session _evenSession; address _even; 
-    Session _oddSession;  address _odd;
+    Session[] _sessions;
+    address[] _clients;
+    
     uint constant total = 2;
+    
     uint _count;
 
     uint public step;
     mapping(address => uint) finished_step;
 
     event StartSession(Session);
+    event NextStep();
 
     function Bsp() public {
         // first count is for joiners
         _count = total;
     }
 
-    function joinEven() public {
+    function join(uint client_num) public {
+        // this is `done()` special cased - before we know the participants
         address client = msg.sender;
-        require(_even == address(0x0));
-        _even = client;
-        _evenSession = new Session(_even, this);
+        require(_clients[client_num] == address(0x0));
+        _clients[client_num] = client;
+        Session s = new Session(client_num, client, this);
+        _sessions[client_num] = s;
+        StartSession(s);
         _count--;
-        StartSession(_evenSession);
     }
 
-    function done() public {
-        address subserver = msg.sender;
-        require(subserver == _even || subserver == _odd);
+    function done(uint client_num) public {
+        Session subserver = Session(msg.sender);
+        require(subserver == _sessions[client_num]);
         require(finished_step[subserver] == step - 1);
         finished_step[subserver] = step;
-        require(subserver == address(_evenSession));
         _count--;
         //updateGlobal(_evenState);
     }
@@ -39,38 +47,51 @@ contract Bsp {
         require(_count == 0);
         _count = total;
         step++;
+        NextStep();
     }
 }
 
 contract Session {
-  address _client;
-  Bsp _server;
+    uint _client_num;
+    address _client;
+    Bsp _server;
 
-  bytes32 _step_1_h;
-  bool _step_2_choice;
+    bytes32 _step_1_h;
+    bool _step_2_choice;
 
-  function Session(address client, Bsp server) public { 
-    _client = client;
-    _server = server;
-  }
+    function Session(uint client_num, address client, Bsp server) public { 
+        _client = client;
+        _server = server;
+        _client_num = client_num;
+    }
 
-  function step_1(bytes32 h) public {
-    require(_server.step() == 1);
-    require(msg.sender == _client);
-    
-    _step_1_h = h;
+    function step_1(bytes32 h) public {
+        require(_server.step() == 1);
+        require(msg.sender == _client);
 
-    _server.done();
-  }
+        _step_1_h = h;
 
-  function step_2(bool choice, uint256 salt) public {
-    require(_server.step() == 2);
-    require(msg.sender == _client);
+        _server.done(_client_num);
+    }
 
-    require(keccak256(choice, salt, msg.sender) == _step_1_h);
-    delete _step_1_h;
-    _step_2_choice = choice;
+    function step_2(bool choice, uint256 salt) public {
+        require(_server.step() == 2);
+        require(msg.sender == _client);
 
-    _server.done();
-  }
+        require(keccak256(choice, salt, msg.sender) == _step_1_h);
+        delete _step_1_h;
+        _step_2_choice = choice;
+
+        _server.done(_client_num);
+    }
+
+    function step_3() {
+        if (_server.win() == _client_num)
+            Won();
+        else
+            Lost();
+    }
+
+    event Won();
+    event Lost();
 }
