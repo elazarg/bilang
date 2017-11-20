@@ -1,8 +1,4 @@
 pragma solidity ^0.4.17;
-library P {
-    uint constant EVEN = 0;
-    uint constant ODD = 1;
-}
 
 contract Bsp {
     Session[] _sessions;
@@ -26,6 +22,7 @@ contract Bsp {
     function join(uint client_num) public {
         // this is `done()` special cased - before we know the participants
         address client = msg.sender;
+        require(client_num < total);
         require(_clients[client_num] == address(0x0));
         _clients[client_num] = client;
         Session s = new Session(client_num, client, this);
@@ -34,7 +31,7 @@ contract Bsp {
         _count--;
     }
 
-    function done(uint client_num) public {
+    function done_generic(uint client_num) internal {
         Session subserver = Session(msg.sender);
         require(subserver == _sessions[client_num]);
         require(finished_step[subserver] == step - 1);
@@ -43,12 +40,33 @@ contract Bsp {
         //updateGlobal(_evenState);
     }
 
-    function next() public {
+    bool _choice_total = 0;
+    uint public win;
+
+    // game-specific
+    function done_0(bytes32 h, uint client_num) public {
+        done_generic(client_num);
+    } 
+    function done_1(bool choice, uint client_num) public {
+        done_generic(client_num);
+        _choice_total = (_choice_total != choice);
+    } 
+
+    // next_* are called externally, by anybody
+    function next_1() public { next_generic(); }
+
+    function next_2() public {
+        next_generic();
+        win =  _choice_total ? 0 : 1; 
+    }
+
+    function next_generic() internal {
         require(_count == 0);
         _count = total;
         step++;
         NextStep();
     }
+
 }
 
 contract Session {
@@ -71,7 +89,7 @@ contract Session {
 
         _step_1_h = h;
 
-        _server.done(_client_num);
+        _server.done_0(h, _client_num);
     }
 
     function step_2(bool choice, uint256 salt) public {
@@ -82,10 +100,10 @@ contract Session {
         delete _step_1_h;
         _step_2_choice = choice;
 
-        _server.done(_client_num);
+        _server.done_1(choice, _client_num);
     }
 
-    function step_3() {
+    function step_3() public {
         if (_server.win() == _client_num)
             Won();
         else
