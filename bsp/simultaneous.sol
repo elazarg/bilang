@@ -6,7 +6,7 @@ contract Bsp {
     
     uint constant total = 2;
     
-    uint _count;
+    uint _count = total;
 
     uint public step;
     mapping(address => uint) finished_step;
@@ -24,10 +24,13 @@ contract Bsp {
         address client = msg.sender;
         require(client_num < total);
         require(_clients[client_num] == address(0x0));
+
         _clients[client_num] = client;
+
         Session s = new Session(client_num, client, this);
         _sessions[client_num] = s;
         StartSession(s);
+        
         _count--;
     }
 
@@ -35,18 +38,20 @@ contract Bsp {
         Session subserver = Session(msg.sender);
         require(subserver == _sessions[client_num]);
         require(finished_step[subserver] == step - 1);
+
         finished_step[subserver] = step;
         _count--;
-        //updateGlobal(_evenState);
+        NextStep();
     }
 
-    bool _choice_total = 0;
+    bool _choice_total = false;
     uint public win;
 
-    // game-specific
-    function done_0(bytes32 h, uint client_num) public {
+    // game-specific reduce
+    function done_0(bytes32, uint client_num) public {
         done_generic(client_num);
-    } 
+    }
+
     function done_1(bool choice, uint client_num) public {
         done_generic(client_num);
         _choice_total = (_choice_total != choice);
@@ -103,13 +108,41 @@ contract Session {
         _server.done_1(choice, _client_num);
     }
 
-    function step_3() public {
+    function step_3() public view returns(string) {
         if (_server.win() == _client_num)
-            Won();
+            return "won";
         else
-            Lost();
+            return "lost";
     }
 
     event Won();
     event Lost();
 }
+
+
+/**
+Client code:
+
+creator: a = create Bsp()
+
+player1:
+
+up = a.join(0)
+
+await () = a.Next
+
+salt = random()
+choice = input()
+h = hash(choice, me, salt)
+up.step_1(h)
+
+await () = a.Next
+
+up.step_2(choice, salt)
+
+await () = a.Next
+
+result = step_3()
+print(result)
+
+*/
