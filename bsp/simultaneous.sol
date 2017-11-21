@@ -22,8 +22,8 @@ contract Bsp {
     function join(uint client_num) public {
         // this is `done()` special cased - before we know the participants
         address client = msg.sender;
-        require(client_num < total);
-        require(_clients[client_num] == address(0x0));
+        if (client_num >= total) revert();
+        if (_clients[client_num] != address(0x0)) revert();
 
         _clients[client_num] = client;
 
@@ -45,20 +45,26 @@ contract Bsp {
 
     // game-specific reduce
 
-    bool _choice_total = false;
+    // option types :(
+    bool[] C;
+    bool[] C_played;
+
     uint public win;
 
-    function done_0(bytes32, uint client_num) public {
+    function done_step_1(bytes32, uint client_num) public {
         done_generic(client_num);
     }
 
-    function done_1(bool choice, uint client_num) public {
+    function done_step_2(bool choice, uint client_num) public {
         done_generic(client_num);
-        _choice_total = (_choice_total != choice);
+        C[client_num] = choice;
+        C_played[client_num] = true;
     } 
 
     // next_* are called externally, by anybody
     function next_1() public {
+        // these tests are O(n).
+        // Somehow the progress condition should also be O(1)
         var done0 = finished_step[_sessions[0]] == step;
         var done1 = finished_step[_sessions[1]] == step;
         require(done0 && done1 
@@ -73,9 +79,11 @@ contract Bsp {
         require(done0 && done1 
             ||  (timeout() && (done0 || done1)));
         
-
         next_generic();
-        win =  _choice_total ? 0 : 1; 
+
+        win = C[0] == C[1] ? 0 : 1;
+        if (!C_played[0]) win = 1;
+        if (!C_played[1]) win = 0;
     }
 
     function next_generic() internal {
@@ -117,7 +125,7 @@ contract Session {
 
         _step_1_h = h;
 
-        _server.done_0(h, _client_num);
+        _server.done_step_1(h, _client_num);
     }
 
     function step_2(bool choice, uint256 salt) public {
@@ -128,7 +136,7 @@ contract Session {
         delete _step_1_h;
         _step_2_choice = choice;
 
-        _server.done_1(choice, _client_num);
+        _server.done_step_2(choice, _client_num);
     }
 
     function step_3() public view returns(string) {
