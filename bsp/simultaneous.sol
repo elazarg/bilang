@@ -41,13 +41,13 @@ contract Bsp {
 
         finished_step[subserver] = step;
         _count--;
-        NextStep();
     }
+
+    // game-specific reduce
 
     bool _choice_total = false;
     uint public win;
 
-    // game-specific reduce
     function done_0(bytes32, uint client_num) public {
         done_generic(client_num);
     }
@@ -58,9 +58,22 @@ contract Bsp {
     } 
 
     // next_* are called externally, by anybody
-    function next_1() public { next_generic(); }
+    function next_1() public {
+        var done0 = finished_step[_sessions[0]] == step;
+        var done1 = finished_step[_sessions[1]] == step;
+        require(done0 && done1 
+            ||  (timeout() && (done0 || done1)));
+        
+        next_generic();
+    }
 
     function next_2() public {
+        var done0 = finished_step[_sessions[0]] == step;
+        var done1 = finished_step[_sessions[1]] == step;
+        require(done0 && done1 
+            ||  (timeout() && (done0 || done1)));
+        
+
         next_generic();
         win =  _choice_total ? 0 : 1; 
     }
@@ -69,7 +82,17 @@ contract Bsp {
         require(_count == 0);
         _count = total;
         step++;
+        reset_timer();
         NextStep();
+    }
+
+    /// timer
+    uint _next_timeout;
+    function reset_timer() internal {
+        _next_timeout = now + 1 days;
+    }
+    function timeout() public view returns(bool) {
+        return _next_timeout < now;
     }
 
 }
@@ -128,8 +151,8 @@ up = a.join(0)
 
 () = await a.Next
 
+choice = input_bool()
 salt = random()
-choice = input()
 h = hash(choice, me, salt)
 up.step_1(h)
 
