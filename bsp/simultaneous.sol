@@ -114,9 +114,6 @@ contract Session {
         else
             return "lost";
     }
-
-    event Won();
-    event Lost();
 }
 
 
@@ -129,18 +126,18 @@ player1:
 
 up = a.join(0)
 
-await () = a.Next
+() = await a.Next
 
 salt = random()
 choice = input()
 h = hash(choice, me, salt)
 up.step_1(h)
 
-await () = a.Next
+() = await a.Next
 
 up.step_2(choice, salt)
 
-await () = a.Next
+() = await a.Next
 
 result = step_3()
 print(result)
