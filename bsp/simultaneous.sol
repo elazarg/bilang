@@ -1,10 +1,9 @@
 pragma solidity ^0.4.17;
 
-contract Bsp {
-    Session[] _sessions;
-    address[] _clients;
-    
+contract Bsp {    
     uint constant total = 2;
+    Session[2] _sessions;
+    address[2] _clients;
     
     uint _count = total;
 
@@ -46,8 +45,8 @@ contract Bsp {
     // game-specific reduce
 
     // option types :(
-    bool[] C;
-    bool[] C_played;
+    bool[2] C;
+    bool[2] C_played;
 
     uint public win;
 
