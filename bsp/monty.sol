@@ -35,6 +35,7 @@ contract Bsp {
         
         _count--;
     }
+
     function join_guest(uint client_num) public {
         // this is `done()` special cased - before we know the participants
         address client = msg.sender;
@@ -49,6 +50,7 @@ contract Bsp {
         
         _count--;
     }
+
     function done_generic(uint client_num) internal {
         Session subserver = Session(msg.sender);
         require(subserver == (client_num == 0 ? Session(_session_host) : _session_guest));
@@ -64,7 +66,7 @@ contract Bsp {
     int _Door1; event Door1(int);
     int _Goat; event Goat(int);
     int _Door2; event Door2(int);
-    int _Car;
+    int _Car; bool _Car_played;
 
     uint public win;
     uint constant HOST = 0;
@@ -100,6 +102,8 @@ contract Bsp {
     function done_step_5(int car, uint client_num) public {
         require(client_num == HOST);
         done_generic(HOST);
+
+        _Car_played = true;
         _Car = car;
     }
 
@@ -125,7 +129,7 @@ contract Bsp {
         require(_count == 0);
         next_generic(1);
 
-        win = (_Goat == _Car || _Door2 == _Car) ? GUEST : HOST;
+        win = (!_Car_played || _Goat == _Car || _Door2 == _Car) ? GUEST : HOST;
     }
 
     function next_generic(uint next_count) internal {
@@ -177,7 +181,7 @@ contract Session_Host is Session {
     function step_3(int goat) public {
         require(_server.step() == 3);
         require(msg.sender == _client);
-
+        require(goat < 3);
         _step_3_goat = goat;
 
         _server.done_step_3(goat, _client_num);
@@ -186,6 +190,7 @@ contract Session_Host is Session {
     function step_5(int car, uint256 salt) public {
         require(_server.step() == 5);
         require(msg.sender == _client);
+        require(car < 3);
 
         require(keccak256(car, salt, msg.sender) == _step_1_h);
         delete _step_1_h;
@@ -220,7 +225,7 @@ contract Session_Guest is Session {
     function step_2(int door1) public {
         require(_server.step() == 2);
         require(msg.sender == _client);
-
+        require(door1 < 3);
         _step_2_door1 = door1;
 
         _server.done_step_2(door1, _client_num);
@@ -229,10 +234,10 @@ contract Session_Guest is Session {
     function step_4(int door2) public {
         require(_server.step() == 4);
         require(msg.sender == _client);
-
+        require(door2 < 3);
         _step_4_door2 = door2;
 
-        _server.done_step_2(door2, _client_num);
+        _server.done_step_4(door2, _client_num);
     }
 
     function step_6() public view returns(string) {
@@ -248,24 +253,58 @@ Client code:
 
 creator: a = create Bsp()
 
-player1:
+host:
 
-up = a.join(0)
+a.join_host()
 
-() = await a.Next
+up = await a.StartSession
 
-choice = input_bool()
+car = input_3()
 salt = random()
-h = hash(choice, me, salt)
+h = hash(car, me, salt)
 up.step_1(h)
 
 () = await a.Next
 
-up.step_2(choice, salt)
+door1 = await a.Next
+
+up.step_3((door1+1)%3 if car != (door1+1)%3 else (door1-1)%3)
+
+_ = await a.Next
+
+up.step_5(car, salt)
 
 () = await a.Next
 
-result = step_3()
+result = step_6()
 print(result)
 
-*/
+guest:
+
+a.join_guest()
+
+up = await a.StartSession
+
+() = await a.Next
+
+door1 = input_3()
+
+up.step2(door1)
+
+() = await a.Next
+
+goat = await a.Next
+
+if goat == (1+door1) % 3
+    door2 = (door1 - 1) %3
+else
+    door2 = (door1 + 1) %3
+
+up.step4(door2)
+
+() = await a.Next
+
+result = step_6()
+print(result)
+
+ */
