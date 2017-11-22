@@ -106,43 +106,31 @@ e &: \text{list of Event} \\
 
 \subsection{Syntax}
 
-Session-step grammar:
-
 \begin{grammar}
-	<St> ::= "join" <roleDef> % first in column only
-		\alt <S>
-
-	<Sn> ::= "join" <roleDef>[<globalVarDef>] % first in column only  % TODO: N becomes irrelevant when some bail out
-		\alt <S>
-	
-	<S>  ::= "-"
-		\alt "private" (<localVarDef>:<type>)+
-        \alt "public" (<localVarDef>:<type>)+ <Where>
-		\alt "publish" <localVar>+ <Where>
-	
-	<Where> ::= "where" <boolExp>
-	
-	<roleDef> ::= <globalVarDef>
+	<S> ::= "join" <roleDef> ( "[" <globalVarDef> "]" )? % first in column only  % TODO: N becomes irrelevant when some bail out
+		\alt "-"
+		\alt ( "private" | "public" ) (<localVarDef>:<type>)+ "where" <boolExp>  % "private" too since it doesn't make sense to have "where" using newer variables
+		\alt "publish" <localVar>+
 \end{grammar}
 
 \begin{grammar}
-	<Fold> ::= "-"
-		  \alt "let" (<globalVarDef>, <globalVarDef>) = "fold" <exp> "(" <localVarDef> "this" "=>" <exp> ")"  % second globalVarDef for counting active participants
+	<Fold> ::= "let" (<globalVarDef>, <globalVarDef>) = "fold" <exp> "(" <localVarDef> "this" "=>" <exp> ")"  % second globalVarDef for counting active participants
 \end{grammar}
 
 \begin{grammar}
-	<Global> ::= "-"
-			\alt "let" <globalVarDef> ":=" <Exp> ";" <Global>?
+	<Global> ::= ("let" <globalVarDef> ":=" <Exp> ";")*
 \end{grammar}
 
 \begin{grammar}
-	<Progress> ::= "-"
-			  \alt "timeout"(<TimeExpr>)
+	<Progress> ::= "timeout" "(" <TimeExpr> ")"
 \end{grammar}
 
-Scoping: variables are accessible from the point of definition downwards.
-Local variables are accessible only from the same role or from global scope.
-Global variables are readable everywhere.
+\subsubsection{Names and Scopes}
+
+Variables are accessible from the point of definition downwards.
+Local variables start with lower-case letters; they are accessible only from the same role or from global scope.
+Global variables start with capital letters; they are readable everywhere.
+Role variables are global variables.
 
 Unless proven to be initialized, variables declared as being of type T are of type Option[T].
 
@@ -150,12 +138,18 @@ Unless proven to be initialized, variables declared as being of type T are of ty
 Programs are parametrized by the number of roles $K$. \emph{$(K+R)$-role program step} is defined as:
 
 \begin{grammar}
-	<Row> ::= <St_1> "&" ... "&" <St_K> "&" <Sn_1> <Fold> "&" ... "&" <Sn_R> <Fold>
-			  "progress" <Progress> "then" <Global>  % if we'll have retry semantics, maybe we want ":-" instead of "then"? :)
+	<Row> ::= <St_1> "&" ... "&" <St_K> "&" <Sn_1> <Fold>? "&" ... "&" <Sn_R> <Fold>?  % adding fold to st will make the language cleaner, but the programs more verbose
+			  "progress" <Progress>? "then" <Global>  % if we'll have retry semantics, maybe we want ":-" instead of "then"? :)
 \end{grammar}
 
-A \emph{($K+R$)-role program} is a sequence of \emph{$K+R$-role program step}s.
+Where \synt{Sn\_i} is \synt{S} in columns where the first join is an array-join, and \synt{St\_i} is for simple join.
+
 The first non-empty item for each $<St_i>$ or $<Sn_i>$ must be an appropriate $join$.
+
+A \emph{($K+R$)-role program} is a sequence of \emph{$K+R$-role program step}s.
+
+\vfill
+\pagebreak
 
 \subsection{Semantics}
 
