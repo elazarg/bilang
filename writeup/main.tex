@@ -9,50 +9,9 @@
 %% SIGPLAN proceedings format should change 'acmlarge' to
 %% 'sigplan,10pt'.
 
-
-\usepackage{booktabs}
-\usepackage{subcaption}
-\usepackage{alltt}
-\usepackage{amsmath}
-\usepackage{amsthm}
-\usepackage{stmaryrd}
-\usepackage{amsfonts}
-\usepackage[all]{xy}
-\usepackage{listings}
-\usepackage{mathtools}
-\usepackage{paralist}
-\usepackage[T1]{fontenc}
-\usepackage{extarrows}
-\usepackage[noend,noline]{algorithm2e}
-\usepackage{arydshln}
-\usepackage{centernot}
-\usepackage{multirow}
-\usepackage{multicol}
-\usepackage{cleveref} % Must be loaded as last package
-\usepackage[nodayofweek]{datetime}
-\usepackage{todonotes}
-\usepackage{comment}
-
 \usepackage{bussproofs}
 \usepackage[nounderscore]{syntax}
-\usepackage{cmll}
-
-
-
-%\usepackage[caption=false]{subfig}
-% \usepackage[hidelinks]{hyperref}
-% \usepackage{hyperref}
-% \usepackage[super]{nth}
-% \usepackage{makeidx}  % allows for indexgeneration
-% \usepackage{cite}
-%\usepackage{boisik}
-%\usepackage{mathabx}
-% \usepackage{fdsymbol}
-% \usepackage{MnSymbol}
-%\usepackage{fourier}
-% \usepackage{MnSymbol} % for \powerset
-% \usepackage{thm-restate}
-
+\usepackage{cleveref} % Must be loaded as last package
 
 \input{macros}
 
@@ -143,44 +102,42 @@ e &: \text{list of Event} \\
 
 \setlength{\grammarindent }{2cm}
 
-\subsection{Spreadsheet-Language}
+\section{Spreadsheet-Language}
+
+\subsection{Syntax}
 
 Session-step grammar:
 
 \begin{grammar}
-	<St> ::= join <roleDef> % first in column only
+	<St> ::= "join" <roleDef> % first in column only
 		\alt <S>
 
-	<Sn> ::= join <roleDef>[<globalVarDef>] % first in column only  % TODO: N becomes irrelevant when some bail out
+	<Sn> ::= "join" <roleDef>[<globalVarDef>] % first in column only  % TODO: N becomes irrelevant when some bail out
 		\alt <S>
 	
-	<S>  ::= -
-		\alt private (<localVarDef>:<type>)+
-        \alt public (<localVarDef>:<type>)+ <Where>
-		\alt publish <localVar>+ <Where>
+	<S>  ::= "-"
+		\alt "private" (<localVarDef>:<type>)+
+        \alt "public" (<localVarDef>:<type>)+ <Where>
+		\alt "publish" <localVar>+ <Where>
 	
-	<Where> ::= where <boolExp>
+	<Where> ::= "where" <boolExp>
 	
 	<roleDef> ::= <globalVarDef>
 \end{grammar}
 
-Fold-step grammar:
-
 \begin{grammar}
-	<F> ::= -
-		\alt let (<globalVarDef>, <globalVarDef>) = fold <exp> (<localVarDef> this => <exp>)  % second globalVarDecl for counting active participants
+	<Fold> ::= "-"
+		  \alt "let" (<globalVarDef>, <globalVarDef>) = "fold" <exp> "(" <localVarDef> "this" "=>" <exp> ")"  % second globalVarDef for counting active participants
 \end{grammar}
 
-Global-step grammar:
 \begin{grammar}
-	<G> ::= -
-		\alt let <globalVarDef> := <Exp>; <G>?
+	<Global> ::= "-"
+			\alt "let" <globalVarDef> ":=" <Exp> ";" <Global>?
 \end{grammar}
 
-Progress condition grammar:
 \begin{grammar}
-	<P> ::= -
-		\alt timeout(<TimeExpr>)
+	<Progress> ::= "-"
+			  \alt "timeout"(<TimeExpr>)
 \end{grammar}
 
 Scoping: variables are accessible from the point of definition downwards.
@@ -193,204 +150,40 @@ Unless proven to be initialized, variables declared as being of type T are of ty
 Programs are parametrized by the number of roles $K$. \emph{$(K+R)$-role program step} is defined as:
 
 \begin{grammar}
-	<P> ::= <St_1> | ... | <St_K> | <Sn_1> <F> | ... | <Sn_R> <F> progress <P> then <G>
+	<Row> ::= <St_1> "&" ... "&" <St_K> "&" <Sn_1> <Fold> "&" ... "&" <Sn_R> <Fold>
+			  "progress" <Progress> "then" <Global>  % if we'll have retry semantics, maybe we want ":-" instead of "then"? :)
 \end{grammar}
 
-A \emph{$K+R$-role program} is a sequence of \emph{$K+R$-role program step}s.
-The first non-empty item for each $<St_i>$ or $<Sn_i>$ must be an approprite $join$.
+A \emph{($K+R$)-role program} is a sequence of \emph{$K+R$-role program step}s.
+The first non-empty item for each $<St_i>$ or $<Sn_i>$ must be an appropriate $join$.
 
-\begin{comment}
+\subsection{Semantics}
 
-\subsection{Server Language}
-
-We define a language $SL$ whose programs $p\in SL$ has meaning \[\semfunc[p] \in State \times (\mathbb{N} \times Msg) \rightarrow (State \times Event)\]
-
-\begin{grammar}
-    <prog> ::= done
-         \alt receive <case list> end   % external choice by owner endpoint
-         % \alt receive (label from <BindId>) <case list> end   % external choice: race
-         \alt par <prog> and <pid> <prog> end
-         \alt <prog>; <prog>
-
-	<cmd> ::= yield <ev: E>; <prog>                 % yield + external choice
-         \alt if <E> then <cmd> else <cmd> end   % internal choice
-         \alt while <E> do <cmd>; yield <ev: E>; <prog>; end    % limited recursion
-         % \alt tell <pid> <E>
-         % \alt ask <pid> <E> <case list>
-         \alt <var> = <E>; <cmd>
-         \alt fail;
-         \alt require *; <cmd>
-
-    <case list> ::= \_ => end
-        \alt <pat> => <cmd>; <case list>
-\end{grammar}
-
-The intention is that \texttt{yield} expressions will be the only suspension points, and evaluation of such an expression always translates to the sequence:
-\begin{enumerate}
-\item finish execution with $ev$ as an output event
-\item wait for the network to send a request
-\item inspect the request and continue execution
-\end{enumerate}
-
-We use a function $\semfunc[p] \in State \rightarrow (State \times Event)$ to define the internal state change, without explicitly referring to the input $(i, Msg)$ after its binding in the \texttt{match} construct.
+E
 
 \begin{align*}
-\judge{&Receive}{
-	-
-}{
-	\semfunc[\text{match (i, Msg) Cs end}, (i', Msg')] = \semfunc[\text{Cs[i/i', Msg/Msg']}]  % receiving MSG
-}\\
-\\
-\judge{&Yield}{
-	-
-}{
-	\semfunc[\text{yield ev; p}] = (p, ev)  % waiting for MSG
-}\\
-\\
-\judge{&ParallelLeft\text{ and symmetrically for p2}}{  % decision: fork a new address? this will be visible to the client
-	\semfunc[p1, (i, Msg)] = (p1', ev)
-}{
-	\semfunc[\text{par p1 and p2 end}, (i, Msg)] = (\text{par p1' and p2 end}, ev)
-}\\
-\\
-\judge{&ParallelDone}{
-    -
-}{
-	\semfunc[\text{par done and done end}] = (done, ev)
-}
-\end{align*}
-\begin{align*}
-\judge{&Then}{
-	-
-}{
-	\semfunc[\text{if * then C1 else C2}] = \semfunc[C1]
-}& \;\;\;\;
-\judge{&CaseGo}{
-	- % TODO: \text{match receive Cs end} and simply dispatch to the first successful match
-}{
-	\semfunc[\text{(i, *) => p; Cs}] = \semfunc[p]
-}\\
-\\
-\judge{&Else}{
-	-
-}{
-	\semfunc[\text{if * then C1 else C2}] = \semfunc[C2]
-}& \;\;\;\;
-\judge{&CaseDrop}{
-	-
-}{
-	\semfunc[\text{(i, *) => p; Cs}] = \semfunc[Cs]
-}\\
-\\
-\judge{&WhileDone}{
-	-
-}{
-	\semfunc[\text{while * do p end; p'}] = \semfunc[p']
-}& \;\;\;\;
-\judge{&While}{
-	\semfunc[p] = (p', ev)
-}{
-	\semfunc[\text{while * do p end}] = (\text{p'; while * do p end}, ev)
-}
-\end{align*}
-
-\end{comment}
-\vfill
-\pagebreak
-
-
-
-
-\begin{align*}
-	E :& \text{ Append-only list} \\
-    R_i :& \text{ A Queue for actor } i
-\end{align*}
-
-\begin{grammar}
-	<cmd> ::= publish <V>
-         \alt yield; take <T>
-         \alt if * then <cmdList> else <cmdList>
-         \alt while * do <cmdList>
-\end{grammar}
-
-
-\begin{align*}
-\judge{TAKE}{
-	-
-}{
-	(E, (i, L, M)::R, \Sigma, \text{take L}.P) \reduce (E, R, \Sigma, P)
-}& \;\;\;\;
-\judge{PUB}{
-	\Sigma \vdash v \reduce x
-}{
-	(E, R, \Sigma, \text{publish v}.P)\reduce (x::E, R, \Sigma, P)
-}\\
-\\
-\judge{DROP}{
-	L' \neq L
-}{
-	(E, (i, L', M)::R, \Sigma, \text{take L}.P) \reduce (E, R, \Sigma, \text{take L}.P)
-} & \;\;\;\;
-\judge{YIELD}{
-	 \;
-}{
-	(E, R, \Sigma, \text{yield; take T}.P) \reduce (E, R, \Sigma, \text{takes T}.P)
-}
-\end{align*}
-
-\subsection{Client Language}
-
-We define a language $CL$ whose programs $p\in CL$ has meaning \[\semfunc[p] \in State \times \text{list of Event} \times (State \times MSG)\]
-
-\begin{grammar}
-	<cmd> ::= send <V>: <T>
-         \alt read latest <T>
-         \alt deq <T>
-         \alt if * then <cmdList> else <cmdList>
-         \alt while * do <cmdList>
-\end{grammar}
-
-\begin{align*}
-\judge{RL}{
-	\forall M', (L, M') \notin E'
-}{
-	(E'.(L, M).E, R_i, \Phi, \text{read latest L}.P) \reduce (E, R_i, \Phi, P)
-}& \;\;\;\;
-\judge{SEND}{
-	\Sigma \vdash v \reduce x
-}{
-	(E, R_i, \Phi, \text{send v: L}.P)\reduce (E, (i, L, x)::R_i, \Phi, P)
-}\\
-\\
-\judge{DEQ}{
-	\;
-}{
-	((T, M)::E, R_i, \Phi, \text{deq T}.P) \reduce (E, R_i, \Phi, P)
-} & \;\;\;\;
-\judge{YIELD}{
-	 -
-}{
-	-
-}
+	\judge{&Public}{
+		n \notin \Sigma \; msg : T \; eval(exp) = true 
+	}{
+		\semfunc[\text{public (n: T) where exp}] msg  \Sigma = \Sigma (n \mapsto msg )
+	}\\
+	\\
+	\judge{&Yield}{
+		-
+	}{
+		-
+	}
 \end{align*}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Paper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\input{notations}
-
-
-% \input{reentrancy}
-% \input{dfa}
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Acknowledgments
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % \begin{acks}
-% We would like to thank the teams at Validity Labs and Ambisafe that assisted us in analyzing their contracts, and to Validity Labs for referring us to the web Oyente tool.
 % \end{acks}
 
 
@@ -400,7 +193,7 @@ We define a language $CL$ whose programs $p\in CL$ has meaning \[\semfunc[p] \in
 
 \newpage
 
-\bibliography{biblio}
+%\bibliography{biblio}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -409,7 +202,7 @@ We define a language $CL$ whose programs $p\in CL$ has meaning \[\semfunc[p] \in
 
 \newpage
 
-\appendix
+%\appendix
 
 % \input{notations}
 
