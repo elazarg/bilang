@@ -31,6 +31,7 @@
 \usepackage{cleveref} % Must be loaded as last package
 \usepackage[nodayofweek]{datetime}
 \usepackage{todonotes}
+\usepackage{comment}
 
 \usepackage{bussproofs}
 \usepackage[nounderscore]{syntax}
@@ -147,12 +148,10 @@ e &: \text{list of Event} \\
 Session-step grammar:
 
 \begin{grammar}
-	<St> ::=  -
-		\alt join <roleDecl> % first in column only
+	<St> ::= join <roleDef> % first in column only
 		\alt <S>
 
-	<Sn> ::= -
-		\alt join <roleDecl>[<globalVarDef>] % first in column only  % TODO: N becomes irrelevant when some bail out
+	<Sn> ::= join <roleDef>[<globalVarDef>] % first in column only  % TODO: N becomes irrelevant when some bail out
 		\alt <S>
 	
 	<S>  ::= -
@@ -162,7 +161,7 @@ Session-step grammar:
 	
 	<Where> ::= where <boolExp>
 	
-	<roleDecl> ::= <globalVarDef>
+	<roleDef> ::= <globalVarDef>
 \end{grammar}
 
 Fold-step grammar:
@@ -198,6 +197,9 @@ Programs are parametrized by the number of roles $K$. \emph{$(K+R)$-role program
 \end{grammar}
 
 A \emph{$K+R$-role program} is a sequence of \emph{$K+R$-role program step}s.
+The first non-empty item for each $<St_i>$ or $<Sn_i>$ must be an approprite $join$.
+
+\begin{comment}
 
 \subsection{Server Language}
 
@@ -292,6 +294,7 @@ We use a function $\semfunc[p] \in State \rightarrow (State \times Event)$ to de
 }
 \end{align*}
 
+\end{comment}
 \vfill
 \pagebreak
 
