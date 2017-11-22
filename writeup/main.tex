@@ -142,6 +142,63 @@ e &: \text{list of Event} \\
 
 \setlength{\grammarindent }{2cm}
 
+\subsection{Spreadsheet-Language}
+
+Session-step grammar:
+
+\begin{grammar}
+	<St> ::=  -
+		\alt join <roleDecl> % first in column only
+		\alt <S>
+
+	<Sn> ::= -
+		\alt join <roleDecl>[<globalVarDef>] % first in column only  % TODO: N becomes irrelevant when some bail out
+		\alt <S>
+	
+	<S>  ::= -
+		\alt private (<localVarDef>:<type>)+
+        \alt public (<localVarDef>:<type>)+ <Where>
+		\alt publish <localVar>+ <Where>
+	
+	<Where> ::= where <boolExp>
+	
+	<roleDecl> ::= <globalVarDef>
+\end{grammar}
+
+Fold-step grammar:
+
+\begin{grammar}
+	<F> ::= -
+		\alt let (<globalVarDef>, <globalVarDef>) = fold <exp> (<localVarDef> this => <exp>)  % second globalVarDecl for counting active participants
+\end{grammar}
+
+Global-step grammar:
+\begin{grammar}
+	<G> ::= -
+		\alt let <globalVarDef> := <Exp>; <G>?
+\end{grammar}
+
+Progress condition grammar:
+\begin{grammar}
+	<P> ::= -
+		\alt timeout(<TimeExpr>)
+\end{grammar}
+
+Scoping: variables are accessible from the point of definition downwards.
+Local variables are accessible only from the same role or from global scope.
+Global variables are readable everywhere.
+
+Unless proven to be initialized, variables declared as being of type T are of type Option[T].
+
+\subsubsection{Table}
+Programs are parametrized by the number of roles $K$. \emph{$(K+R)$-role program step} is defined as:
+
+\begin{grammar}
+	<P> ::= <St_1> | ... | <St_K> | <Sn_1> <F> | ... | <Sn_R> <F> progress <P> then <G>
+\end{grammar}
+
+A \emph{$K+R$-role program} is a sequence of \emph{$K+R$-role program step}s.
+
 \subsection{Server Language}
 
 We define a language $SL$ whose programs $p\in SL$ has meaning \[\semfunc[p] \in State \times (\mathbb{N} \times Msg) \rightarrow (State \times Event)\]
