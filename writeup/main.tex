@@ -107,10 +107,11 @@ e &: \text{list of Event} \\
 \subsection{Syntax}
 
 \begin{grammar}
-	<S> ::= "join" <gVar> ( "[" <gVar> "]" )? % first in column only  % TODO: N becomes irrelevant when some bail out
-		\alt "-"
-		\alt ( "private" | "public" ) (<lVar> ":" <type>)+ "where" <BoolExp>  % "private" too since it doesn't make sense to have "where" using newer variables
-		\alt "publish" <lVar>+
+	<Join>	::= "join" <gVar> "[" (<num>|<gVar>) "]" % first in column only  % TODO: N becomes irrelevant when some bail out
+
+	<S>		::= ( "private" | "public" ) (<lVar> ":" <type>)+ "where" <BoolExp>  % "private" too since it doesn't make sense to have "where" using newer variables
+			\alt "publish" <lVar>+
+			\alt "-"
 \end{grammar}
 
 \begin{grammar}
@@ -125,23 +126,52 @@ e &: \text{list of Event} \\
 	<Progress> ::= "timeout" "(" <TimeExpr> ")"
 \end{grammar}
 
-The syntax for combining the languages above is best described in a tabular form,
-demonstrating the intended information flow for $(1+n)$-player games:
+For \lit{join role[n]} the fold expression \texttt{let (\_, n) := fold 0 ($\lambda$ x.x)} is added. 
+\lit{join n} is a syntactic sugar for \lit{join n[1]}.
 
-\begin{table}[h!]
-	\centering
-	\begin{tabular}{|c|c|c|}
-		\hline
-        \synt{S}   & \synt{S}     & \synt{Progress} \\
-                   & \synt{Fold}  &                 \\
-		\hline
-		\multicolumn{2}{ |c| }{\synt{Global}} &  \\
-		\hline
-	\end{tabular}
+The syntax for combining the languages above is best described in a tabular form,
+demonstrating the intended information flow for $2$-player games:
+
+\begin{table}[h]
+		\begin{tabular}[t]{|c|c|c|}
+			\hline
+			\synt{Join} & \synt{Join}  & \synt{Progress} \\
+			\hline
+			\multicolumn{2}{ |c| }{\synt{Global}} &  \\
+			\hline
+			\synt{S}    & \synt{S}     & \synt{Progress} \\
+			\synt{Fold} & \synt{Fold}  &                 \\
+			\hline
+			\multicolumn{2}{ |c| }{\synt{Global}} &  \\
+			\hline
+			\synt{S}    & \synt{S}     & \synt{Progress} \\
+			\synt{Fold} & \synt{Fold}  &                 \\
+			\hline
+			\multicolumn{2}{ |c| }{\synt{Global}} &  \\
+			\hline
+		\end{tabular}
+	\hfill
+		\begin{tabular}[t]{|c|c|c|}
+			\hline
+			\texttt{join Even[1]}		& \texttt{join Odd[1]}		&  \\
+			\hline
+			\multicolumn{2}{ |c| }{-} &  \\
+			\hline
+			\texttt{private c: bool}	& \texttt{private c: bool}	& \texttt{timeout(1 day)} \\
+			- 							& -							&                		  \\
+			\hline
+			\multicolumn{2}{ |c| }{-} &  \\
+			\hline
+			\texttt{publish c}			& \texttt{publish c}		& \texttt{timeout(1 day)} \\
+			- 							& -							&                		  \\
+			\hline
+			\multicolumn{2}{ |c| }{\texttt{W := winner(Even.c, Odd.c)}} &  \\
+			\hline
+		\end{tabular}
 \end{table}
 
-Information (e.g. by scoping rules) flows downwards, never upwards, and is not intended to flow sideways.
-The latter is not enforced against badly-behaved client (that can inspect in-flight messages or watch the blockchain),
+Information (e.g. by scoping rules), like time, flows downwards, never upwards, and is not intended to flow sideways.
+The latter is not enforced against malicious client (that can inspect in-flight messages or watch the blockchain),
 and \lit{private} should be used when important.
 
 \subsubsection{Names and Scopes}
@@ -154,31 +184,27 @@ Role variables are global variables.
 Unless proven to be initialized, variables declared as being of type T are of type Option[T].
 
 \subsubsection{Table}
-Programs are parametrized by the number of roles $k$. \emph{$(k+r)$-role program} is defined as:
+Programs are parametrized by the number of roles $k$. \emph{$k$-role program} is defined as:
 
 \begin{grammar}
 	<Table> ::= <Row>$^n$
 
-	<Row> ::= (<St> "&")$^k$ (<Sn> <Fold>? "&")$^r$ % adding fold to st will make the language cleaner, but the programs more verbose
+	<Row> ::= (<S> <Fold>? "&")$^k$ % adding fold to st will make the language cleaner, but the programs more verbose
 			  "progress" <Progress>? "then" <Global> "$" % if we'll have retry semantics, maybe we want ":-" instead of "then"? :)
 \end{grammar}
 
-Where \synt{Sn\_i} is \synt{S} in columns where the first join is an array-join, and \synt{St\_i} is for simple join.
-
-The first non-empty item for each \synt{St\_i} or \synt{Sn\_i} must be an appropriate $join$.
+The first non-empty item for each \synt{S} must be an appropriate $join$.
 
 Transposing the program, the syntax is:
 
 \begin{grammar}
-	<Prog> ::= (<St> "&")$^k$ (<Sn> "&")$^r$ "&" <P> "&" <G>
+	<Prog> ::= <Sn>$^k$ <P> <G>
 
-	<St> ::= ("-" "$")$^x$ "join" <gVar>                "$" (<S>        "$")$^{n-x-1}$
+	<Sn> ::= ("-" "$")$^x$ <Join> "$" (<S> <Fold> "$")$^{n-x-1}$ "&"
 
-	<Sn> ::= ("-" "$")$^y$ "join" <gVar> "[" <gVar> "]" "$" (<S> <Fold> "$")$^{n-y-1}$
+	<P> ::= (<Progress> "$")$^n$ "&"
 
-	<P> ::= (<Progress> "$")$^n$
-
-	<G> ::= (<Global> "$")$^n$
+	<G> ::= (<Global> "$")$^n$ "&"
 \end{grammar}
 
 \vfill
@@ -191,33 +217,56 @@ Event handler semantics - different kind of \texttt{let} declarations:
 \newcommand{\owner}{\mathbb{R}}
 \begin{align*}
 	\judge{&Join}{
-		-
+		i = \#(role) \;\;\; \texttt{m is variable or } i < \semfunc[m]
 	}{
-		\semfunc[\text{join n}](sender, \_)(\sigma) = \sigma [ \owner \mapsto sender]
-	}\\
-	\\
+		\semfunc[{join role[m]}](sender, \_) = ((role, i) \mapsto (sender, \emptyset), i+1, ("accept", n, i)])
+	}
+\end{align*}
+
+In the following, the messages are always from the owner of the session; otherwise they are dropped:
+
+\begin{align*}
 	\judge{&Public}{
 		msg \in T \; \; \; exp \leadsto^* true
 	}{
-		\semfunc[\text{public (n: T) where exp}](\sigma(\owner), msg)(\sigma) = \sigma [n \mapsto msg]
-	}\\
-	\\
+		\semfunc[public (n: T) where exp](msg, \sigma) = \sigma [n \mapsto msg]
+	}\\	\\
 	\judge{&Private}{
 		\texttt{thunk(n, s) = (hash(n, s, sender)=msg \& exp)}
 	}{
-		\semfunc[\text{private (n: T) where exp}](\sigma(\owner), msg)(\sigma) = \sigma [@n \mapsto thunk]
-	}\\
-	\\
+		\semfunc[private (n: T) where exp](msg, \sigma) = \sigma [@n \mapsto thunk]
+	}\\	\\
 	\judge{&Publish}{
-		n : T \;\;\; (msg, s) \in (T \times int) \;\;\; \sigma(@n)(msg, s) = true)
+		\Gamma \vdash n : T \;\;\; msg = (v, s) \in (T \times int) \;\;\; \sigma(@n)(v, s) \leadsto* true
 	}{
-		\semfunc[\text{publish n}](\sigma(\owner), msg)(\sigma) = \sigma [n \mapsto msg]
+		\semfunc[publish n](msg, \sigma) = \sigma [n \mapsto msg]
+	}
+\end{align*}
+
+A \lit{private}-\lit{publish} pair is implemented as a simple commitment scheme, that is also non-replayable.
+
+\begin{align*}
+	\judge{&Fold}{
+		e2 \leadsto^* v1 \;\;\; rs = \{ role | \text{role sent message} \} \;\;\; m' = \texttt{fold } v1 \texttt{ f } rs
+	}{
+		\semfunc[let (m, n) := fold e2 f](\Sigma, \sigma) = \sigma [m \mapsto m', n \mapsto \#(msg) ]
+	}
+\end{align*}
+
+
+\begin{align*}
+	\judge{&Global}{
+		exp \leadsto^* v
+	}{
+		\semfunc[let N := exp;](\Sigma) = \Sigma [N \mapsto v]
 	}
 \end{align*}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Paper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% TODO: abstraction.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Acknowledgments
