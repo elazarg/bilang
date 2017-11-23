@@ -107,23 +107,42 @@ e &: \text{list of Event} \\
 \subsection{Syntax}
 
 \begin{grammar}
-	<S> ::= "join" <roleDef> ( "[" <globalVarDef> "]" )? % first in column only  % TODO: N becomes irrelevant when some bail out
+	<S> ::= "join" <gVar> ( "[" <gVar> "]" )? % first in column only  % TODO: N becomes irrelevant when some bail out
 		\alt "-"
-		\alt ( "private" | "public" ) (<localVarDef>:<type>)+ "where" <boolExp>  % "private" too since it doesn't make sense to have "where" using newer variables
-		\alt "publish" <localVar>+
+		\alt ( "private" | "public" ) (<lVar> ":" <type>)+ "where" <BoolExp>  % "private" too since it doesn't make sense to have "where" using newer variables
+		\alt "publish" <lVar>+
 \end{grammar}
 
 \begin{grammar}
-	<Fold> ::= "let" (<globalVarDef>, <globalVarDef>) = "fold" <exp> "(" <localVarDef> "this" "=>" <exp> ")"  % second globalVarDef for counting active participants
+	<Fold> ::= "let" "(" <gVar> "," <gVar> ")" ":=" "fold" <Exp> "(" <lVar> "this" "=>" <Exp> ")"  % second globalVarDef for counting active participants
 \end{grammar}
 
 \begin{grammar}
-	<Global> ::= ("let" <globalVarDef> ":=" <Exp> ";")*
+	<Global> ::= ( "let" <gVar> ":=" <Exp> ";")*
 \end{grammar}
 
 \begin{grammar}
 	<Progress> ::= "timeout" "(" <TimeExpr> ")"
 \end{grammar}
+
+The syntax for combining the languages above is best described in a tabular form,
+demonstrating the intended information flow for $(1+n)$-player games:
+
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|c|c|c|}
+		\hline
+        \synt{S}   & \synt{S}     & \synt{Progress} \\
+                   & \synt{Fold}  &                 \\
+		\hline
+		\multicolumn{2}{ |c| }{\synt{Global}} &  \\
+		\hline
+	\end{tabular}
+\end{table}
+
+Information (e.g. by scoping rules) flows downwards, never upwards, and is not intended to flow sideways.
+The latter is not enforced against badly-behaved client (that can inspect in-flight messages or watch the blockchain),
+and \lit{private} should be used when important.
 
 \subsubsection{Names and Scopes}
 
@@ -135,37 +154,64 @@ Role variables are global variables.
 Unless proven to be initialized, variables declared as being of type T are of type Option[T].
 
 \subsubsection{Table}
-Programs are parametrized by the number of roles $K$. \emph{$(K+R)$-role program step} is defined as:
+Programs are parametrized by the number of roles $k$. \emph{$(k+r)$-role program} is defined as:
 
 \begin{grammar}
-	<Row> ::= <St_1> "&" ... "&" <St_K> "&" <Sn_1> <Fold>? "&" ... "&" <Sn_R> <Fold>?  % adding fold to st will make the language cleaner, but the programs more verbose
-			  "progress" <Progress>? "then" <Global>  % if we'll have retry semantics, maybe we want ":-" instead of "then"? :)
+	<Table> ::= <Row>$^n$
+
+	<Row> ::= (<St> "&")$^k$ (<Sn> <Fold>? "&")$^r$ % adding fold to st will make the language cleaner, but the programs more verbose
+			  "progress" <Progress>? "then" <Global> "$" % if we'll have retry semantics, maybe we want ":-" instead of "then"? :)
 \end{grammar}
 
 Where \synt{Sn\_i} is \synt{S} in columns where the first join is an array-join, and \synt{St\_i} is for simple join.
 
-The first non-empty item for each $<St_i>$ or $<Sn_i>$ must be an appropriate $join$.
+The first non-empty item for each \synt{St\_i} or \synt{Sn\_i} must be an appropriate $join$.
 
-A \emph{($K+R$)-role program} is a sequence of \emph{$K+R$-role program step}s.
+Transposing the program, the syntax is:
+
+\begin{grammar}
+	<Prog> ::= (<St> "&")$^k$ (<Sn> "&")$^r$ "&" <P> "&" <G>
+
+	<St> ::= ("-" "$")$^x$ "join" <gVar>                "$" (<S>        "$")$^{n-x-1}$
+
+	<Sn> ::= ("-" "$")$^y$ "join" <gVar> "[" <gVar> "]" "$" (<S> <Fold> "$")$^{n-y-1}$
+
+	<P> ::= (<Progress> "$")$^n$
+
+	<G> ::= (<Global> "$")$^n$
+\end{grammar}
 
 \vfill
 \pagebreak
 
 \subsection{Semantics}
 
-E
+Event handler semantics - different kind of \texttt{let} declarations:
 
+\newcommand{\owner}{\mathbb{R}}
 \begin{align*}
-	\judge{&Public}{
-		n \notin \Sigma \; msg : T \; eval(exp) = true 
+	\judge{&Join}{
+		-
 	}{
-		\semfunc[\text{public (n: T) where exp}] msg  \Sigma = \Sigma (n \mapsto msg )
+		\semfunc[\text{join n}](sender, \_)(\sigma) = \sigma [ \owner \mapsto sender]
 	}\\
 	\\
-	\judge{&Yield}{
-		-
+	\judge{&Public}{
+		msg \in T \; \; \; exp \leadsto^* true
 	}{
-		-
+		\semfunc[\text{public (n: T) where exp}](\sigma(\owner), msg)(\sigma) = \sigma [n \mapsto msg]
+	}\\
+	\\
+	\judge{&Private}{
+		\texttt{thunk(n, s) = (hash(n, s, sender)=msg \& exp)}
+	}{
+		\semfunc[\text{private (n: T) where exp}](\sigma(\owner), msg)(\sigma) = \sigma [@n \mapsto thunk]
+	}\\
+	\\
+	\judge{&Publish}{
+		n : T \;\;\; (msg, s) \in (T \times int) \;\;\; \sigma(@n)(msg, s) = true)
+	}{
+		\semfunc[\text{publish n}](\sigma(\owner), msg)(\sigma) = \sigma [n \mapsto msg]
 	}
 \end{align*}
 
