@@ -9,7 +9,6 @@
 %% SIGPLAN proceedings format should change 'acmlarge' to
 %% 'sigplan,10pt'.
 
-\usepackage{bussproofs}
 \usepackage[nounderscore]{syntax}
 \usepackage{cleveref} % Must be loaded as last package
 
@@ -71,6 +70,23 @@
 
 \maketitle
 
+\section{Abstract Machine}
+The abstract machine works in five steps.
+
+The first step is joining: a map from open roles to agents is maintained, where new roles can be occupied and abandoned (by messages from the appropriate agents). At some point, when the map is full, the machine continues to the next step, and the roles are locked. Note that there is no progress guarantee at the joining step. Also note that joining messages carry an amount of gas (or other payment method) that must be enough for the rest of the protocol -- this is a commitment to the continuation of the protocol. Once a role has been committed to, it cannot be abandoned -- or to be precise, abandoning roles is not compensated for.
+
+The second step is assigning a private variable whose value can be restricted by a \texttt{where} clause, and then publishing a cryptographic commitment. Again a map is maintained, and when the map is full or the progress condition is met, the machine continues to step 3.
+
+The third step is publishing a private variable. The map is maintained as before, but published values are checked against the commitment and against the \texttt{where} clause; mismatches are simply dropped. The progress is as in step 2.
+
+The forth step consists of folding the actions of role-sets, using a commotative-assiciative operation. Implementation-wise this fold happens at each publish step, but at the abstract level we regard it as a separate step. The fold operation should not have any side effect on the state of the machine.
+
+The fifth step is arbitrary (finite) computation on the published variables; as a side effect it binds values to fresh global variables, and sends them to every participant. Further computation can refer to these variables.
+
+These five steps are performed repeatedly until the end of the program. Each step can also be empty, but there can be no actions without a joining operation before it.
+
+Note that the maps are not ``in-flight messages'' in the underlying system. For this we define network semantics.
+
 \section{Network Semantics}
 
 We define the valid transitions on the entire system, assuming abstract specification of the clients and the (single) server. The network behavior is simple: a client can enqueue messages in its own queue. The miner dequeues a message from some arbitrary queue, executes it, and appends the resulting event (assumed to be a single item) to the list of events.
@@ -127,10 +143,10 @@ e &: \text{list of Event} \\
 \end{grammar}
 
 For \lit{join role[n]} the fold expression \texttt{let (\_, n) := fold 0 ($\lambda$ x.x)} is added. 
-\lit{join n} is a syntactic sugar for \lit{join n[1]}.
+\lit{join role} is a syntactic sugar for \lit{join role[1]}.
 
 The syntax for combining the languages above is best described in a tabular form,
-demonstrating the intended information flow for $2$-player games:
+demonstrating a $2$-player games:
 
 \begin{table}[h]
 		\begin{tabular}[t]{|c|c|c|}
@@ -173,6 +189,7 @@ demonstrating the intended information flow for $2$-player games:
 Information (e.g. by scoping rules), like time, flows downwards, never upwards, and is not intended to flow sideways.
 The latter is not enforced against malicious client (that can inspect in-flight messages or watch the blockchain),
 and \lit{private} should be used when important.
+Note that even then, the mere action of sending a message leaks information; this is probably unavoidable in current systems.
 
 \subsubsection{Names and Scopes}
 
@@ -191,9 +208,10 @@ Programs are parametrized by the number of roles $k$. \emph{$k$-role program} is
 
 	<Row> ::= (<S> <Fold>? "&")$^k$ % adding fold to st will make the language cleaner, but the programs more verbose
 			  "progress" <Progress>? "then" <Global> "$" % if we'll have retry semantics, maybe we want ":-" instead of "then"? :)
+		\alt  (<Join>? "&")$^k$  <Progress>? "$"
 \end{grammar}
 
-The first non-empty item for each \synt{S} must be an appropriate $join$.
+The first non-empty item for each column must be an appropriate $join$.
 
 Transposing the program, the syntax is:
 
@@ -211,6 +229,18 @@ Transposing the program, the syntax is:
 \pagebreak
 
 \subsection{Semantics}
+
+We define two semantic functions: join semantics and message semantics.
+
+The meaning of a join step is a function from $2^{Msg} \rightarrow 2^{Agent}$ whose result is the new joiners.
+For now we don't consider further state changes at the join step, although they might be crucial for certain applications.
+
+The semantics of a full communication step is a function $\Sigma \times 2^{P} \rightarrow \Sigma \times E $ where $P$ is a packet -- a message from 
+client to server -- and $E$ is a broadcast message. $\Sigma$ is the type of complete server state (local and shared).
+
+Each full communcation step consists of 3 (possibly empty) phases: send, fold and progress-execute.
+The fold step happens (observationally) as a single step, but operationally each step executes immediately following the receiving of the message.
+The values of the global variables at the end of the third phase are the contents of the broadcast message.
 
 Event handler semantics - different kind of \texttt{let} declarations:
 
@@ -245,18 +275,22 @@ In the following, the messages are always from the owner of the session; otherwi
 
 A \lit{private}-\lit{publish} pair is implemented as a simple commitment scheme, that is also non-replayable.
 
+Let $\mathbb{M}$ be the set of messages accepted in the sessions;
+let $\mathbb{F}$ be the left-folding of the operation $f$ over $\mathbb{M}$ with $v$ as initial value,
+Then
+
 \begin{align*}
 	\judge{&Fold}{
-		e2 \leadsto^* v1 \;\;\; rs = \{ role | \text{role sent message} \} \;\;\; m' = \texttt{fold } v1 \texttt{ f } rs
+		e \Downarrow v
 	}{
-		\semfunc[let (m, n) := fold e2 f](\Sigma, \sigma) = \sigma [m \mapsto m', n \mapsto \#(msg) ]
+		\semfunc[let (m, n) := fold e f](\Sigma, \sigma) = \Sigma [m \mapsto \mathbb{F}, n \mapsto |\mathbb{M}| ]
 	}
 \end{align*}
 
 
 \begin{align*}
 	\judge{&Global}{
-		exp \leadsto^* v
+		exp \Downarrow v
 	}{
 		\semfunc[let N := exp;](\Sigma) = \Sigma [N \mapsto v]
 	}
