@@ -36,46 +36,57 @@ object Syntax {
 
   case class Fold(exp: Exp, v: Var, init: Value)
 
-  case class LocalStep(action: Action, name: Name)
+  case class LocalStep(action: Action, name: Name, fold: Option[Fold] = None)
 
-  case class BigStep(action: Map[Role, (LocalStep, Option[Fold])], timeout: Int, commands: Seq[Stmt])
+  case class BigStep(action: Map[Role, LocalStep], timeout: Int, commands: Seq[Stmt])
 
-  case class Program(steps: Seq[BigStep])
+  case class ProgramRows(steps: Seq[BigStep])
+
+  case class ProgramCols(
+    cols: Map[Role, Seq[LocalStep]],
+    progress: Seq[Int],
+    global: Seq[Option[Stmt]]
+  )
 }
 
 import Syntax._
 
 object Examples {
-  val OddsEvens = Program(Seq[BigStep](
+  val OddsEvensRows = ProgramRows(Seq(
     BigStep(
       action=Map(
-        "OddPlayer"  -> (LocalStep(Join(), "OddPlayer" ), None),
-        "EvenPlayer" -> (LocalStep(Join(), "EvenPlayer"), None)
+        "OddPlayer"  -> LocalStep(Join(), "OddPlayer" ),
+        "EvenPlayer" -> LocalStep(Join(), "EvenPlayer")
       ),
       timeout = -1,
       commands=Seq[Stmt]()
     ),
     BigStep(
       action=Map(
-        "OddPlayer"  -> (LocalStep(Private(), "c"), None),
-        "EvenPlayer" -> (LocalStep(Private(), "c"), None)
+        "OddPlayer"  -> LocalStep(Private(), "c"),
+        "EvenPlayer" -> LocalStep(Private(), "c")
       ),
       timeout=1,
       commands=Seq[Stmt]()
     ),
     BigStep(
       action=Map(
-        "OddPlayer"  -> (LocalStep(Publish(), "c"), None),
-        "EvenPlayer" -> (LocalStep(Publish(), "c"), None)
+        "OddPlayer"  -> LocalStep(Publish(), "c"),
+        "EvenPlayer" -> LocalStep(Publish(), "c")
       ),
       timeout=1,
       commands=Seq[Stmt](
-        Assign("Winner", IfThenElse(
-          BinOp(Op.EQ, Var("OddPlayer", "c"), Var("EvenPlayer", "c")),
-          Bool(true),
-          Bool(false))
-        )
+        Assign("Winner", BinOp(Op.EQ, Var("OddPlayer", "c"), Var("EvenPlayer", "c")))
       )
     )
   ))
+
+  val OddsEvensCols = ProgramCols(
+    Map(
+      "OddPlayer" -> Seq(LocalStep(Join(), "OddPlayer" ), LocalStep(Private(), "c"), LocalStep(Publish(), "c")),
+      "EvenPlayer"-> Seq(LocalStep(Join(), "EvenPlayer"), LocalStep(Private(), "c"), LocalStep(Publish(), "c"))
+    ),
+    Seq(1, 1, 1),
+    Seq(None, None, Some(Assign("Winner", BinOp(Op.EQ, Var("OddPlayer", "c"), Var("EvenPlayer", "c")))))
+  )
 }

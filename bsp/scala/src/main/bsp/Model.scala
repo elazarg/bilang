@@ -10,17 +10,17 @@ object Model {
   private val Γ = Map[Agent, Scope]()
   private val global: Scope = mutable.Map[Var, Value]()
 
-  private val requests = mutable.Map[Agent, Var]()
+  private val assigned = mutable.Map[Agent, Var]()
   private val owner = mutable.Map[Role, Agent]()
 
   def time = 0
 
   def receive_request(s: BigStep, sender: Agent, role: Role, value: Value): Unit = {
     // assume each sender must only send one message
-    val (LocalStep(action, name), fold) = s.action(role)
+    val LocalStep(action, name, fold) = s.action(role)
     val v = Var(role, name)
     val local = Γ(sender)
-    require(!requests.get(sender).contains(v))
+    require(!assigned.get(sender).contains(v))
     action match {
       case Join(single) =>
         if (single) require(!owner.contains(role))
@@ -37,20 +37,26 @@ object Model {
     // Fold is required; when not specified (for singleton roles),
     // it is a simple assignment from local to global.
     global += fold.get.v -> eval(fold.get.exp, global ++ local)
-    requests.put(sender, v)
+    assigned.put(sender, v)
   }
 
   def progress(s: BigStep): Unit = {
-    val vars = (s.action map { case (role, (LocalStep(_, v), _)) => Var(role, v) }).toSet
-    val assigned = requests.values.toSet // TODO: perhaps testing fold result is better
-    assert(assigned.subsetOf(vars))
-    require(s.timeout <= time || vars == assigned)
+    val declared_vars = (s.action map { case (role, LocalStep(_, v, _)) => Var(role, v) }).toSet
+    val assigned_vars = assigned.values.toSet // TODO: perhaps testing fold result is better
+    assert(assigned_vars.subsetOf(declared_vars))
+    require(s.timeout <= time || declared_vars == assigned_vars)
 
-    requests.clear()
+    assigned.clear()
     for (Assign(name, exp) <- s.commands) {
       global += Var("Global", name) -> eval(exp, global)
       // fire event here
     }
+  }
+
+  def pre_step(s: BigStep): Unit = {
+    // FIX: Should happen at the global phase of previous step, to avoid the loop
+    for ( (_, LocalStep(_, _, Some(fold))) <- s.action)
+      global += (fold.v -> eval(fold.init, global))
   }
 
   def require(condition: Boolean): Unit = { }
@@ -89,11 +95,5 @@ object Model {
   }
 
   def hash(value: Value): Num = Num(value.hashCode)
-
-  def pre_step(s: BigStep): Unit = {
-    // FIX: Should happen at the global phase of previous step, to avoid the loop
-    for ( (_, (_, Some(fold))) <- s.action)
-      global += (fold.v -> eval(fold.init, global))
-  }
 
 }
