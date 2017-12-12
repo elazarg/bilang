@@ -17,31 +17,41 @@ object Model {
 
   def receive_request(s: BigStep, sender: Agent, role: Role, value: Value): Unit = {
     // assume each sender must only send one message
-    val LocalStep(action, name, fold) = s.action(role)
-    val v = Var(role, name)
+    val step = s.action(role)
     val local = Γ(sender)
-    require(!assigned.get(sender).contains(v))
-    action match {
+
+    def noReenter(name: Name) (conditions: Var => Unit) = {
+      val v = Var(role, name)
+      require(!assigned.get(sender).contains(v))
+      conditions(v)
+      assigned.put(sender, v)
+    }
+
+    step.action match {
       case Join(single) =>
         if (single) require(!owner.contains(role))
         owner.put(role, sender)
 
-      case Private() =>
-        require(owner.get(role).contains(sender))
+      case Private(name) =>
+        noReenter(name) { _ =>
+          require(owner.get(role).contains(sender))
+        }
 
-      case Publish(where) =>
-        require(owner.get(role).contains(sender))
-        require(hash(value) == local(v))
-        require(eval(where, global ++ local + (v -> value)) != Bool(false))
+      case Publish(name, where) =>
+        noReenter(name) { v =>
+          require(owner.get(role).contains(sender))
+          require(hash(value) == local(v))
+          require(eval(where, global ++ local + (v -> value)) != Bool(false))
+        }
     }
-    // Fold is required; when not specified (for singleton roles),
+    // Fix: Fold is required; when not specified (for singleton roles),
     // it is a simple assignment from local to global.
-    global += fold.get.v -> eval(fold.get.exp, global ++ local)
-    assigned.put(sender, v)
+    for (fold <- step.fold)
+      global += fold.v -> eval(fold.exp, global ++ local)
   }
 
   def progress(s: BigStep): Unit = {
-    val declared_vars = (s.action map { case (role, LocalStep(_, v, _)) => Var(role, v) }).toSet
+    val declared_vars = (s.action map { case (role, ls) => Var(role, ls.action.name) }).toSet
     val assigned_vars = assigned.values.toSet // TODO: perhaps testing fold result is better
     assert(assigned_vars.subsetOf(declared_vars))
     require(s.timeout <= time || declared_vars == assigned_vars)
@@ -55,7 +65,7 @@ object Model {
 
   def pre_step(s: BigStep): Unit = {
     // FIX: Should happen at the global phase of previous step, to avoid the loop
-    for ( (_, LocalStep(_, _, Some(fold))) <- s.action)
+    for ( (_, LocalStep(_, Some(fold))) <- s.action)
       global += (fold.v -> eval(fold.init, global))
   }
 
