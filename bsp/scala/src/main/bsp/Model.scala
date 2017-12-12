@@ -56,31 +56,35 @@ object Model {
   def require(condition: Boolean): Unit = { }
 
   def sem(op: Op1) (e: Value) : Value = {
-    (op, e)  match {
+    (op, e) match {
       case (Op1.NOT, Bool(x)) =>  Bool(!x)
       case (Op1.MINUS, Num(x)) => Num(-x)
-      case _ => throw Exception
+      case _ => ???
     }
   }
 
   def sem(op: Op) (left: Value, right: Value) : Value = {
-    (op, left, right)  match {
+    (op, left, right) match {
       case (Op.EQ, _, _) =>  Bool(left == right)
       case (Op.LT, Num(x), Num(y)) => Bool(x < y)
       case (Op.ADD, Num(x), Num(y)) => Num(x + y)
       case (Op.SUB, Num(x), Num(y)) => Num(x - y)
       case (Op.MAX, Num(x), Num(y)) => Num(Math.max(x, y))
-      case _ => throw Exception
+      case _ => ???
     }
   }
 
   def eval(e: Exp, ctx: Scope): Value = {
+    def eval(e: Exp) = Model.eval(e, ctx)
     e match {
       case x @ Num(_) => x
       case x @ Bool(_) => x
       case v @ Var(_, _) => ctx(v)
-      case UnOp(op, arg) => sem(op)(eval(arg, ctx))
-      case BinOp(op, left, right) => sem(op)(eval(left, ctx), eval(right, ctx))
+      case UnOp(op, arg) => sem(op)(eval(arg))
+      case BinOp(op, left, right) => sem(op)(eval(left), eval(right))
+      case IfThenElse(cond, left, right) =>
+        val Bool(b) = eval(cond)
+        if (b) eval(left) else eval(right)
     }
   }
 
