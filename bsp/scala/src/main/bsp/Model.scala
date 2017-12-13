@@ -7,7 +7,7 @@ import Op1.Op1
 
 object Model {
   type Scope = mutable.Map[Var, Value]
-  private val Γ = Map[Agent, Scope]()
+  private val local_objects = Map[(Agent, Role), Scope]()
   private val global: Scope = mutable.Map[Var, Value]()
 
   private val assigned = mutable.Map[Agent, Var]()
@@ -15,36 +15,30 @@ object Model {
 
   def time = 0
 
-  def receive_request(step: LocalStep, sender: Agent, role: Role, value: Value): Unit = {
+  def join(sender: Agent, role: Role, single: Boolean): Unit ={
+    if (single) require(!owner.contains(role))
+    owner.put(role, sender)
+  }
+
+  def receive(step: LocalStep, sender: Agent, role: Role, value: Value): Unit = {
     // assume each sender must only send one message
-    val local = Γ(sender)
 
-    def noReenter(name: Name) (conditions: Var => Boolean) = {
-      val v = Var(role, name)
-      require(!assigned.get(sender).contains(v))
-      if (owner.get(role).contains(sender) && conditions(v))
-        assigned.put(sender, v)
-    }
+    // Local scope is inaccessible to others
+    val local = local_objects( (sender, role) )
+    val v = Var(role, step.action.name)
+    require(!assigned.get(sender).contains(v))
 
-    step.action match {
-      case Join(single) =>
-        if (single) require(!owner.contains(role))
-        owner.put(role, sender)
+    val scope = global ++ local
+    require(hash(value) == local(v) && eval(step.action.where, scope + (v -> value)) != Bool(false))
 
-      case Private(name) =>
-        noReenter(name) { _ => true }
+    local.put(v, value)
 
-      case Publish(name, where) =>
-        noReenter(name) { v =>
-          hash(value) == local(v) &&
-          eval(where, global ++ local + (v -> value)) != Bool(false)
-        }
-        // FIX: update local?
-    }
-    // Fix: Fold is required; when not specified (for singleton roles),
-    // it is a simple assignment from local to global.
-    for (fold <- step.fold)
-      global += fold.v -> eval(fold.exp, global ++ local)
+    global += (step.fold match {
+      case Some(fold) => fold.v -> eval(fold.exp, scope)
+      case None       => v -> value
+    })
+
+    assigned.put(sender, v)
   }
 
   def progress(s: BigStep): Unit = {
@@ -91,6 +85,7 @@ object Model {
     def eval(e: Exp) = Model.eval(e, ctx)
     e match {
       case x @ Num(_) => x
+      case Hash(x) => hash(eval(x))
       case x @ Bool(_) => x
       case v @ Var(_, _) => ctx(v)
       case UnOp(op, arg) => sem(op)(eval(arg))

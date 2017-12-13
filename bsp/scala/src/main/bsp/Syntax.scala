@@ -21,33 +21,32 @@ object Syntax {
   case class BinOp(op: Op, left: Exp, right: Exp) extends Exp
   case class IfThenElse(cond: Exp, left: Exp, right: Exp) extends Exp
   case class UnOp(op: Op1, e: Exp) extends Exp
+  case class Hash(e: Exp) extends Exp
 
   sealed abstract class Value extends Exp
   case class Num(n: Int) extends Value
   case class Bool(t: Boolean) extends Value
 
-  sealed abstract class Action {
-    def name: Name
-  }
-  case class Private(name: Name) extends Action
-  case class Publish(name: Name, where: Exp = Bool(true)) extends Action
-  case class Join(single: Boolean = true) extends Action {
-    def name: Name = { "owner" }
-  }
+  case class Public(name: Name, where: Exp = Bool(true))
 
+/* Sugar:
+  sealed abstract case class Action(name: Name)
+  case class Private(override val name: Name) extends Action(name)
+  case class Publish(override val name: Name, where: Exp = Bool(true)) extends Action(name)
+*/
   sealed abstract class Stmt
   case class Assign(name: Name, e: Exp) extends Stmt
 
   case class Fold(exp: Exp, v: Var, init: Value)
 
-  case class LocalStep(action: Action, fold: Option[Fold] = None)
+  case class LocalStep(action: Public, fold: Option[Fold] = None)
 
   case class BigStep(action: Map[Role, LocalStep], timeout: Int, commands: Seq[Stmt])
 
-  case class ProgramRows(steps: Seq[BigStep])
+  case class ProgramRows(roles: Map[Role, Boolean], steps: Seq[BigStep])
 
   case class ProgramCols(
-    cols: Map[Role, Seq[LocalStep]],
+    cols: Map[Role, (Boolean, Seq[LocalStep])],
     progress: Seq[Int],
     global: Seq[Option[Stmt]]
   )
@@ -56,41 +55,35 @@ object Syntax {
 import Syntax._
 
 object Examples {
-  val OddsEvensRows = ProgramRows(Seq(
-    BigStep(
-      action=Map(
-        "OddPlayer"  -> LocalStep(Join()),
-        "EvenPlayer" -> LocalStep(Join())
+  val OddsEvensRows = ProgramRows(
+    Map("Odd" -> true, "Even" -> true),
+    Seq(
+      BigStep(
+        action=Map(
+          "Odd"  -> LocalStep(Public("ch")),
+          "Even" -> LocalStep(Public("ch"))
+        ),
+        timeout=1,
+        commands=Seq[Stmt]()
       ),
-      timeout = -1,
-      commands=Seq[Stmt]()
-    ),
-    BigStep(
-      action=Map(
-        "OddPlayer"  -> LocalStep(Private("c")),
-        "EvenPlayer" -> LocalStep(Private("c"))
-      ),
-      timeout=1,
-      commands=Seq[Stmt]()
-    ),
-    BigStep(
-      action=Map(
-        "OddPlayer"  -> LocalStep(Publish("c")),
-        "EvenPlayer" -> LocalStep(Publish("c"))
-      ),
-      timeout=1,
-      commands=Seq[Stmt](
-        Assign("Winner", BinOp(Op.EQ, Var("OddPlayer", "c"), Var("EvenPlayer", "c")))
+      BigStep(
+        action=Map(
+          "Odd" -> LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Odd", "c")), Var("Odd", "ch")))),
+          "Even" -> LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Even", "c")), Var("Even", "ch"))))
+        ),
+        timeout=1,
+        commands=Seq[Stmt](
+          Assign("Winner", BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))
+        )
       )
-    )
   ))
 
   val OddsEvensCols = ProgramCols(
     Map(
-      "OddPlayer" -> Seq(LocalStep(Join()), LocalStep(Private("c")), LocalStep(Publish("c"))),
-      "EvenPlayer"-> Seq(LocalStep(Join()), LocalStep(Private("c")), LocalStep(Publish("c")))
+      "Odd" -> (true, Seq(LocalStep(Public("ch")), LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Odd",  "c")), Var("Odd",  "ch")))))),
+      "Even"-> (true, Seq(LocalStep(Public("ch")), LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Even", "c")), Var("Even", "ch"))))))
     ),
     Seq(-1, -1, -1),
-    Seq(None, None, Some(Assign("Winner", BinOp(Op.EQ, Var("OddPlayer", "c"), Var("EvenPlayer", "c")))))
+    Seq(None, Some(Assign("Winner", BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
   )
 }
