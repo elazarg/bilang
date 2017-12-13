@@ -9,6 +9,7 @@ object Model {
   type Scope = mutable.Map[Var, Value]
   private val local_objects = Map[(Agent, Role), Scope]()
   private val global: Scope = mutable.Map[Var, Value]()
+  private val next_global: Scope = mutable.Map[Var, Value]()
 
   private val assigned = mutable.Map[Agent, Var]()
   private val owner = mutable.Map[Role, Agent]()
@@ -33,7 +34,7 @@ object Model {
 
     local.put(v, value)
 
-    global += (step.fold match {
+    next_global += (step.fold match {
       case Some(fold) => fold.v -> eval(fold.exp, scope)
       case None       => v -> value
     })
@@ -42,6 +43,9 @@ object Model {
   }
 
   def progress(s: BigStep): Unit = {
+    global ++= next_global
+    next_global.clear()
+
     val declared_vars = (s.action map { case (role, LocalStep(action, _)) => Var(role, action.name) }).toSet
     val assigned_vars = assigned.values.toSet // TODO: perhaps testing fold result is better
     assert(assigned_vars.subsetOf(declared_vars))
@@ -85,9 +89,9 @@ object Model {
     def eval(e: Exp) = Model.eval(e, ctx)
     e match {
       case x @ Num(_) => x
-      case Hash(x) => hash(eval(x))
       case x @ Bool(_) => x
       case v @ Var(_, _) => ctx(v)
+      case Hash(x) => hash(eval(x))
       case UnOp(op, arg) => sem(op)(eval(arg))
       case BinOp(op, left, right) => sem(op)(eval(left), eval(right))
       case IfThenElse(cond, left, right) =>

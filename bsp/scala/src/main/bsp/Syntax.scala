@@ -55,6 +55,9 @@ object Syntax {
 import Syntax._
 
 object Examples {
+  def reveal(role: Name, v: Name, c: Name) = {
+    Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c)))
+  }
   val OddsEvensRows = ProgramRows(
     Map("Odd" -> true, "Even" -> true),
     Seq(
@@ -68,8 +71,8 @@ object Examples {
       ),
       BigStep(
         action=Map(
-          "Odd" -> LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Odd", "c")), Var("Odd", "ch")))),
-          "Even" -> LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Even", "c")), Var("Even", "ch"))))
+          "Odd" -> LocalStep(reveal("Odd", "c", "ch")),
+          "Even" -> LocalStep(reveal("Even", "c", "ch"))
         ),
         timeout=1,
         commands=Seq[Stmt](
@@ -80,8 +83,8 @@ object Examples {
 
   val OddsEvensCols = ProgramCols(
     Map(
-      "Odd" -> (true, Seq(LocalStep(Public("ch")), LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Odd",  "c")), Var("Odd",  "ch")))))),
-      "Even"-> (true, Seq(LocalStep(Public("ch")), LocalStep(Public("c", where = BinOp(Op.EQ, Hash(Var("Even", "c")), Var("Even", "ch"))))))
+      "Odd" -> (true, Seq(LocalStep(Public("ch")), LocalStep(reveal("Odd", "c", "ch")))),
+      "Even"-> (true, Seq(LocalStep(Public("ch")), LocalStep(reveal("Even", "c", "ch"))))
     ),
     Seq(-1, -1, -1),
     Seq(None, Some(Assign("Winner", BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
