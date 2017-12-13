@@ -15,16 +15,15 @@ object Model {
 
   def time = 0
 
-  def receive_request(s: BigStep, sender: Agent, role: Role, value: Value): Unit = {
+  def receive_request(step: LocalStep, sender: Agent, role: Role, value: Value): Unit = {
     // assume each sender must only send one message
-    val step = s.action(role)
     val local = Γ(sender)
 
-    def noReenter(name: Name) (conditions: Var => Unit) = {
+    def noReenter(name: Name) (conditions: Var => Boolean) = {
       val v = Var(role, name)
       require(!assigned.get(sender).contains(v))
-      conditions(v)
-      assigned.put(sender, v)
+      if (owner.get(role).contains(sender) && conditions(v))
+        assigned.put(sender, v)
     }
 
     step.action match {
@@ -33,16 +32,14 @@ object Model {
         owner.put(role, sender)
 
       case Private(name) =>
-        noReenter(name) { _ =>
-          require(owner.get(role).contains(sender))
-        }
+        noReenter(name) { _ => true }
 
       case Publish(name, where) =>
         noReenter(name) { v =>
-          require(owner.get(role).contains(sender))
-          require(hash(value) == local(v))
-          require(eval(where, global ++ local + (v -> value)) != Bool(false))
+          hash(value) == local(v) &&
+          eval(where, global ++ local + (v -> value)) != Bool(false)
         }
+        // FIX: update local?
     }
     // Fix: Fold is required; when not specified (for singleton roles),
     // it is a simple assignment from local to global.
@@ -51,7 +48,7 @@ object Model {
   }
 
   def progress(s: BigStep): Unit = {
-    val declared_vars = (s.action map { case (role, ls) => Var(role, ls.action.name) }).toSet
+    val declared_vars = (s.action map { case (role, LocalStep(action, _)) => Var(role, action.name) }).toSet
     val assigned_vars = assigned.values.toSet // TODO: perhaps testing fold result is better
     assert(assigned_vars.subsetOf(declared_vars))
     require(s.timeout <= time || declared_vars == assigned_vars)
