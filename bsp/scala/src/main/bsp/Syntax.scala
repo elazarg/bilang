@@ -48,17 +48,17 @@ object Syntax {
   case class ProgramCols(
     cols: Map[Role, (Boolean, Seq[LocalStep])],
     progress: Seq[Int],
-    global: Seq[Option[Stmt]]
+    global: Seq[Seq[Stmt]]
   )
 }
 
 import Syntax._
 
 object Examples {
-  def reveal(role: Name, v: Name, c: Name) = {
+  def reveal(role: Name, v: Name, c: Name): Public = {
     Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c)))
   }
-  val OddsEvensRows = ProgramRows(
+  val oddsEvensRows = ProgramRows(
     Map("Odd" -> true, "Even" -> true),
     Seq(
       BigStep(
@@ -81,12 +81,39 @@ object Examples {
       )
   ))
 
-  val OddsEvensCols = ProgramCols(
+  val oddsEvensCols = ProgramCols(
     Map(
       "Odd" -> (true, Seq(LocalStep(Public("ch")), LocalStep(reveal("Odd", "c", "ch")))),
       "Even"-> (true, Seq(LocalStep(Public("ch")), LocalStep(reveal("Even", "c", "ch"))))
     ),
     Seq(-1, -1, -1),
-    Seq(None, Some(Assign("Winner", BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
+    Seq(Seq(), Seq(Assign("Winner", BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
   )
+
+  def transpose(p: ProgramCols) : ProgramRows = {
+    val (roles: Map[Role, Boolean], actions: Seq[Map[Role, LocalStep]]) = p.cols.map {
+      case (role, (single, local_steps)) => (role -> single, local_steps.map( step => role -> step) )
+    }.unzip
+
+    val steps = (actions, p.progress, p.global).zipped.map {
+      case (action, timeout, commands) => BigStep(action.toMap, timeout, commands)
+    }.toSeq
+
+    ProgramRows(roles, steps)
+  }
+
+  def transpose(p: ProgramRows) : ProgramCols = {
+    val cols: Map[Role, (Boolean, Seq[LocalStep])] = p.roles.map {
+      case (role, single) => role -> (single, p.steps.map(_.action(role)))
+    }
+    val progress: Seq[Int] = p.steps.map(_.timeout)
+    val globals: Seq[Seq[Stmt]] = p.steps.map(x=>x.commands)
+
+    ProgramCols(cols, progress, globals)
+  }
+
+  def main(): Unit = {
+    assert(transpose(oddsEvensCols) == oddsEvensRows)
+    assert(transpose(oddsEvensRows) == oddsEvensCols)
+  }
 }
