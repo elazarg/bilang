@@ -11,7 +11,19 @@ case class ProgressPacket() extends Packet
 
 class Model(program: ProgramRows) {
 
-  type Scope = mutable.Map[Var, Value]
+  def receive(packet: Packet): Unit = packet match {
+    case SmallStepPacket(sender, role, value) =>
+      doSmallStep(program.steps(pc).action(role), sender, role, value)
+    case ProgressPacket() =>
+      progress(program.steps(pc))
+      pc += 1
+    case JoinPacket(sender, role) =>
+      require(pc == 0)
+      join(program.roles(role), sender, role)
+      pc = 1
+  }
+
+  private type Scope = mutable.Map[Var, Value]
   private def make_scope () = mutable.Map[Var, Value]()
 
   /// per-owner object
@@ -26,28 +38,14 @@ class Model(program: ProgramRows) {
 
   private var pc = 0
 
-  def time = 0
+  private def time = 0
 
-  def receive(packet: Packet): Unit = {
-    packet match {
-      case SmallStepPacket(sender, role, value) =>
-        val bs = program.steps(pc)
-        doSmallStep(bs.action(role), sender, role, value)
-      case ProgressPacket() =>
-        progress(program.steps(pc))
-        pc += 1
-      case JoinPacket(sender, role) =>
-        require(pc == 0)
-        join(program.roles(role), sender, role)
-    }
-  }
-
-  def join(single: Boolean, sender: Agent, role: RoleName): Unit = {
+  private def join(single: Boolean, sender: Agent, role: RoleName): Unit = {
     if (single) require(!localObjects.contains(role))
     localObjects(role)(sender) = make_scope()
   }
 
-  def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {
+  private def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {
     // assume each sender must only send one message
 
     val local = localObjects(role)(sender)
@@ -64,7 +62,7 @@ class Model(program: ProgramRows) {
     })
   }
 
-  def progress(s: BigStep): Unit = {
+  private def progress(s: BigStep): Unit = {
     require(s.timeout <= time)
     global ++= roleClassScope.values.flatten
     for (Assign(name, exp) <- s.commands) {
@@ -73,9 +71,9 @@ class Model(program: ProgramRows) {
     }
   }
 
-  def require(condition: Boolean): Unit = { }
+  private def require(condition: Boolean): Unit = { }
 
-  def sem(op: Op1) (e: Value) : Value = {
+  private def sem(op: Op1) (e: Value) : Value = {
     (op, e) match {
       case (Op1.NOT, Bool(x)) =>  Bool(!x)
       case (Op1.MINUS, Num(x)) => Num(-x)
@@ -83,7 +81,7 @@ class Model(program: ProgramRows) {
     }
   }
 
-  def sem(op: Op) (left: Value, right: Value) : Value = {
+  private def sem(op: Op) (left: Value, right: Value) : Value = {
     (op, left, right) match {
       case (Op.EQ, _, _) =>  Bool(left == right)
       case (Op.LT, Num(x), Num(y)) => Bool(x < y)
@@ -94,7 +92,7 @@ class Model(program: ProgramRows) {
     }
   }
 
-  def eval(e: Exp, ctx: Scope): Value = {
+  private def eval(e: Exp, ctx: Scope): Value = {
     def eval(e: Exp) = this.eval(e, ctx)
     e match {
       case x : Num => x
@@ -109,6 +107,6 @@ class Model(program: ProgramRows) {
     }
   }
 
-  def hash(value: Value): Num = Num(value.hashCode)
+  private def hash(value: Value): Num = Num(value.hashCode)
 
 }
