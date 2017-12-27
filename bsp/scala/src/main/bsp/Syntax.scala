@@ -1,6 +1,6 @@
 
 object Syntax {
-  type Role = String
+  type RoleName = String
   type Name = String
   type Agent = Int
 
@@ -17,7 +17,7 @@ object Syntax {
   import Op1.Op1
 
   sealed abstract class Exp
-  case class Var(role: Role, name: Name) extends Exp
+  case class Var(role: RoleName, name: Name) extends Exp
   case class BinOp(op: Op, left: Exp, right: Exp) extends Exp
   case class IfThenElse(cond: Exp, left: Exp, right: Exp) extends Exp
   case class UnOp(op: Op1, e: Exp) extends Exp
@@ -27,7 +27,7 @@ object Syntax {
   case class Num(n: Int) extends Value
   case class Bool(t: Boolean) extends Value
 
-  case class Public(name: Name, where: Exp = Bool(true))
+  case class Public(varname: Name, where: Exp = Bool(true))
 
 /* Sugar:
   sealed abstract case class Action(name: Name)
@@ -41,12 +41,12 @@ object Syntax {
 
   case class LocalStep(action: Public, fold: Option[Fold] = None)
 
-  case class BigStep(action: Map[Role, LocalStep], timeout: Int, commands: Seq[Stmt])
+  case class BigStep(action: Map[RoleName, LocalStep], timeout: Int, commands: Seq[Stmt])
 
-  case class ProgramRows(roles: Map[Role, Boolean], steps: Seq[BigStep])
+  case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep])
 
   case class ProgramCols(
-    cols: Map[Role, (Boolean, Seq[LocalStep])],
+    cols: Map[RoleName, (Boolean, Seq[LocalStep])],
     progress: Seq[Int],
     global: Seq[Seq[Stmt]]
   )
@@ -91,7 +91,7 @@ object Examples {
   )
 
   def transpose(p: ProgramCols) : ProgramRows = {
-    val (roles: Map[Role, Boolean], actions: Seq[Map[Role, LocalStep]]) = p.cols.map {
+    val (roles: Map[RoleName, Boolean], actions: Seq[Map[RoleName, LocalStep]]) = p.cols.map {
       case (role, (single, local_steps)) => (role -> single, local_steps.map( step => role -> step) )
     }.unzip
 
@@ -102,15 +102,11 @@ object Examples {
     ProgramRows(roles, steps)
   }
 
-  def transpose(p: ProgramRows) : ProgramCols = {
-    val cols: Map[Role, (Boolean, Seq[LocalStep])] = p.roles.map {
-      case (role, single) => role -> (single, p.steps.map(_.action(role)))
-    }
-    val progress: Seq[Int] = p.steps.map(_.timeout)
-    val globals: Seq[Seq[Stmt]] = p.steps.map(x=>x.commands)
-
-    ProgramCols(cols, progress, globals)
-  }
+  def transpose(p: ProgramRows) = ProgramCols(
+    cols = p.roles.map { case (role, single) => role -> (single, p.steps.map(_.action(role))) },
+    progress = p.steps.map(_.timeout),
+    global = p.steps.map(_.commands)
+  )
 
   def main(): Unit = {
     assert(transpose(oddsEvensCols) == oddsEvensRows)
