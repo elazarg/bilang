@@ -53,15 +53,17 @@ object Syntax {
   )
 
   def transpose(p: ProgramCols) : ProgramRows = {
-    val (roles, actions) = p.cols.map {
-      case (role, (single, local_steps)) => (role -> single, local_steps.map(role -> _).toMap)
-    }.unzip
-
-    val steps = (actions, p.progress, p.global).zipped.map {
-      case (action, timeout, commands) => BigStep(action, timeout, commands)
-    }
-
-    ProgramRows(roles.toMap, steps.toSeq)
+    val indices = p.cols.values.head._2.indices
+    ProgramRows(
+      roles = p.cols.map { case (role, (single, _)) => role -> single },
+      steps = indices.map { i =>
+        BigStep(
+          action = p.cols.keySet.map(role => role -> p.cols(role)._2(i)).toMap,
+          timeout = p.progress(i),
+          commands = p.global(i)
+        )
+      }
+    )
   }
 
   def transpose(p: ProgramRows) = ProgramCols(
