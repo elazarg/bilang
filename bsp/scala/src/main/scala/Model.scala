@@ -4,66 +4,72 @@ import Syntax._
 import Op.Op
 import Op1.Op1
 
-sealed class Packet
+sealed abstract class Packet
 case class JoinPacket(sender: Agent, role: RoleName) extends Packet
 case class SmallStepPacket(sender: Agent, role: RoleName, value: Value) extends Packet
 case class ProgressPacket() extends Packet
 
+object Utils {
+  def hash(value: Value): Num = Num(value.hashCode)
+}
+
 class Model(program: ProgramRows) {
+
+  private var pc = -1
 
   def receive(packet: Packet): Unit = packet match {
     case SmallStepPacket(sender, role, value) =>
       doSmallStep(program.steps(pc).action(role), sender, role, value)
     case ProgressPacket() =>
-      progress(program.steps(pc))
+      if (pc >= 0)
+        progress(program.steps(pc))
       pc += 1
     case JoinPacket(sender, role) =>
-      require(pc == 0)
+      require(pc == -1)
       join(program.roles(role), sender, role)
-      pc = 1
   }
 
   private type Scope = mutable.Map[Var, Value]
-  private def make_scope () = mutable.Map[Var, Value]()
+  private def makeScope () = mutable.Map[Var, Value]()
 
   /// per-owner object
-  private val localObjects = Map[RoleName, mutable.Map[Agent, Scope]]()
+  private val localObjects =
+    program.roles.keys.map(_ -> mutable.Map[Agent, Scope]()).toMap
 
   /// externally visible role variables - one scope per role, "statically allocated"
   /// similar to static variables
   /// consists only of fold variables
-  private val roleClassScope = Map[RoleName, Scope]()
+  private val roleClassScope: Map[RoleName, Scope] =
+    program.roles.keys.map(_ -> makeScope()).toMap
 
-  private val global: Scope = make_scope()
-
-  private var pc = 0
+  private val global: Scope = makeScope()
 
   private def time = 0
 
   private def join(single: Boolean, sender: Agent, role: RoleName): Unit = {
-    if (single) require(!localObjects.contains(role))
-    localObjects(role)(sender) = make_scope()
+    if (single) require(localObjects(role).isEmpty)
+    localObjects(role)(sender) = makeScope()
   }
 
   private def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {
     // assume each sender must only send one message
 
+    val scope = roleClassScope(role)
     val local = localObjects(role)(sender)
     val v = Var(role, step.action.varname)
     require(!local.contains(v))
 
-    require(hash(value) == local(v))
     require(eval(step.action.where, global ++ local + (v -> value)) != Bool(false))
 
     local(v) = value
-    roleClassScope(role) += (step.fold match {
-      case Some(fold) => fold.v -> eval(fold.exp, global ++ local ++ roleClassScope(role))
+    scope += (step.fold match {
+      case Some(fold) => fold.v -> eval(fold.exp, global ++ local ++ scope)
       case None       => v -> value // single user
     })
   }
 
   private def progress(s: BigStep): Unit = {
-    require(s.timeout <= time)
+    require(true || s.timeout <= time)
     global ++= roleClassScope.values.flatten
     for (Assign(name, exp) <- s.commands) {
       global += Var("Global", name) -> eval(exp, global)
@@ -71,7 +77,10 @@ class Model(program: ProgramRows) {
     }
   }
 
-  private def require(condition: Boolean): Unit = { }
+  private def require(condition: Boolean): Unit = {
+    if (!condition)
+      throw new Exception()
+  }
 
   private def sem(op: Op1) (e: Value) : Value = {
     (op, e) match {
@@ -95,10 +104,9 @@ class Model(program: ProgramRows) {
   private def eval(e: Exp, ctx: Scope): Value = {
     def eval(e: Exp) = this.eval(e, ctx)
     e match {
-      case x : Num => x
-      case x : Bool => x
+      case x : Value => x
       case v : Var => ctx(v)
-      case Hash(x) => hash(eval(x))
+      case Hash(x) => Utils.hash(eval(x))
       case UnOp(op, arg) => sem(op)(eval(arg))
       case BinOp(op, left, right) => sem(op)(eval(left), eval(right))
       case IfThenElse(cond, left, right) =>
@@ -107,6 +115,11 @@ class Model(program: ProgramRows) {
     }
   }
 
-  private def hash(value: Value): Num = Num(value.hashCode)
+}
 
+class Network(contract: Model) {
+  def run(packets: Seq[Packet]): Unit = {
+    for (p <- packets)
+      contract.receive(p)
+  }
 }

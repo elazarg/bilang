@@ -26,6 +26,7 @@ object Syntax {
   sealed abstract class Value extends Exp
   case class Num(n: Int) extends Value
   case class Bool(t: Boolean) extends Value
+  case class Tuple(vs: Value*) extends Value
 
   case class Public(varname: Name, where: Exp = Bool(true))
 
@@ -50,56 +51,17 @@ object Syntax {
     progress: Seq[Int],
     global: Seq[Seq[Stmt]]
   )
-}
-
-import Syntax._
-
-object Examples {
-  def reveal(role: Name, v: Name, c: Name): Public = {
-    Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c)))
-  }
-  val oddsEvensRows = ProgramRows(
-    Map("Odd" -> true, "Even" -> true),
-    Seq(
-      BigStep(
-        action=Map(
-          "Odd"  -> LocalStep(Public("ch")),
-          "Even" -> LocalStep(Public("ch"))
-        ),
-        timeout=1,
-        commands=Seq[Stmt]()
-      ),
-      BigStep(
-        action=Map(
-          "Odd" -> LocalStep(reveal("Odd", "c", "ch")),
-          "Even" -> LocalStep(reveal("Even", "c", "ch"))
-        ),
-        timeout=1,
-        commands=Seq[Stmt](
-          Assign("Winner", BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))
-        )
-      )
-  ))
-
-  val oddsEvensCols = ProgramCols(
-    Map(
-      "Odd" -> (true, Seq(LocalStep(Public("ch")), LocalStep(reveal("Odd", "c", "ch")))),
-      "Even"-> (true, Seq(LocalStep(Public("ch")), LocalStep(reveal("Even", "c", "ch"))))
-    ),
-    Seq(-1, -1, -1),
-    Seq(Seq(), Seq(Assign("Winner", BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
-  )
 
   def transpose(p: ProgramCols) : ProgramRows = {
-    val (roles: Map[RoleName, Boolean], actions: Seq[Map[RoleName, LocalStep]]) = p.cols.map {
-      case (role, (single, local_steps)) => (role -> single, local_steps.map( step => role -> step) )
+    val (roles, actions) = p.cols.map {
+      case (role, (single, local_steps)) => (role -> single, local_steps.map(role -> _).toMap)
     }.unzip
 
     val steps = (actions, p.progress, p.global).zipped.map {
-      case (action, timeout, commands) => BigStep(action.toMap, timeout, commands)
-    }.toSeq
+      case (action, timeout, commands) => BigStep(action, timeout, commands)
+    }
 
-    ProgramRows(roles, steps)
+    ProgramRows(roles.toMap, steps.toSeq)
   }
 
   def transpose(p: ProgramRows) = ProgramCols(
@@ -108,8 +70,4 @@ object Examples {
     global = p.steps.map(_.commands)
   )
 
-  def main(): Unit = {
-    assert(transpose(oddsEvensCols) == oddsEvensRows)
-    assert(transpose(oddsEvensRows) == oddsEvensCols)
-  }
 }
