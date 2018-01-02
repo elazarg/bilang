@@ -58,7 +58,7 @@ object Syntax {
       roles = p.cols.map { case (role, (single, _)) => role -> single },
       steps = indices.map { i =>
         BigStep(
-          action = p.cols.keySet.map(role => role -> p.cols(role)._2(i)).toMap,
+          action = p.cols.map { case (role, (_, steps)) => role -> steps(i) },
           timeout = p.progress(i),
           commands = p.global(i)
         )
