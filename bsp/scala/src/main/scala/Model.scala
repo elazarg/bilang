@@ -36,12 +36,6 @@ class Model(program: ProgramRows) {
   private val localObjects =
     program.roles.keys.map(_ -> mutable.Map[Agent, Scope]()).toMap
 
-  /// externally visible role variables - one scope per role, "statically allocated"
-  /// similar to static variables
-  /// consists only of fold variables
-  private val roleClassScope: Map[RoleName, Scope] =
-    program.roles.keys.map(_ -> makeScope()).toMap
-
   private val global: Scope = makeScope()
 
   private def time = 100
@@ -54,7 +48,6 @@ class Model(program: ProgramRows) {
   private def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {
     // assume each sender must only send one message
 
-    val scope = roleClassScope(role)
     val local = localObjects(role)(sender)
     val v = Var(role, step.action.varname)
     require(!local.contains(v))
@@ -66,9 +59,9 @@ class Model(program: ProgramRows) {
     global ++= exec(step.fold.stmts, global ++ local)
   }
 
+
   private def progress(s: BigStep): Unit = {
     require(s.timeout <= time)
-    global ++= roleClassScope.values.flatten
     global ++= exec(s.commands, global)
   }
 
@@ -77,10 +70,10 @@ class Model(program: ProgramRows) {
       throw new Exception()
   }
   def exec(block: Iterable[Stmt], scope: Scope): Scope = {
-    val local = makeScope()
+    val tempScope = makeScope()
     for (Assign(v, exp) <- block)
-      local += v -> eval(exp, scope ++ local)
-    local
+      tempScope += v -> eval(exp, scope ++ tempScope)
+    tempScope
   }
 
   private def applyOp(op: Op1, e: Value) : Value = {
