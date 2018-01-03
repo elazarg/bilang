@@ -5,7 +5,7 @@ object OddsEvens extends Example {
   def reveal(role: Name, v: Name, c: Name): LocalStep = {
     LocalStep(
       Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c))),
-      Fold(Seq(Assign(Var(role, v),  Var(role, c))))
+      Fold(Seq(), Seq(Assign(Var(role, v),  Var(role, c))))
     )
   }
 
@@ -14,8 +14,8 @@ object OddsEvens extends Example {
     Seq(
       BigStep(
         action = Map(
-          "Odd" -> LocalStep(Public("ch"), Fold(Seq(Assign(Var("Odd", "ch"), Var("Odd", "ch"))))),
-          "Even" -> LocalStep(Public("ch"), Fold(Seq(Assign(Var("Even", "ch"), Var("Even", "ch")))))
+          "Odd"  -> singlePublic("Odd", "ch"),
+          "Even" -> singlePublic("Even", "ch"),
         ),
         timeout = 1,
         commands = Seq[Stmt]()
@@ -30,21 +30,19 @@ object OddsEvens extends Example {
           Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))
         )
       )
-    ))
+    )
+  )
+
+  private def singlePublic(role: RoleName, name: Name): LocalStep =
+    LocalStep(Public("ch"), Fold(Seq(), Seq(Assign(Var(role, name), Var(role, name)))))
 
   override val cols = ProgramCols(
     Map(
-      "Odd" -> (true, Seq(
-        LocalStep(Public("ch"), Fold(Seq(Assign(Var("Odd", "ch"), Var("Odd", "ch"))))),
-        reveal("Odd", "c", "ch")
-      )),
-      "Even" -> (true, Seq(
-        LocalStep(Public("ch"), Fold(Seq(Assign(Var("Even", "ch"), Var("Even", "ch"))))),
-        reveal("Even", "c", "ch")
-      ))
+      "Odd" -> (true, Seq(singlePublic("Odd", "ch"),   reveal("Odd", "c", "ch"))),
+      "Even" -> (true, Seq(singlePublic("Even", "ch"), reveal("Even", "c", "ch")))
     ),
     Seq(1, 1), // FIX: no join timeout
-    Seq(Seq(), Seq(Assign(Var("Gloval", "Winner"), BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
+    Seq(Seq(), Seq(Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
   )
 
   val alice: Agent = 0

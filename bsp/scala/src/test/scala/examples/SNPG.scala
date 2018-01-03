@@ -11,18 +11,23 @@ object SNPG extends Example {
         Seq(LocalStep(Public("beth")),
             LocalStep(
               reveal("Player", "bet", "beth"),
-              Fold(Seq(
-                Assign(Var("Glboal", "S"),     BinOp(Op.ADD, Var("Global", "S"),     Var("Player", "bet"))),
-                Assign(Var("Glboal", "Count"), BinOp(Op.ADD, Var("Global", "Count"), Num(1)))
-              ))
+              Fold(
+                inits=Seq(
+                  Assign(Var("Player", "S"), Num(0)),
+                  Assign(Var("Player", "Count"), Num(0))
+                ),
+                stmts=Seq(
+                  Assign(Var("Global", "S"),     BinOp(Op.ADD, Var("Global", "S"),     Var("Player", "bet"))),
+                  Assign(Var("Global", "Count"), BinOp(Op.ADD, Var("Global", "Count"), Num(1)))
+                )
+              )
             )
       )
       ),
     ),
     Seq(1, 1), // FIX: no join timeout
-    Seq(Seq(Assign(Var("Glboal", "S"), Num(0)),
-            Assign(Var("Glboal", "Count"), Num(0))),
-        Seq(Assign(Var("Glboal", "Payment"), BinOp(Op.DIV, Var("Global", "S"), Var("Global", "Count"))))
+    Seq(Seq(),
+        Seq(Assign(Var("Global", "Payment"), BinOp(Op.DIV, Var("Player", "S"), Var("Player", "Count"))))
     )
   )
 

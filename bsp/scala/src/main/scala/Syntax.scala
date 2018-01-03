@@ -38,9 +38,9 @@ object Syntax {
   sealed abstract class Stmt
   case class Assign(name: Var, e: Exp) extends Stmt
 
-  case class Fold(stmts: Seq[Stmt])
+  case class Fold(inits: Seq[Stmt], stmts: Seq[Stmt])
 
-  case class LocalStep(action: Public, fold: Fold = Fold(Seq()))
+  case class LocalStep(action: Public, fold: Fold = Fold(Seq(), Seq()))
 
   case class BigStep(action: Map[RoleName, LocalStep], timeout: Int, commands: Seq[Stmt])
 

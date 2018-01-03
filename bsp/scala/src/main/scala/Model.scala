@@ -18,15 +18,20 @@ class Model(program: ProgramRows) {
   private var pc = -1
 
   def receive(packet: Packet): Unit = packet match {
+    case JoinPacket(sender, role) =>
+      require(pc == -1)
+      join(program.roles(role), sender, role)
+
     case SmallStepPacket(sender, role, value) =>
       doSmallStep(program.steps(pc).action(role), sender, role, value)
+
     case ProgressPacket() =>
       if (pc >= 0)
         progress(program.steps(pc))
       pc += 1
-    case JoinPacket(sender, role) =>
-      require(pc == -1)
-      join(program.roles(role), sender, role)
+      if (program.steps.lengthCompare(pc) < 0)
+        for ((role, step) <- program.steps(pc).action)
+          exec(step.fold.inits, global)
   }
 
   private type Scope = mutable.Map[Var, Value]
