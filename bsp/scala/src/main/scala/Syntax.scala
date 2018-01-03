@@ -6,7 +6,7 @@ object Syntax {
 
   object Op extends Enumeration {
     type Op = Value
-    val EQ, LT, ADD, SUB, MAX = Value
+    val EQ, LT, ADD, SUB, MUL, DIV, MAX = Value
   }
   import Op.Op
 
@@ -36,11 +36,11 @@ object Syntax {
   case class Publish(override val name: Name, where: Exp = Bool(true)) extends Action(name)
 */
   sealed abstract class Stmt
-  case class Assign(name: Name, e: Exp) extends Stmt
+  case class Assign(name: Var, e: Exp) extends Stmt
 
-  case class Fold(exp: Exp, v: Var, init: Value)
+  case class Fold(stmts: Seq[Stmt])
 
-  case class LocalStep(action: Public, fold: Option[Fold] = None)
+  case class LocalStep(action: Public, fold: Fold = Fold(Seq()))
 
   case class BigStep(action: Map[RoleName, LocalStep], timeout: Int, commands: Seq[Stmt])
 

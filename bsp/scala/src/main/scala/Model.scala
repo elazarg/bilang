@@ -44,7 +44,7 @@ class Model(program: ProgramRows) {
 
   private val global: Scope = makeScope()
 
-  private def time = 0
+  private def time = 100
 
   private def join(single: Boolean, sender: Agent, role: RoleName): Unit = {
     if (single) require(localObjects(role).isEmpty)
@@ -62,27 +62,28 @@ class Model(program: ProgramRows) {
     require(eval(step.action.where, global ++ local + (v -> value)) != Bool(false))
 
     local(v) = value
-    scope += (step.fold match {
-      case Some(fold) => fold.v -> eval(fold.exp, global ++ local ++ scope)
-      case None       => v -> value // single user
-    })
+
+    global ++= exec(step.fold.stmts, global ++ local)
   }
 
   private def progress(s: BigStep): Unit = {
-    require(true || s.timeout <= time)
+    require(s.timeout <= time)
     global ++= roleClassScope.values.flatten
-    for (Assign(name, exp) <- s.commands) {
-      global += Var("Global", name) -> eval(exp, global)
-      // fire event here
-    }
+    global ++= exec(s.commands, global)
   }
 
   private def require(condition: Boolean): Unit = {
     if (!condition)
       throw new Exception()
   }
+  def exec(block: Iterable[Stmt], scope: Scope): Scope = {
+    val local = makeScope()
+    for (Assign(v, exp) <- block)
+      local += v -> eval(exp, scope ++ local)
+    local
+  }
 
-  private def sem(op: Op1) (e: Value) : Value = {
+  private def applyOp(op: Op1, e: Value) : Value = {
     (op, e) match {
       case (Op1.NOT, Bool(x)) =>  Bool(!x)
       case (Op1.MINUS, Num(x)) => Num(-x)
@@ -90,7 +91,7 @@ class Model(program: ProgramRows) {
     }
   }
 
-  private def sem(op: Op) (left: Value, right: Value) : Value = {
+  private def applyOp(op: Op, left: Value, right: Value) : Value = {
     (op, left, right) match {
       case (Op.EQ, _, _) =>  Bool(left == right)
       case (Op.LT, Num(x), Num(y)) => Bool(x < y)
@@ -107,8 +108,8 @@ class Model(program: ProgramRows) {
       case x : Value => x
       case v : Var => ctx(v)
       case Hash(x) => Utils.hash(eval(x))
-      case UnOp(op, arg) => sem(op)(eval(arg))
-      case BinOp(op, left, right) => sem(op)(eval(left), eval(right))
+      case UnOp(op, arg) => applyOp(op, eval(arg))
+      case BinOp(op, left, right) => applyOp(op, eval(left), eval(right))
       case IfThenElse(cond, left, right) =>
         val Bool(b) = eval(cond)
         if (b) eval(left) else eval(right)

@@ -1,12 +1,13 @@
-import Examples.{oddsEvensCols, oddsEvensRows}
-import Syntax.transpose
 import org.scalatest.FunSuite
+
+import Syntax.transpose
+import OddsEvens.{cols, rows}
 
 class SyntaxTest extends FunSuite {
   test("Transposing rows to columns") {
-    assert(transpose(oddsEvensRows) === oddsEvensCols)
+    assert(transpose(rows) === cols)
   }
   test("Transposing columns to rows") {
-    assert(transpose(oddsEvensCols) === oddsEvensRows)
+    assert(transpose(cols) === rows)
   }
 }
