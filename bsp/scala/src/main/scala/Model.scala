@@ -9,6 +9,9 @@ case class JoinPacket(sender: Agent, role: RoleName) extends Packet
 case class SmallStepPacket(sender: Agent, role: RoleName, value: Value) extends Packet
 case class ProgressPacket() extends Packet
 
+sealed abstract class Event
+
+
 object Utils {
   def hash(value: Value): Num = Num(value.hashCode)
 }
@@ -17,21 +20,26 @@ class Model(program: ProgramRows) {
 
   private var pc = -1
 
-  def receive(packet: Packet): Unit = packet match {
+  def receive(packet: Packet): Map[Var, Value] = packet match {
     case JoinPacket(sender, role) =>
       require(pc == -1)
       join(program.roles(role), sender, role)
+      Map.empty
 
     case SmallStepPacket(sender, role, value) =>
       doSmallStep(program.steps(pc).action(role), sender, role, value)
+      Map.empty
 
     case ProgressPacket() =>
-      if (pc >= 0)
-        progress(program.steps(pc))
+      val res: Map[Var, Value] = if (pc >= 0) progress(program.steps(pc)) else Map.empty
       pc += 1
-      if (program.steps.lengthCompare(pc) < 0)
-        for ((role, step) <- program.steps(pc).action)
-          exec(step.fold.inits, global)
+
+      if (program.steps.lengthCompare(pc) > 0) {
+        val action = program.steps(pc).action
+        for ((role, step) <- action)
+          global ++= exec(step.fold.inits, global)
+      }
+      res
   }
 
   private type Scope = mutable.Map[Var, Value]
@@ -60,20 +68,21 @@ class Model(program: ProgramRows) {
     require(eval(step.action.where, global ++ local + (v -> value)) != Bool(false))
 
     local(v) = value
-
     global ++= exec(step.fold.stmts, global ++ local)
   }
 
-
-  private def progress(s: BigStep): Unit = {
+  private def progress(s: BigStep): Map[Var, Value] = {
     require(s.timeout <= time)
-    global ++= exec(s.commands, global)
+    val res = exec(s.commands, global).toMap
+    global ++= res
+    res
   }
 
   private def require(condition: Boolean): Unit = {
     if (!condition)
       throw new Exception()
   }
+
   def exec(block: Iterable[Stmt], scope: Scope): Scope = {
     val tempScope = makeScope()
     for (Assign(v, exp) <- block)
@@ -96,6 +105,8 @@ class Model(program: ProgramRows) {
       case (Op.ADD, Num(x), Num(y)) => Num(x + y)
       case (Op.SUB, Num(x), Num(y)) => Num(x - y)
       case (Op.MAX, Num(x), Num(y)) => Num(Math.max(x, y))
+      case (Op.DIV, Num(_), Num(0)) => ???
+      case (Op.DIV, Num(x), Num(y)) => Num(x / y)
       case _ => ???
     }
   }

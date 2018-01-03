@@ -9,25 +9,29 @@ object OddsEvens extends Example {
     )
   }
 
+  private val odd: RoleName = "Odd"
+  private val even: RoleName = "Even"
+  private val global: RoleName = "Global"
+
   override val rows = ProgramRows(
-    Map("Odd" -> true, "Even" -> true),
+    Map(odd -> true, even -> true),
     Seq(
       BigStep(
         action = Map(
-          "Odd"  -> singlePublic("Odd", "ch"),
-          "Even" -> singlePublic("Even", "ch"),
+          odd  -> singlePublic(odd, "ch"),
+          even -> singlePublic(even, "ch"),
         ),
         timeout = 1,
-        commands = Seq[Stmt]()
+        commands = Seq()
       ),
       BigStep(
         action = Map(
-          "Odd" -> reveal("Odd", "c", "ch"),
-          "Even" -> reveal("Even", "c", "ch")
+          odd -> reveal(odd, "c", "ch"),
+          even -> reveal(even, "c", "ch")
         ),
         timeout = 1,
-        commands = Seq[Stmt](
-          Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))
+        commands = Seq(
+          Assign(Var(global, "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))
         )
       )
     )
@@ -38,27 +42,27 @@ object OddsEvens extends Example {
 
   override val cols = ProgramCols(
     Map(
-      "Odd" -> (true, Seq(singlePublic("Odd", "ch"),   reveal("Odd", "c", "ch"))),
-      "Even" -> (true, Seq(singlePublic("Even", "ch"), reveal("Even", "c", "ch")))
+      odd -> (true, Seq(singlePublic(odd, "ch"),   reveal(odd, "c", "ch"))),
+      even -> (true, Seq(singlePublic(even, "ch"), reveal(even, "c", "ch")))
     ),
     Seq(1, 1), // FIX: no join timeout
-    Seq(Seq(), Seq(Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var("Odd", "c"), Var("Even", "c")))))
+    Seq(Seq(), Seq(Assign(Var(global, "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))))
   )
 
   val alice: Agent = 0
   val bob: Agent = 1
 
   val packets = Seq(
-    JoinPacket(alice, "Odd"),
-    JoinPacket(bob, "Even"),
+    JoinPacket(alice, odd),
+    JoinPacket(bob, even),
     ProgressPacket(),
 
-    SmallStepPacket(alice, "Odd", Utils.hash(Num(0))),
-    SmallStepPacket(bob, "Even", Utils.hash(Num(1))),
+    SmallStepPacket(alice, odd, Utils.hash(Num(0))),
+    SmallStepPacket(bob, even, Utils.hash(Num(1))),
     ProgressPacket(),
 
-    SmallStepPacket(alice, "Odd", Num(0)),
-    SmallStepPacket(bob, "Even", Num(1)),
+    SmallStepPacket(alice, odd, Num(0)),
+    SmallStepPacket(bob, even, Num(1)),
     ProgressPacket(),
   )
 }
