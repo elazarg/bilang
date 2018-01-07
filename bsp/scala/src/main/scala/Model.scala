@@ -5,41 +5,45 @@ import Op.Op
 import Op1.Op1
 
 sealed abstract class Packet
-case class JoinPacket(sender: Agent, role: RoleName) extends Packet
-case class SmallStepPacket(sender: Agent, role: RoleName, value: Value) extends Packet
-case class ProgressPacket() extends Packet
+case class JoinPacket(sender: Agent, pc: Int, role: RoleName) extends Packet
+case class SmallStepPacket(sender: Agent, pc: Int, role: RoleName, value: Value) extends Packet
+case class ProgressPacket(pc: Int) extends Packet
+case class DisconnectPacket(sender: Agent, pc: Int, role: RoleName) extends Packet
 
-sealed abstract class Event
 
-
-object Utils {
-  def hash(value: Value): Num = Num(value.hashCode)
+object Model {
+  type Event = Map[Var, Value]
 }
 
 class Model(program: ProgramRows) {
+  var pc: Int = -1
 
-  private var pc = -1
-
-  def receive(packet: Packet): Map[Var, Value] = packet match {
-    case JoinPacket(sender, role) =>
-      require(pc == -1)
+  def receive(packet: Packet): Model.Event = packet match {
+    case JoinPacket(sender, _pc, role) =>
+      require(_pc == -1)
+      require(_pc == pc)
       join(program.roles(role), sender, role)
       Map.empty
 
-    case SmallStepPacket(sender, role, value) =>
+    case SmallStepPacket(sender, _pc, role, value) =>
+      require(_pc == pc)
       doSmallStep(program.steps(pc).action(role), sender, role, value)
       Map.empty
 
-    case ProgressPacket() =>
+    case ProgressPacket(_pc) =>
+      require(_pc == pc)
       val res: Map[Var, Value] = if (pc >= 0) progress(program.steps(pc)) else Map.empty
       pc += 1
 
       if (program.steps.lengthCompare(pc) > 0) {
-        val action = program.steps(pc).action
-        for ((role, step) <- action)
+        for ((_, step) <- program.steps(pc).action)
           global ++= exec(step.fold.inits, global)
       }
       res
+    case DisconnectPacket(_, _pc, _) =>
+      print(_pc, pc)
+      require(_pc == pc)
+      Map.empty
   }
 
   private type Scope = mutable.Map[Var, Value]
@@ -51,7 +55,7 @@ class Model(program: ProgramRows) {
 
   private val global: Scope = makeScope()
 
-  private def time = 100
+  var time = 100
 
   private def join(single: Boolean, sender: Agent, role: RoleName): Unit = {
     if (single) require(localObjects(role).isEmpty)
@@ -125,11 +129,4 @@ class Model(program: ProgramRows) {
     }
   }
 
-}
-
-class Network(contract: Model) {
-  def run(packets: Seq[Packet]): Unit = {
-    for (p <- packets)
-      contract.receive(p)
-  }
 }

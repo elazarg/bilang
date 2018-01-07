@@ -2,7 +2,7 @@
 object Syntax {
   type RoleName = String
   type Name = String
-  type Agent = Int
+  type Agent = Any
 
   object Op extends Enumeration {
     type Op = Value

@@ -42,27 +42,19 @@ object OddsEvens extends Example {
 
   override val cols = ProgramCols(
     Map(
-      odd -> (true, Seq(singlePublic(odd, "ch"),   reveal(odd, "c", "ch"))),
+      odd  -> (true, Seq(singlePublic(odd,  "ch"), reveal(odd,  "c", "ch"))),
       even -> (true, Seq(singlePublic(even, "ch"), reveal(even, "c", "ch")))
     ),
     Seq(1, 1), // FIX: no join timeout
     Seq(Seq(), Seq(Assign(Var(global, "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))))
   )
 
-  val alice: Agent = 0
-  val bob: Agent = 1
+  def player(role: RoleName, n: Int): Strategy = {
+    case List() => JoinPacket(this, -1, role)
+    case List(_) => SmallStepPacket(this, 0, role, Utils.hash(Num(n)))
+    case List(_, _) => SmallStepPacket(this, 1, role, Num(n))
+    case List(_, _, _) => DisconnectPacket(this, 2, role)
+  }
 
-  val packets = Seq(
-    JoinPacket(alice, odd),
-    JoinPacket(bob, even),
-    ProgressPacket(),
-
-    SmallStepPacket(alice, odd, Utils.hash(Num(0))),
-    SmallStepPacket(bob, even, Utils.hash(Num(1))),
-    ProgressPacket(),
-
-    SmallStepPacket(alice, odd, Num(0)),
-    SmallStepPacket(bob, even, Num(1)),
-    ProgressPacket(),
-  )
+  val players: List[Strategy] = List(player("Odd", 0), player("Even", 1))
 }

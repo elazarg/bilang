@@ -39,20 +39,12 @@ object SNPG extends Example {
     Seq(Seq(), Seq(payment))
   )
 
-  val alice: Agent = 0
-  val bob: Agent = 1
+  def player(n: Int): Strategy = {
+    case List() => JoinPacket(this, -1, "Player")
+    case List(_) => SmallStepPacket(this, 0, "Player", Utils.hash(Num(n)))
+    case List(_, _) => SmallStepPacket(this, 1, "Player", Num(n))
+    case List(_, _, _) => DisconnectPacket(this, 2, "Player")
+  }
 
-  val packets = Seq(
-    JoinPacket(alice, "Player"),
-    JoinPacket(bob,   "Player"),
-    ProgressPacket(),
-
-    SmallStepPacket(alice, "Player", Utils.hash(Num(50)) ),
-    SmallStepPacket(bob,   "Player", Utils.hash(Num(150))),
-    ProgressPacket(),
-
-    SmallStepPacket(alice, "Player", Num(50) ),
-    SmallStepPacket(bob,   "Player", Num(150)),
-    ProgressPacket(),
-  )
+  val players = List(player(50), player(150))
 }

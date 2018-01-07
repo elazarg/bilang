@@ -4,5 +4,5 @@ trait Example {
 
   def cols: Syntax.ProgramCols = Syntax.transpose(rows)
 
-  val packets: Seq[Packet]
+  val players: List[Strategy]
 }
