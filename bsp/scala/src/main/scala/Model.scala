@@ -18,32 +18,35 @@ object Model {
 class Model(program: ProgramRows) {
   var pc: Int = -1
 
-  def receive(packet: Packet): Model.Event = packet match {
-    case JoinPacket(sender, _pc, role) =>
-      require(_pc == -1)
-      require(_pc == pc)
-      join(program.roles(role), sender, role)
-      Map.empty
+  def receive(packet: Packet): Option[Model.Event] = {
+    println(packet)
+    packet match {
+      case JoinPacket(sender, _pc, role) =>
+        require(_pc == -1)
+        require(_pc == pc)
+        join(program.roles(role), sender, role)
+        None
 
-    case SmallStepPacket(sender, _pc, role, value) =>
-      require(_pc == pc)
-      doSmallStep(program.steps(pc).action(role), sender, role, value)
-      Map.empty
+      case SmallStepPacket(sender, _pc, role, value) =>
+        require(_pc == pc)
+        doSmallStep(program.steps(pc).action(role), sender, role, value)
+        None
 
-    case ProgressPacket(_pc) =>
-      require(_pc == pc)
-      val res: Map[Var, Value] = if (pc >= 0) progress(program.steps(pc)) else Map.empty
-      pc += 1
+      case ProgressPacket(_pc) =>
+        require(_pc == pc)
+        val res: Map[Var, Value] = if (pc >= 0) progress(program.steps(pc)) else Map.empty
+        pc += 1
 
-      if (program.steps.lengthCompare(pc) > 0) {
-        for ((_, step) <- program.steps(pc).action)
-          global ++= exec(step.fold.inits, global)
-      }
-      res
-    case DisconnectPacket(_, _pc, _) =>
-      print(_pc, pc)
-      require(_pc == pc)
-      Map.empty
+        if (program.steps.lengthCompare(pc) > 0) {
+          for ((_, step) <- program.steps(pc).action)
+            global ++= exec(step.fold.inits, global)
+        }
+        Some(res)
+
+      case DisconnectPacket(_, _pc, _) =>
+        require(_pc == pc)
+        None
+    }
   }
 
   private type Scope = mutable.Map[Var, Value]
@@ -129,4 +132,5 @@ class Model(program: ProgramRows) {
     }
   }
 
+  override def toString: String = (pc, localObjects, global).toString
 }

@@ -1,10 +1,7 @@
+import Model.Event
 import Syntax._
 
 object SNPG extends Example {
-  def reveal(role: Name, v: Name, c: Name): Public = {
-    Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c)))
-  }
-
   private val fold = Fold(
     inits = Seq(
       Assign(Var("Player", "S"), Num(0)),
@@ -15,36 +12,33 @@ object SNPG extends Example {
       Assign(Var("Player", "Count"), BinOp(Op.ADD, Var("Player", "Count"), Num(1)))
     )
   )
+
+  private val commit = LocalStep(Public("beth"))
+  private val reveal = LocalStep(Public("bet", where = BinOp(Op.EQ, Hash(Var("Player", "bet")), Var("Player", "beth"))), fold)
   private val payment = Assign(Var("Global", "Payment"), BinOp(Op.DIV, Var("Player", "S"), Var("Player", "Count")))
 
   override val rows = ProgramRows(
     Map("Player" -> false),
     Seq(
-      BigStep(
-        action = Map("Player"  -> LocalStep(Public("beth"))),
-        timeout = 1,
-        commands = Seq()
-      ),
-      BigStep(
-        action = Map("Player" -> LocalStep(reveal("Player", "bet", "beth"), fold)),
-        timeout = 1,
-        commands = Seq(payment)
-      )
+      BigStep(action = Map("Player" -> commit), timeout = 1, commands = Seq()),
+      BigStep(action = Map("Player" -> reveal), timeout = 1, commands = Seq(payment))
     )
   )
 
   override val cols = ProgramCols(
-    Map("Player" -> (false, Seq(LocalStep(Public("beth")), LocalStep(reveal("Player", "bet", "beth"), fold)))),
+    Map("Player" -> (false, Seq(commit, reveal))),
     Seq(1, 1), // FIX: no join timeout
     Seq(Seq(), Seq(payment))
   )
 
-  def player(n: Int): Strategy = {
-    case List() => JoinPacket(this, -1, "Player")
-    case List(_) => SmallStepPacket(this, 0, "Player", Utils.hash(Num(n)))
-    case List(_, _) => SmallStepPacket(this, 1, "Player", Num(n))
-    case List(_, _, _) => DisconnectPacket(this, 2, "Player")
+  class Player(n: Int) extends Strategy {
+    override def act(events: List[Event]): Packet = events match {
+      case List() => JoinPacket(this, -1, "Player")
+      case List(_) => SmallStepPacket(this, 0, "Player", Utils.hash(Num(n)))
+      case List(_, _) => SmallStepPacket(this, 1, "Player", Num(n))
+      case List(_, _, _) => DisconnectPacket(this, 2, "Player")
+    }
   }
 
-  val players = List(player(50), player(150))
+  val players = List(new Player(50), new Player(150))
 }

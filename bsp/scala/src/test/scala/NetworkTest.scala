@@ -9,14 +9,16 @@ class NetworkTest extends FunSuite {
   }
 
   private def runtest(ex: Example): Unit = {
-    val net = new Network(new Model(ex.rows), ex.players)
+    val model = new Model(ex.rows)
+    val net = new Network(model, ex.players)
 
-    net.clientStep(0);  net.clientStep(1)
-    net.perform(0);     net.perform(1)
-    net.AddProgress(0); net.perform(0)
-
-    net.clientStep(0);  net.clientStep(1)
-    net.perform(0);     net.perform(1)
-    net.AddProgress(0); net.perform(0)
+    def bigstep(): Unit = {
+      net.clientStep(0);  net.clientStep(1)
+      net.perform(0);     net.perform(1)
+      net.AddProgress(0); net.perform(0)
+    }
+    bigstep()
+    bigstep()
+    bigstep()
   }
 }

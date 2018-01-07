@@ -1,4 +1,5 @@
 
+import Model.Event
 import Syntax._
 
 object OddsEvens extends Example {
@@ -49,12 +50,14 @@ object OddsEvens extends Example {
     Seq(Seq(), Seq(Assign(Var(global, "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))))
   )
 
-  def player(role: RoleName, n: Int): Strategy = {
-    case List() => JoinPacket(this, -1, role)
-    case List(_) => SmallStepPacket(this, 0, role, Utils.hash(Num(n)))
-    case List(_, _) => SmallStepPacket(this, 1, role, Num(n))
-    case List(_, _, _) => DisconnectPacket(this, 2, role)
+  class Player(role: RoleName, n: Int) extends Strategy {
+    override def act(events: List[Event]): Packet = events match {
+      case List() => JoinPacket(this, -1, role)
+      case List(_) => SmallStepPacket(this, 0, role, Utils.hash(Num(n)))
+      case List(_, _) => SmallStepPacket(this, 1, role, Num(n))
+      case List(_, _, _) => DisconnectPacket(this, 2, role)
+    }
   }
 
-  val players: List[Strategy] = List(player("Odd", 0), player("Even", 1))
+  val players: List[Strategy] = List(new Player("Odd", 0), new Player("Even", 1))
 }

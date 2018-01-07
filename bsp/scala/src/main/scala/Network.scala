@@ -10,7 +10,8 @@ class Network(contract: Model, players: List[Strategy]) {
 
   def perform(i: Int): Unit = {
     val packet = packets(i).dequeue()
-    events +:= contract.receive(packet)
+    for (event <- contract.receive(packet))
+      events +:= event
   }
 
   def AddProgress(i: Int): Unit = {
