@@ -16,5 +16,6 @@ class NetworkTest extends FunSuite {
       case Progress(i) => net.AddProgress(i)
       case Deliver(i) => net.perform(i)
     }
+    assert(net.events === run.expectedEvents)
   }
 }

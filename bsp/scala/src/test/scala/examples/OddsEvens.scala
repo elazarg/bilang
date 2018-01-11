@@ -54,4 +54,5 @@ object OddsEvensRun extends GameRun {
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
   )
+  val expectedEvents: List[Map[Var, Value]] = List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
 }
