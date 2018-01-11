@@ -44,7 +44,7 @@ object SNPGRun extends GameRun {
   }
 
   val game: Game = SNPG
-  val players = List(new Player(50), new Player(150))
+  val players: List[Strategy] = List(new Player(50), new Player(150))
   val schedule: List[Action] = List(
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),

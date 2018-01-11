@@ -13,7 +13,7 @@ class NetworkTest extends FunSuite {
     val net = new Network(model, run.players)
     run.schedule.foreach {
       case Send(i) => net.clientStep(i)
-      case Progress(i) => net.perform(i)
+      case Progress(i) => net.AddProgress(i)
       case Deliver(i) => net.perform(i)
     }
   }
