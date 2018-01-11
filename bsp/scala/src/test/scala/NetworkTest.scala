@@ -2,23 +2,19 @@ import org.scalatest.FunSuite
 
 class NetworkTest extends FunSuite {
   test("Odds and Evens happy path executes without errors") {
-    runtest(OddsEvens)
+    runtest(OddsEvensRun)
   }
   test("SNPG happy path executes without errors") {
-    runtest(SNPG)
+    runtest(SNPGRun)
   }
 
-  private def runtest(ex: Example): Unit = {
-    val model = new Model(ex.rows)
-    val net = new Network(model, ex.players)
-
-    def bigstep(): Unit = {
-      net.clientStep(0);  net.clientStep(1)
-      net.perform(0);     net.perform(1)
-      net.AddProgress(0); net.perform(0)
+  private def runtest(run: GameRun): Unit = {
+    val model = new Model(run.game.rows)
+    val net = new Network(model, run.players)
+    run.schedule.foreach {
+      case Send(i) => net.clientStep(i)
+      case Progress(i) => net.perform(i)
+      case Deliver(i) => net.perform(i)
     }
-    bigstep()
-    bigstep()
-    bigstep()
   }
 }

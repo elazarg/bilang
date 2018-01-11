@@ -1,7 +1,7 @@
 import Model.Event
 import Syntax._
 
-object SNPG extends Example {
+object SNPG extends Game {
   private val fold = Fold(
     inits = Seq(
       Assign(Var("Player", "S"), Num(0)),
@@ -30,6 +30,9 @@ object SNPG extends Example {
     Seq(1, 1), // FIX: no join timeout
     Seq(Seq(), Seq(payment))
   )
+}
+
+object SNPGRun extends GameRun {
 
   class Player(n: Int) extends Strategy {
     override def act(events: List[Event]): Packet = events match {
@@ -40,5 +43,11 @@ object SNPG extends Example {
     }
   }
 
+  val game: Game = SNPG
   val players = List(new Player(50), new Player(150))
+  val schedule: List[Action] = List(
+    Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
+    Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
+    Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
+  )
 }
