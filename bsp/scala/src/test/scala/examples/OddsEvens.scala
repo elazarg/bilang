@@ -12,9 +12,9 @@ object OddsEvens extends Game {
 
   private val odd: RoleName = "Odd"
   private val even: RoleName = "Even"
-  private val global: RoleName = "Global"
-
-  private val finalCommands = Seq(Assign(Var(global, "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c"))))
+  private val finalCommands = Seq(
+    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))
+  )
 
   private def singlePublic(role: RoleName, name: Name) =
     LocalStep(Public("ch"), Fold(Seq(), Seq(Assign(Var(role, name), Var(role, name)))))

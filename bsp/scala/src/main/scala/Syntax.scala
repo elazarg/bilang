@@ -72,4 +72,38 @@ object Syntax {
     global = p.steps.map(_.commands)
   )
 
+  def validate(p: ProgramCols): Unit = {
+
+  }
+
+  private def checkUseAfterDef(steps: Seq[LocalStep]): Boolean = {
+    // TODO: add global names. Probably easier on ProgramRows, as most other name resolution
+    // TODO: decide access to previous locals of other players
+    val defined = collection.mutable.Set[Name]()
+    for (LocalStep(Public(varname, where), Fold(inits, stmts)) <- steps) {
+      defined += varname
+
+      if (! freeVars(where).subsetOf(defined)) return false
+
+      for (Assign(Var(_, name), e) <- inits) {
+        if (! freeVars(e).subsetOf(defined)) return false
+        defined += name
+      }
+      // stmts can only use, not declare. TODO: add Declare() statement
+      for (Assign(Var(_, name), e) <- stmts) {
+        if (! freeVars(e).subsetOf(defined)) return false
+        if (! defined.contains(name)) return false
+      }
+    }
+    true
+  }
+
+  private def freeVars(exp: Exp): Set[Name] = exp match {
+    case _ : Value => Set()
+    case Var(_, name) => Set(name)
+    case Hash(e) => freeVars(e)
+    case UnOp(_, arg) => freeVars(arg)
+    case BinOp(_, left, right) => freeVars(left) ++ freeVars(right)
+    case IfThenElse(cond, left, right) => freeVars(cond) ++ freeVars(left) ++ freeVars(right)
+  }
 }
