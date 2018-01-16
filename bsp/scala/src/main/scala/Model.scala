@@ -32,14 +32,16 @@ class Model(program: ProgramRows) {
 
     case ProgressPacket(_pc) =>
       require(_pc == pc)
-      val res: Map[Var, Value] = if (pc >= 0) progress(program.steps(pc)) else Map.empty
+      if (pc >= 0)
+        progress(program.steps(pc))
+      val globalsSoFar = global.toMap
       pc += 1
 
       if (program.steps.lengthCompare(pc) > 0) {
         for ((_, step) <- program.steps(pc).action)
           global ++= exec(step.fold.inits, global)
       }
-      Some(res)
+      Some(globalsSoFar)
 
     case DisconnectPacket(_, _pc, _) =>
       require(_pc == pc)
@@ -77,11 +79,9 @@ class Model(program: ProgramRows) {
     global ++= exec(step.fold.stmts, global ++ local)
   }
 
-  private def progress(s: BigStep): Map[Var, Value] = {
+  private def progress(s: BigStep): Unit = {
     require(s.timeout <= time)
-    val res = exec(s.commands, global).toMap
-    global ++= res
-    res
+    global ++= exec(s.commands, global).toMap
   }
 
   private def require(condition: Boolean): Unit = {

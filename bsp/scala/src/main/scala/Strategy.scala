@@ -1,4 +1,4 @@
 
 trait Strategy {
-  def act(events: List[Model.Event]) : Packet
+  def act(events: List[Model.Event]) : Option[Packet]
 }

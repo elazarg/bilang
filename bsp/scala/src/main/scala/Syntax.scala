@@ -43,7 +43,7 @@ object Syntax {
   case class LocalStep(action: Option[Public], fold: Fold = Fold(Seq(), Seq()))
 
   // TODO: commands only at the end? or only for money
-  case class BigStep(action: Map[RoleName, LocalStep], timeout: Int, commands: Seq[Stmt])
+  case class BigStep(action: Map[RoleName, LocalStep], timeout: Int, commands: Seq[Stmt] = Seq())
 
   case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep])
 
@@ -75,7 +75,10 @@ object Syntax {
 
   def validate(rows: ProgramRows): Boolean = {
     val defined = collection.mutable.Set[Name]()
+    val roles = rows.roles.keys.toSet
     for (bigstep <- rows.steps) {
+      if (bigstep.action.keySet != roles)
+        return false
       for ( (role, LocalStep(Some(Public(varname, where)), Fold(inits, stmts)) ) <- bigstep.action ){
         defined += varname
 

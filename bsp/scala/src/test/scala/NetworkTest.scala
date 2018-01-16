@@ -11,7 +11,7 @@ class NetworkTest extends FunSuite {
   }
 
   test("MontyHall happy path executes without errors") {
-    runtest(SNPGRun)
+    runtest(MontyHallRun)
   }
 
   private def runtest(run: GameRun): Unit = {

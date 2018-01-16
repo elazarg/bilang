@@ -27,7 +27,7 @@ object OddsEvens extends Game {
   override val rows = ProgramRows(
     Map(odd -> true, even -> true),
     Seq(
-      BigStep(Map(odd -> oddCh, even -> evenCh), 1, Seq()),
+      BigStep(Map(odd -> oddCh, even -> evenCh), 1),
       BigStep(Map(odd -> oddReveal, even -> evenReveal), 1, finalCommands)
     )
   )
@@ -44,12 +44,12 @@ object OddsEvens extends Game {
 
 object OddsEvensRun extends GameRun {
   class Player(role: RoleName, n: Int) extends Strategy {
-    override def act(events: List[Event]): Packet = events match {
+    override def act(events: List[Event]): Option[Packet] = Some(events match {
       case List() => JoinPacket(this, -1, role)
       case List(_) => SmallStepPacket(this, 0, role, Utils.hash(Num(n)))
       case List(_, _) => SmallStepPacket(this, 1, role, Num(n))
       case List(_, _, _) => DisconnectPacket(this, 2, role)
-    }
+    })
   }
 
   val game: Game = OddsEvens

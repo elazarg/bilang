@@ -13,8 +13,8 @@ object SNPG extends Game {
     )
   )
 
-  private val commit = LocalStep(Public("beth"))
-  private val reveal = LocalStep(Public("bet", where = BinOp(Op.EQ, Hash(Var("Player", "bet")), Var("Player", "beth"))), fold)
+  private val commit = LocalStep(Some(Public("beth")))
+  private val reveal = LocalStep(Some(Public("bet", where = BinOp(Op.EQ, Hash(Var("Player", "bet")), Var("Player", "beth")))), fold)
   private val payment = Assign(Var("Global", "Payment"), BinOp(Op.DIV, Var("Player", "S"), Var("Player", "Count")))
 
   override val rows = ProgramRows(
@@ -35,12 +35,12 @@ object SNPG extends Game {
 object SNPGRun extends GameRun {
 
   class Player(n: Int) extends Strategy {
-    override def act(events: List[Event]): Packet = events match {
+    override def act(events: List[Event]): Option[Packet] = Some(events match {
       case List() => JoinPacket(this, -1, "Player")
       case List(_) => SmallStepPacket(this, 0, "Player", Utils.hash(Num(n)))
       case List(_, _) => SmallStepPacket(this, 1, "Player", Num(n))
       case List(_, _, _) => DisconnectPacket(this, 2, "Player")
-    }
+    })
   }
 
   val game: Game = SNPG

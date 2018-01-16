@@ -12,6 +12,7 @@ object MontyHall extends Game {
   private val host: RoleName = "Host"
   private val guest: RoleName = "Guest"
   private val finalCommands = Seq(
+    Assign(Var("Global", "Car"), Var(host, "Car")),
     Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(host, "c"), Var(guest, "c")))
   )
 
@@ -31,10 +32,10 @@ object MontyHall extends Game {
   override val rows = ProgramRows(
     Map(host -> true, guest -> true),
     Seq(
-      BigStep(Map(host -> hostCarh, guest -> NOP), 1, Seq()),
-      BigStep(Map(host -> NOP, guest -> guestDoor1), 1, Seq()),
-      BigStep(Map(host -> hostGoat, guest -> NOP), 1, Seq()),
-      BigStep(Map(host -> NOP, guest -> guestDoor2), 1, Seq()),
+      BigStep(Map(host -> hostCarh, guest -> NOP), 1),
+      BigStep(Map(host -> NOP, guest -> guestDoor1), 1),
+      BigStep(Map(host -> hostGoat, guest -> NOP), 1),
+      BigStep(Map(host -> NOP, guest -> guestDoor2), 1),
       BigStep(Map(host -> hostReveal, guest -> NOP), 1, finalCommands)
     )
   )
@@ -53,9 +54,10 @@ object MontyHallRun extends GameRun {
   private def other(d1: Int, d2: Int): Int = 3 - d1 - d2
 
   class PlayerHost(role: RoleName, car: Int) extends Strategy {
-    override def act(events: List[Event]): Packet = events match {
-      case List() => JoinPacket(this, -1, role)
-      case List(_) => SmallStepPacket(this, 0, role, Utils.hash(Num(car)))
+    override def act(events: List[Event]): Option[Packet] = events match {
+      case List() => Some(JoinPacket(this, -1, role))
+      case List(_) => Some(SmallStepPacket(this, 0, role, Utils.hash(Num(car))))
+      case List(_, _) => None
       case List(_, _, m) =>
         val Num(door1) = m(Var("Guest", "door1"))
         val goat =
@@ -63,30 +65,36 @@ object MontyHallRun extends GameRun {
             if (new util.Random(15).nextBoolean()) (car+1)%3 else (car-1)%3
           else
             other(car, door1)
-        SmallStepPacket(this, 1, role, Num(goat))
-      case List(_, _, _, _, _) => SmallStepPacket(this, 1, role, Num(car))
+        Some(SmallStepPacket(this, 2, role, Num(goat)))
+      case List(_, _, _, _) => None
+      case List(_, _, _, _, _) => Some(SmallStepPacket(this, 4, role, Num(car)))
     }
   }
 
   class PlayerGuest(role: RoleName, door1: Int, switch: Boolean) extends Strategy {
-    override def act(events: List[Event]): Packet = events match {
-      case List() => JoinPacket(this, -1, role)
-      case List(_, _) => SmallStepPacket(this, 1, role, Num(door1))
+    override def act(events: List[Event]): Option[Packet] = events match {
+      case List() => Some(JoinPacket(this, -1, role))
+      case List(_) => None
+      case List(_, _) => Some(SmallStepPacket(this, 1, role, Num(door1)))
+      case List(_, _, _) => None
       case List(_, _, _, m) =>
         val Num(goat) = m(Var("Host", "goat"))
         val door2 = if (switch) other(goat, door1) else door1
-        SmallStepPacket(this, 1, role, Num(door2))
+        Some(SmallStepPacket(this, 3, role, Num(door2)))
+      case List(_, _, _, _, _) => None
     }
   }
 
   val game: Game = MontyHall
   val players: List[Strategy] = List(new PlayerHost("Host", 0), new PlayerGuest("Guest", 0, true))
-  val schedule: List[Action] = List( // TODO: make progress decision part of the strategy
-    Send(0), Deliver(0), Progress(0), Deliver(0),
-    Send(1), Deliver(1), Progress(1), Deliver(1),
-    Send(0), Deliver(0), Progress(0), Deliver(0),
-    Send(1), Deliver(1), Progress(1), Deliver(1),
-    Send(0), Deliver(0), Progress(0), Deliver(0),
+  val schedule: List[Action] = List(
+    Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
+
+    Send(0), Deliver(0), Progress(0), Deliver(0), // carh
+    Send(1), Deliver(1), Progress(1), Deliver(1), // door1
+    Send(0), Deliver(0), Progress(0), Deliver(0), // goat
+    Send(1), Deliver(1), Progress(1), Deliver(1), // door2
+    Send(0), Deliver(0), Progress(0), Deliver(0), // car
   )
   val expectedEvents: List[Map[Var, Value]] = List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
 }
