@@ -4,12 +4,12 @@ import Syntax.transpose
 
 class SyntaxTest extends FunSuite {
   test("Transposing rows to columns") {
-    rowsToCols(OddsEvens)
+    rowsToCols(MontyHall)
     rowsToCols(SNPG)
   }
 
   test("Transposing columns to rows") {
-    colsToRows(OddsEvens)
+    colsToRows(MontyHall)
     colsToRows(SNPG)
   }
 

@@ -5,7 +5,7 @@ import Syntax._
 object OddsEvens extends Game {
   def reveal(role: Name, v: Name, c: Name): LocalStep = {
     LocalStep(
-      Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c))),
+      Some(Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c)))),
       Fold(Seq(), Seq(Assign(Var(role, v), Var(role, c))))
     )
   }
@@ -16,21 +16,26 @@ object OddsEvens extends Game {
     Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))
   )
 
-  private def singlePublic(role: RoleName, name: Name) =
-    LocalStep(Public("ch"), Fold(Seq(), Seq(Assign(Var(role, name), Var(role, name)))))
+  private def singlePublic(role: RoleName) =
+    LocalStep(Some(Public("ch")), Fold(Seq(), Seq(Assign(Var(role, "ch"), Var(role, "ch")))))
+
+  private val oddCh: LocalStep = singlePublic(odd)
+  private val evenCh: LocalStep = singlePublic(even)
+  private val oddReveal: LocalStep = reveal(odd, "c", "ch")
+  private val evenReveal: LocalStep = reveal(even, "c", "ch")
 
   override val rows = ProgramRows(
     Map(odd -> true, even -> true),
     Seq(
-      BigStep(Map(odd -> singlePublic(odd, "ch"), even -> singlePublic(even, "ch")), 1, Seq()),
-      BigStep(Map(odd -> reveal(odd, "c", "ch"), even -> reveal(even, "c", "ch")), 1, finalCommands)
+      BigStep(Map(odd -> oddCh, even -> evenCh), 1, Seq()),
+      BigStep(Map(odd -> oddReveal, even -> evenReveal), 1, finalCommands)
     )
   )
 
   override val cols = ProgramCols(
     Map(
-      odd -> (true, Seq(singlePublic(odd, "ch"), reveal(odd, "c", "ch"))),
-      even -> (true, Seq(singlePublic(even, "ch"), reveal(even, "c", "ch")))
+      odd -> (true, Seq(oddCh, oddReveal)),
+      even -> (true, Seq(evenCh, evenReveal))
     ),
     Seq(1, 1), // FIX: no join timeout
     Seq(Seq(), finalCommands)

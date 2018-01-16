@@ -64,12 +64,14 @@ class Model(program: ProgramRows) {
 
   private def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {
     // assume each sender must only send one message
+    if (step.action.isEmpty) return
+    val action = step.action.get
 
     val local = localObjects(role)(sender)
-    val v = Var(role, step.action.varname)
+    val v = Var(role, action.varname)
     require(!local.contains(v))
 
-    require(eval(step.action.where, global ++ local + (v -> value)) != Bool(false))
+    require(eval(action.where, global ++ local + (v -> value)) != Bool(false))
 
     local(v) = value
     global ++= exec(step.fold.stmts, global ++ local)

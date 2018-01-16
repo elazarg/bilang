@@ -40,8 +40,9 @@ object Syntax {
 
   case class Fold(inits: Seq[Stmt], stmts: Seq[Stmt])
 
-  case class LocalStep(action: Public, fold: Fold = Fold(Seq(), Seq()))
+  case class LocalStep(action: Option[Public], fold: Fold = Fold(Seq(), Seq()))
 
+  // TODO: commands only at the end? or only for money
   case class BigStep(action: Map[RoleName, LocalStep], timeout: Int, commands: Seq[Stmt])
 
   case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep])
@@ -72,31 +73,28 @@ object Syntax {
     global = p.steps.map(_.commands)
   )
 
-  def validate(p: ProgramCols): Unit = {
-
-  }
-
-  private def checkUseAfterDef(steps: Seq[LocalStep]): Boolean = {
-    // TODO: add global names. Probably easier on ProgramRows, as most other name resolution
-    // TODO: decide access to previous locals of other players
+  def validate(rows: ProgramRows): Boolean = {
     val defined = collection.mutable.Set[Name]()
-    for (LocalStep(Public(varname, where), Fold(inits, stmts)) <- steps) {
-      defined += varname
+    for (bigstep <- rows.steps) {
+      for ( (role, LocalStep(Some(Public(varname, where)), Fold(inits, stmts)) ) <- bigstep.action ){
+        defined += varname
 
-      if (! freeVars(where).subsetOf(defined)) return false
+        if (! freeVars(where).subsetOf(defined)) return false
 
-      for (Assign(Var(_, name), e) <- inits) {
-        if (! freeVars(e).subsetOf(defined)) return false
-        defined += name
-      }
-      // stmts can only use, not declare. TODO: add Declare() statement
-      for (Assign(Var(_, name), e) <- stmts) {
-        if (! freeVars(e).subsetOf(defined)) return false
-        if (! defined.contains(name)) return false
+        for (Assign(Var(_, name), e) <- inits) {
+          if (! freeVars(e).subsetOf(defined)) return false
+          defined += name
+        }
+        // stmts can only use names, not declare names. TODO: add Declare() statement
+        for (Assign(Var(_, name), e) <- stmts) {
+          if (! freeVars(e).subsetOf(defined)) return false
+          if (! defined.contains(name)) return false
+        }
       }
     }
     true
   }
+
 
   private def freeVars(exp: Exp): Set[Name] = exp match {
     case _ : Value => Set()

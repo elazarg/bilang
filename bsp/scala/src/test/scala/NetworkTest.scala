@@ -1,10 +1,16 @@
 import org.scalatest.FunSuite
 
 class NetworkTest extends FunSuite {
+
   test("Odds and Evens happy path executes without errors") {
     runtest(OddsEvensRun)
   }
+
   test("SNPG happy path executes without errors") {
+    runtest(SNPGRun)
+  }
+
+  test("MontyHall happy path executes without errors") {
     runtest(SNPGRun)
   }
 
