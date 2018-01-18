@@ -52,30 +52,28 @@ object MontyHallRun extends GameRun {
   private val doors = Set(0, 1, 2)
   def chooseExcept(d1: Int, d2: Int): Int = new util.Random(15).shuffle(doors -- Set(d1, d2)).head
 
-  class PlayerHost(role: RoleName, car: Int) extends Strategy {
-    override def act(events: List[Event]): Option[Packet] = events match {
-      case List() => Some(JoinPacket(this, -1, role))
-      case List(_) => Some(SmallStepPacket(this, 0, role, Utils.hash(Num(car))))
+  class PlayerHost(val role: RoleName, car: Int) extends SimpleStrategy {
+    override def actSimple(events: List[Event]): Option[Value] = events match {
+      case List(_) => Some(Utils.hash(Num(car)))
       case List(_, _) => None
-      case List(_, _, m) =>
-        val Num(door1) = m.static(Var("Guest", "door1"))
+      case List(_, _, env) =>
+        val Num(door1) = env.static(Var("Guest", "door1"))
         val goat = chooseExcept(door1, car)
-        Some(SmallStepPacket(this, 2, role, Num(goat)))
+        Some(Num(goat))
       case List(_, _, _, _) => None
-      case List(_, _, _, _, _) => Some(SmallStepPacket(this, 4, role, Num(car)))
+      case List(_, _, _, _, _) => Some(Num(car))
     }
   }
 
-  class PlayerGuest(role: RoleName, door1: Int, switch: Boolean) extends Strategy {
-    override def act(events: List[Event]): Option[Packet] = events match {
-      case List() => Some(JoinPacket(this, -1, role))
+  class PlayerGuest(val role: RoleName, door1: Int, switch: Boolean) extends SimpleStrategy {
+    override def actSimple(events: List[Event]): Option[Value] = events match {
       case List(_) => None
-      case List(_, _) => Some(SmallStepPacket(this, 1, role, Num(door1)))
+      case List(_, _) => Some(Num(door1))
       case List(_, _, _) => None
-      case List(_, _, _, m) =>
-        val Num(goat) = m.static(Var("Host", "goat"))
+      case List(_, _, _, env) =>
+        val Num(goat) = env.static(Var("Host", "goat"))
         val door2 = if (switch) chooseExcept(goat, door1) else door1
-        Some(SmallStepPacket(this, 3, role, Num(door2)))
+        Some(Num(door2))
       case List(_, _, _, _, _) => None
     }
   }
