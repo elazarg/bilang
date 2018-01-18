@@ -3,17 +3,17 @@ import Model.Event
 import Syntax._
 
 object OddsEvens extends Game {
-  def reveal(role: Name, v: Name, c: Name): LocalStep = {
+  def reveal(role: Name): LocalStep = {
     LocalStep(
-      Some(Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c)))),
-      Fold(Seq(), Seq(Assign(Var(role, v), Var(role, c))))
+      Some(Public("c", where = BinOp(Op.EQ, Hash(Var(role, "c")), Var(role, "ch")))),
+      Fold(Seq(), Seq(Assign(Var(role, "c"), Var(role, "ch"))))
     )
   }
 
   private val odd: RoleName = "Odd"
   private val even: RoleName = "Even"
   private val finalCommands = Seq(
-    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))
+    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(odd, "ch"), Var(even, "ch")))
   )
 
   private def singlePublic(role: RoleName) =
@@ -21,15 +21,16 @@ object OddsEvens extends Game {
 
   private val oddCh: LocalStep = singlePublic(odd)
   private val evenCh: LocalStep = singlePublic(even)
-  private val oddReveal: LocalStep = reveal(odd, "c", "ch")
-  private val evenReveal: LocalStep = reveal(even, "c", "ch")
+  private val oddReveal: LocalStep = reveal(odd)
+  private val evenReveal: LocalStep = reveal(even)
 
   override val rows = ProgramRows(
     Map(odd -> true, even -> true),
     Seq(
       BigStep(Map(odd -> oddCh, even -> evenCh), 1),
-      BigStep(Map(odd -> oddReveal, even -> evenReveal), 1, finalCommands)
-    )
+      BigStep(Map(odd -> oddReveal, even -> evenReveal), 1)
+    ),
+    finalCommands
   )
 
   override val cols = ProgramCols(
@@ -38,12 +39,12 @@ object OddsEvens extends Game {
       even -> (true, Seq(evenCh, evenReveal))
     ),
     Seq(1, 1), // FIX: no join timeout
-    Seq(Seq(), finalCommands)
+    finalCommands
   )
 }
 
 object OddsEvensRun extends GameRun {
-  class Player(role: RoleName, n: Int) extends Strategy {
+  class Player(role: RoleName, n: Int) extends AnyRef with Strategy {
     override def act(events: List[Event]): Option[Packet] = Some(events match {
       case List() => JoinPacket(this, -1, role)
       case List(_) => SmallStepPacket(this, 0, role, Utils.hash(Num(n)))

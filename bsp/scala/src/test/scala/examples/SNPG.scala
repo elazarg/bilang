@@ -15,20 +15,21 @@ object SNPG extends Game {
 
   private val commit = LocalStep(Some(Public("beth")))
   private val reveal = LocalStep(Some(Public("bet", where = BinOp(Op.EQ, Hash(Var("Player", "bet")), Var("Player", "beth")))), fold)
-  private val payment = Assign(Var("Global", "Payment"), BinOp(Op.DIV, Var("Player", "S"), Var("Player", "Count")))
+  private val finalCommands = Seq(Assign(Var("Global", "Payment"), BinOp(Op.DIV, Var("Player", "S"), Var("Player", "Count"))))
 
   override val rows = ProgramRows(
     Map("Player" -> false),
     Seq(
-      BigStep(action = Map("Player" -> commit), timeout = 1, commands = Seq()),
-      BigStep(action = Map("Player" -> reveal), timeout = 1, commands = Seq(payment))
-    )
+      BigStep(action = Map("Player" -> commit), timeout = 1),
+      BigStep(action = Map("Player" -> reveal), timeout = 1)
+    ),
+    finalCommands
   )
 
   override val cols = ProgramCols(
     Map("Player" -> (false, Seq(commit, reveal))),
     Seq(1, 1), // FIX: no join timeout
-    Seq(Seq(), Seq(payment))
+    finalCommands
   )
 }
 

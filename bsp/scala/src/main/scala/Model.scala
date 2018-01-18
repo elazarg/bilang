@@ -12,56 +12,79 @@ case class DisconnectPacket(sender: Agent, pc: Int, role: RoleName) extends Pack
 
 
 object Model {
-  type Event = Map[Var, Value]
+  type Event = StepState
+}
+
+case class StepState (
+  val static: Map[Var, Value],
+  val objects: Map[Agent, Map[Var, Value]]
+)
+
+class PendingStepState {
+  val static = mutable.Map[Var, Value]()
+  val objects = mutable.Map[Agent, mutable.Map[Var, Value]]()
+
+  def freezeAndClear(): StepState = {
+    val res = StepState(
+      static=static.toMap,
+      objects=objects.map{ case (k, v) => k -> v.toMap }.toMap
+    )
+    static.clear()
+    objects.values.foreach(_.clear())
+    res
+  }
 }
 
 class Model(program: ProgramRows) {
-  var pc: Int = -1
+  var state: List[StepState] = List()
 
-  def receive(packet: Packet): Option[Model.Event] = packet match {
+  private val pendingState = new PendingStepState()
+
+  def pc: Int = state.size - 1
+
+  def receive(packet: Packet): Unit = packet match {
     case JoinPacket(sender, _pc, role) =>
       require(_pc == -1)
       require(_pc == pc)
       join(program.roles(role), sender, role)
-      None
 
     case SmallStepPacket(sender, _pc, role, value) =>
       require(_pc == pc)
       doSmallStep(program.steps(pc).action(role), sender, role, value)
-      None
 
     case ProgressPacket(_pc) =>
       require(_pc == pc)
       if (pc >= 0)
         progress(program.steps(pc))
-      val globalsSoFar = global.toMap
-      pc += 1
-
-      if (program.steps.lengthCompare(pc) > 0) {
+      state :+= pendingState.freezeAndClear()
+      if (program.steps.lengthCompare(pc) > 0) { // pc < steps.size
         for ((_, step) <- program.steps(pc).action)
-          global ++= exec(step.fold.inits, global)
+          execFold(step.fold.inits)
+      } else {
+        exec(program.finalCommands)
       }
-      Some(globalsSoFar)
 
     case DisconnectPacket(_, _pc, _) =>
       require(_pc == pc)
-      None
   }
-
-  private type Scope = mutable.Map[Var, Value]
-  private def makeScope () = mutable.Map[Var, Value]()
-
-  /// per-owner object
-  private val localObjects =
-    program.roles.keys.map(_ -> mutable.Map[Agent, Scope]()).toMap
-
-  private val global: Scope = makeScope()
 
   var time = 100
 
   private def join(single: Boolean, sender: Agent, role: RoleName): Unit = {
-    if (single) require(localObjects(role).isEmpty)
-    localObjects(role)(sender) = makeScope()
+    if (single) require(pendingState.objects.get(sender).isEmpty)
+    pendingState.objects(sender) = mutable.Map[Var, Value]()
+  }
+
+  private def lookup(v: Var, maybeAgent: Option[Agent] = None): Value = {
+    for (s <- state.reverse) {
+      for (agent <- maybeAgent)
+        for (res <- s.objects(agent).get(v))
+          return res
+      for (res <- s.static.get(v))
+        return res
+    }
+    throw new Exception(v.toString + " not found")
+    ???
   }
 
   private def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {
@@ -69,19 +92,28 @@ class Model(program: ProgramRows) {
     if (step.action.isEmpty) return
     val action = step.action.get
 
-    val local = localObjects(role)(sender)
     val v = Var(role, action.varname)
-    require(!local.contains(v))
+    require(!pendingState.objects.contains( (sender, v) ))
 
-    require(eval(action.where, global ++ local + (v -> value)) != Bool(false))
+    def ctx(v1: Var): Value =
+      if (v == v1) value else lookup(v1, Some(sender))
 
-    local(v) = value
-    global ++= exec(step.fold.stmts, global ++ local)
+    require(eval(action.where, ctx) == Bool(true))
+
+    pendingState.objects(sender)(v) = value
+    execFold(step.fold.stmts, ctx)
+  }
+
+  private def execFold(stmts: Seq[Stmt], ctx: Var => Value = lookup(_, None)): Unit = {
+    println(stmts)
+    // Lookup on fold should consider pending state. This is not the elegant solution though
+    val more = exec(stmts, v=> pendingState.static.getOrElse(v, ctx(v)))
+    println(" -> " + more)
+    pendingState.static ++= more
   }
 
   private def progress(s: BigStep): Unit = {
     require(s.timeout <= time)
-    global ++= exec(s.commands, global).toMap
   }
 
   private def require(condition: Boolean): Unit = {
@@ -89,11 +121,11 @@ class Model(program: ProgramRows) {
       throw new Exception()
   }
 
-  def exec(block: Iterable[Stmt], scope: Scope): Scope = {
-    val tempScope = makeScope()
+  def exec(block: Iterable[Stmt], ctx: Var => Value = lookup(_, None)): Map[Var, Value] = {
+    val tempScope = mutable.Map[Var, Value]()
     for (Assign(v, exp) <- block)
-      tempScope += v -> eval(exp, scope ++ tempScope)
-    tempScope
+      tempScope += v -> eval(exp, v => tempScope.getOrElse(v, ctx(v)))
+    tempScope.toMap
   }
 
   private def applyOp(op: Op1, e: Value) : Value = {
@@ -117,7 +149,7 @@ class Model(program: ProgramRows) {
     }
   }
 
-  private def eval(e: Exp, ctx: Scope): Value = {
+  private def eval(e: Exp, ctx: Var => Value): Value = {
     def eval(e: Exp) = this.eval(e, ctx)
     e match {
       case x : Value => x
@@ -131,5 +163,5 @@ class Model(program: ProgramRows) {
     }
   }
 
-  override def toString: String = (pc, localObjects, global).toString
+  override def toString: String = (state, pendingState).toString
 }

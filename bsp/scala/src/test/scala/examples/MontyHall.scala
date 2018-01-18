@@ -12,19 +12,16 @@ object MontyHall extends Game {
   private val host: RoleName = "Host"
   private val guest: RoleName = "Guest"
   private val finalCommands = Seq(
-    Assign(Var("Global", "Car"), Var(host, "Car")),
-    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(host, "c"), Var(guest, "c")))
+    Assign(Var("Global", "Car"), Var(host, "car")),
+    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(host, "car"), Var(guest, "door2")))
   )
 
-  private def singlePublic(role: RoleName, v: Name) =
-    LocalStep(Some(Public(v)), Fold(Seq(), Seq(Assign(Var(role, v), Var(role, v)))))
+  private def singlePublic(role: RoleName, v: Name, where : Exp = Bool(true)) =
+    LocalStep(Some(Public(v, where)), Fold(Seq(), Seq(Assign(Var(role, v), Var(role, v)))))
 
   private val hostCarh: LocalStep = singlePublic(host, "carh")
   private val guestDoor1: LocalStep = singlePublic(guest, "door1")
-  private val hostGoat: LocalStep = LocalStep(
-    Some(Public("goat", where = UnOp(Op1.NOT, BinOp(Op.EQ, Var("Host", "goat"), Var("Guest", "door1"))))),
-    Fold(Seq(), Seq(Assign(Var("Host", "goat"), Var("Host", "goat"))))
-  )
+  private val hostGoat: LocalStep = singlePublic(host, "goat", where = UnOp(Op1.NOT, BinOp(Op.EQ, Var("Host", "goat"), Var("Guest", "door1"))))
   private val guestDoor2: LocalStep = singlePublic(guest, "door2")
   private val hostReveal: LocalStep = reveal(host, "car", "carh")
 
@@ -36,8 +33,9 @@ object MontyHall extends Game {
       BigStep(Map(host -> NOP, guest -> guestDoor1), 1),
       BigStep(Map(host -> hostGoat, guest -> NOP), 1),
       BigStep(Map(host -> NOP, guest -> guestDoor2), 1),
-      BigStep(Map(host -> hostReveal, guest -> NOP), 1, finalCommands)
-    )
+      BigStep(Map(host -> hostReveal, guest -> NOP), 1)
+    ),
+    finalCommands
   )
 
   override val cols = ProgramCols(
@@ -46,12 +44,13 @@ object MontyHall extends Game {
       guest -> (true, Seq(NOP, guestDoor1, NOP, guestDoor2, NOP))
     ),
     Seq(1, 1), // FIX: no join timeout
-    Seq(Seq(), finalCommands)
+    finalCommands
   )
 }
 
 object MontyHallRun extends GameRun {
-  private def other(d1: Int, d2: Int): Int = 3 - d1 - d2
+  private val doors = Set(0, 1, 2)
+  def chooseExcept(d1: Int, d2: Int): Int = new util.Random(15).shuffle(doors -- Set(d1, d2)).head
 
   class PlayerHost(role: RoleName, car: Int) extends Strategy {
     override def act(events: List[Event]): Option[Packet] = events match {
@@ -59,12 +58,8 @@ object MontyHallRun extends GameRun {
       case List(_) => Some(SmallStepPacket(this, 0, role, Utils.hash(Num(car))))
       case List(_, _) => None
       case List(_, _, m) =>
-        val Num(door1) = m(Var("Guest", "door1"))
-        val goat =
-          if (door1 == car)
-            if (new util.Random(15).nextBoolean()) (car+1)%3 else (car-1)%3
-          else
-            other(car, door1)
+        val Num(door1) = m.static(Var("Guest", "door1"))
+        val goat = chooseExcept(door1, car)
         Some(SmallStepPacket(this, 2, role, Num(goat)))
       case List(_, _, _, _) => None
       case List(_, _, _, _, _) => Some(SmallStepPacket(this, 4, role, Num(car)))
@@ -78,8 +73,8 @@ object MontyHallRun extends GameRun {
       case List(_, _) => Some(SmallStepPacket(this, 1, role, Num(door1)))
       case List(_, _, _) => None
       case List(_, _, _, m) =>
-        val Num(goat) = m(Var("Host", "goat"))
-        val door2 = if (switch) other(goat, door1) else door1
+        val Num(goat) = m.static(Var("Host", "goat"))
+        val door2 = if (switch) chooseExcept(goat, door1) else door1
         Some(SmallStepPacket(this, 3, role, Num(door2)))
       case List(_, _, _, _, _) => None
     }

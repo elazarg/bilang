@@ -2,7 +2,7 @@ import scala.collection.mutable
 
 class Network(contract: Model, players: List[Strategy]) {
   private val packets = players.map(_=> mutable.Queue[Packet]())
-  var events: List[Model.Event] = List[Model.Event]()
+  def events: List[Model.Event] = contract.state
 
   def clientStep(i: Int): Unit = {
     for (packet <- players(i).act(events)) {
@@ -12,8 +12,7 @@ class Network(contract: Model, players: List[Strategy]) {
 
   def perform(i: Int): Unit = {
     val packet = packets(i).dequeue()
-    for (event <- contract.receive(packet))
-      events :+= event
+    contract.receive(packet)
   }
 
   def AddProgress(i: Int): Unit = {

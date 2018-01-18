@@ -1,4 +1,7 @@
 
+// TODO: STATIC BINDING! yes, as an implementation detail. But static. binding.
+
+
 object Syntax {
   type RoleName = String
   type Name = String
@@ -43,14 +46,14 @@ object Syntax {
   case class LocalStep(action: Option[Public], fold: Fold = Fold(Seq(), Seq()))
 
   // TODO: commands only at the end? or only for money
-  case class BigStep(action: Map[RoleName, LocalStep], timeout: Int, commands: Seq[Stmt] = Seq())
+  case class BigStep(action: Map[RoleName, LocalStep], timeout: Int)
 
-  case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep])
+  case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep], finalCommands: Seq[Stmt] = Seq())
 
   case class ProgramCols(
     cols: Map[RoleName, (Boolean, Seq[LocalStep])],
     progress: Seq[Int],
-    global: Seq[Seq[Stmt]]
+    finalCommands: Seq[Stmt] = Seq()
   )
 
   def transpose(p: ProgramCols) : ProgramRows = {
@@ -60,17 +63,17 @@ object Syntax {
       steps = indices.map { i =>
         BigStep(
           action = p.cols.map { case (role, (_, steps)) => role -> steps(i) },
-          timeout = p.progress(i),
-          commands = p.global(i)
+          timeout = p.progress(i)
         )
-      }
+      },
+      finalCommands = p.finalCommands
     )
   }
 
   def transpose(p: ProgramRows) = ProgramCols(
     cols = p.roles.map { case (role, single) => role -> (single, p.steps.map(_.action(role))) },
     progress = p.steps.map(_.timeout),
-    global = p.steps.map(_.commands)
+    finalCommands = p.finalCommands
   )
 
   def validate(rows: ProgramRows): Boolean = {
