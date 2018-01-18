@@ -35,13 +35,13 @@ object SNPG extends Game {
 
 object SNPGRun extends GameRun {
 
-  class Player(n: Int) extends Strategy {
-    override def act(events: List[Event]): Option[Packet] = Some(events match {
-      case List() => JoinPacket(this, -1, "Player")
-      case List(_) => SmallStepPacket(this, 0, "Player", Utils.hash(Num(n)))
-      case List(_, _) => SmallStepPacket(this, 1, "Player", Num(n))
-      case List(_, _, _) => DisconnectPacket(this, 2, "Player")
-    })
+  class Player(n: Int) extends SimpleStrategy {
+    override val role = "Player"
+    override def actSimple(events: List[Event]): Option[Value] =
+      Some(events match {
+        case List(_) => Utils.hash(Num(n))
+        case List(_, _) => Num(n)
+      })
   }
 
   val game: Game = SNPG
@@ -51,5 +51,11 @@ object SNPGRun extends GameRun {
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
   )
-  val expectedEvents = List(Map(), Map(), Map(Var("Global", "Payment") -> Num(100)))
+  override val expectedEvents: List[StepState] =
+    List(
+      StepState(Map(),Map(players(1) -> Map(), players(0) -> Map())),
+      StepState(Map(),Map(players(1) -> Map(Var("Player","beth") -> Num(-215980852)), players(0) -> Map(Var("Player","beth") -> Num(1749213749)))),
+      StepState(Map(Var("Player","S") -> Num(200), Var("Player","Count") -> Num(2)),Map(players(1) -> Map(Var("Player","bet") -> Num(150)), players(0) -> Map(Var("Player","bet") -> Num(50))))
+    )
+    // List(Map(), Map(), Map(Var("Global", "Payment") -> Num(100)))
 }

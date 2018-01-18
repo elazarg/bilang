@@ -44,21 +44,28 @@ object OddsEvens extends Game {
 }
 
 object OddsEvensRun extends GameRun {
-  class Player(role: RoleName, n: Int) extends AnyRef with Strategy {
-    override def act(events: List[Event]): Option[Packet] = Some(events match {
-      case List() => JoinPacket(this, -1, role)
-      case List(_) => SmallStepPacket(this, 0, role, Utils.hash(Num(n)))
-      case List(_, _) => SmallStepPacket(this, 1, role, Num(n))
-      case List(_, _, _) => DisconnectPacket(this, 2, role)
-    })
+  class Player(override val role: RoleName, n: Int) extends SimpleStrategy {
+    override def actSimple(events: List[Event]): Option[Value] =
+      Some(events match {
+        case List(_) => Utils.hash(Num(n))
+        case List(_, _) => Num(n)
+      })
   }
 
   val game: Game = OddsEvens
-  val players: List[Strategy] = List(new Player("Odd", 0), new Player("Even", 1))
+  private val odd = new Player("Odd", 0)
+  private val even = new Player("Even", 1)
+  val players: List[Strategy] = List(odd, even)
   val schedule: List[Action] = List( // TODO: make progress decision part of the strategy
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
   )
-  val expectedEvents: List[Map[Var, Value]] = List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
+  override val expectedEvents: List[StepState] =
+    List(
+      StepState(Map(),Map(odd -> Map(), even -> Map())),
+      StepState(Map(Var("Even","ch") -> Num(818387364), Var("Odd","ch") -> Num(-1669410282)),Map(odd -> Map(Var("Odd","ch") -> Num(-1669410282)), even -> Map(Var("Even","ch") -> Num(818387364)))),
+      StepState(Map(Var("Odd","c") -> Num(-1669410282), Var("Even","c") -> Num(818387364)),Map(odd -> Map(Var("Odd","c") -> Num(0)), even -> Map(Var("Even","c") -> Num(1))))
+    )
+    //List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
 }

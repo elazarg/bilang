@@ -84,7 +84,6 @@ class Model(program: ProgramRows) {
         return res
     }
     throw new Exception(v.toString + " not found")
-    ???
   }
 
   private def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {

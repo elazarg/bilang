@@ -15,5 +15,5 @@ trait GameRun {
   val game: Game
   val players: List[Strategy]
   val schedule: List[Action]
-  val expectedEvents: List[Map[Syntax.Var, Syntax.Value]]
+  val expectedEvents: List[StepState]
 }

@@ -52,7 +52,7 @@ object MontyHallRun extends GameRun {
   private val doors = Set(0, 1, 2)
   def chooseExcept(d1: Int, d2: Int): Int = new util.Random(15).shuffle(doors -- Set(d1, d2)).head
 
-  class PlayerHost(val role: RoleName, car: Int) extends SimpleStrategy {
+  class PlayerHost(override val role: RoleName, car: Int) extends SimpleStrategy {
     override def actSimple(events: List[Event]): Option[Value] = events match {
       case List(_) => Some(Utils.hash(Num(car)))
       case List(_, _) => None
@@ -65,7 +65,7 @@ object MontyHallRun extends GameRun {
     }
   }
 
-  class PlayerGuest(val role: RoleName, door1: Int, switch: Boolean) extends SimpleStrategy {
+  class PlayerGuest(override val role: RoleName, door1: Int, switch: Boolean) extends SimpleStrategy {
     override def actSimple(events: List[Event]): Option[Value] = events match {
       case List(_) => None
       case List(_, _) => Some(Num(door1))
@@ -79,7 +79,9 @@ object MontyHallRun extends GameRun {
   }
 
   val game: Game = MontyHall
-  val players: List[Strategy] = List(new PlayerHost("Host", 0), new PlayerGuest("Guest", 0, true))
+  private val host = new PlayerHost("Host", 0)
+  private val guest = new PlayerGuest("Guest", 0, true)
+  val players: List[Strategy] = List(host, guest)
   val schedule: List[Action] = List(
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
 
@@ -89,5 +91,14 @@ object MontyHallRun extends GameRun {
     Send(1), Deliver(1), Progress(1), Deliver(1), // door2
     Send(0), Deliver(0), Progress(0), Deliver(0), // car
   )
-  val expectedEvents: List[Map[Var, Value]] = List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
+  override val expectedEvents: List[StepState] =
+    List(
+      StepState(Map(),Map(host -> Map(), guest -> Map())),
+      StepState(Map(Var("Host","carh") -> Num(-1669410282)),Map(host -> Map(Var("Host","carh") -> Num(-1669410282)), guest -> Map())),
+      StepState(Map(Var("Guest","door1") -> Num(0)),Map(host -> Map(), guest -> Map(Var("Guest","door1") -> Num(0)))),
+      StepState(Map(Var("Host","goat") -> Num(1)),Map(host -> Map(Var("Host","goat") -> Num(1)), guest -> Map())),
+      StepState(Map(Var("Guest","door2") -> Num(2)),Map(host -> Map(), guest -> Map(Var("Guest","door2") -> Num(2)))),
+      StepState(Map(Var("Host","car") -> Num(-1669410282)),Map(host -> Map(Var("Host","car") -> Num(0)), guest -> Map()))
+    )
+    // List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
 }
