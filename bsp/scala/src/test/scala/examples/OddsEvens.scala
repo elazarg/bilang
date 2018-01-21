@@ -67,5 +67,4 @@ object OddsEvensRun extends GameRun {
       StepState(Map(Var("Even","ch") -> Num(818387364), Var("Odd","ch") -> Num(-1669410282)),Map(odd -> Map(Var("Odd","ch") -> Num(-1669410282)), even -> Map(Var("Even","ch") -> Num(818387364)))),
       StepState(Map(Var("Odd","c") -> Num(-1669410282), Var("Even","c") -> Num(818387364)),Map(odd -> Map(Var("Odd","c") -> Num(0)), even -> Map(Var("Even","c") -> Num(1))))
     )
-    //List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
 }

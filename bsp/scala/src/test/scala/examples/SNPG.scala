@@ -57,5 +57,4 @@ object SNPGRun extends GameRun {
       StepState(Map(),Map(players(1) -> Map(Var("Player","beth") -> Num(-215980852)), players(0) -> Map(Var("Player","beth") -> Num(1749213749)))),
       StepState(Map(Var("Player","S") -> Num(200), Var("Player","Count") -> Num(2)),Map(players(1) -> Map(Var("Player","bet") -> Num(150)), players(0) -> Map(Var("Player","bet") -> Num(50))))
     )
-    // List(Map(), Map(), Map(Var("Global", "Payment") -> Num(100)))
 }

@@ -14,6 +14,10 @@ class NetworkTest extends FunSuite {
     runtest(MontyHallRun)
   }
 
+  test("Auction happy path executes without errors") {
+    runtest(AuctionRun)
+  }
+
   private def runtest(run: GameRun): Unit = {
     val model = new Model(run.game.rows)
     val net = new Network(model, run.players)

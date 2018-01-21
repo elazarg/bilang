@@ -100,5 +100,4 @@ object MontyHallRun extends GameRun {
       StepState(Map(Var("Guest","door2") -> Num(2)),Map(host -> Map(), guest -> Map(Var("Guest","door2") -> Num(2)))),
       StepState(Map(Var("Host","car") -> Num(-1669410282)),Map(host -> Map(Var("Host","car") -> Num(0)), guest -> Map()))
     )
-    // List(Map(), Map(), Map(Var("Global", "Winner") -> Bool(false)))
 }
