@@ -79,7 +79,7 @@ The second step is assigning a private variable whose value can be restricted by
 
 The third step is publishing a private variable. The map is maintained as before, but published values are checked against the commitment and against the \texttt{where} clause; mismatches are simply dropped. The progress is as in step 2.
 
-The forth step consists of folding the actions of role-sets, using a commotative-assiciative operation. Implementation-wise this fold happens at each publish step, but at the abstract level we regard it as a separate step. The fold operation should not have any side effect on the state of the machine.
+The forth step consists of folding the actions of role-sets, using a commotative-assiciative operation. Implementation-wise this fold happens at each publish step, but at the abstract level we regard it as a separate step. The fold operation should not have any side effect on the state of the machine. (FIX: this cannot be the case if participants can change their choices; fold in general does not handle properly a change of mind with non-cancellable operators such as $max$).
 
 The fifth step is arbitrary (finite) computation on the published variables; as a side effect it binds values to fresh global variables, and sends them to every participant. Further computation can refer to these variables.
 
@@ -118,35 +118,80 @@ e &: \text{list of Event} \\
 
 \setlength{\grammarindent }{2cm}
 
-\section{Spreadsheet-Language}
+\section{Game Language}
 
 \subsection{Syntax}
 
 \begin{grammar}
-	<Join>	::= "join" <gVar> "[" (<num>|<gVar>) "]" % first in column only  % TODO: N becomes irrelevant when some bail out
+	<Prog>      ::= <Role>+ <BigStep>+
 
-	<S>		::= ( "private" | "public" ) (<lVar> ":" <type>)+ "where" <BoolExp>  % "private" too since it doesn't make sense to have "where" using newer variables
-			\alt "publish" <lVar>+
-			\alt "-"
+	<Role>		::= <ID> [ "multiple" ]
+
+	<BigStep>   ::= <Cell>+ "pre" <Stmt>* "post" <Stmt>*
+
+	<Cell> 		::= <LocalStep> <Fold>
+
+	<LocalStep> ::= "public" <ID>* "where" <Exp>
+	
+	<Fold>      ::= "fold" <Stmt>*
 \end{grammar}
 
-\begin{grammar}
-	<Fold> ::= "let" "(" <gVar> "," <gVar> ")" ":=" "fold" <Exp> "(" <lVar> "this" "=>" <Exp> ")"  % second globalVarDef for counting active participants
-\end{grammar}
+Syntactically, we forbid assignment to global variables in the local steps;
+we forbid reference to variables of other roles from the same big step;
+assignments and bindings are always to a new variable.
+fold expressions can only assign role-static variables, and must be commutative.
 
-\begin{grammar}
-	<Global> ::= ( "let" <gVar> ":=" <Exp> ";")*
-\end{grammar}
+For each role $r$, let $A^r$ be the set of players bound to the role $r$.
+The state is 
+\[
+	(\Sigma: Var \mapsto Value, \{ \sigma^r_a: Var \mapsto Value | a \in A^r \} )
+\].
 
-\begin{grammar}
-	<Progress> ::= "timeout" "(" <TimeExpr> ")"
-\end{grammar}
+Denote $\mathbb{S} = (Env \times Env)$
+
+We assume $Exec: \texttt{Stmt*} \times \mathbb{S} \mapsto Env $, and $Eval: Exp \times \mathbb{S} \mapsto Value$.
+We omit timeout notation.
+
+\begin{align*}
+	\judge{&Local}{
+		\sigma' = \sigma[s_1\mapsto v_1, ..., s_n \mapsto v_n] \;\;\;
+		Eval(cond, (\Sigma, \sigma')) = \emph{tt} \;\;\;
+		\Sigma' = Exec(f, (\Sigma, \sigma')) \;\;\;
+	}{
+		(\texttt{public }(s_1 ... s_n) \texttt{ where } cond\texttt{ fold }f, (\Sigma, \sigma)) \rightsquigarrow (\Sigma', \sigma')
+	}\\
+	\\
+	\judge{&Global}{
+		\forall s\in steps, t\in Roles(s), (s, (Exec(pre, S), \sigma_t)) \longrightarrow_r (\Sigma', \sigma'_t)
+	}{ % fix: roles
+		(\overline{steps} \texttt{pre } pre \texttt{ post } post, (\Sigma, \{\sigma_t | t \in T \}))
+		\Downarrow (Exec(post, \Sigma'), \{\sigma'_t | t\in T \})
+	}
+\end{align*}
+
+\vfill 
+\pagebreak
+
+\begin{align*}
+	\judge{&Local}{
+		exp \text{ evaluates to true under assignment of values to variables on a process/object T of role R}
+	}{
+		\text{variables of T are updated to these values and fold statements are executed, updating the static variables for role R}
+	}\\
+	\\
+	\judge{&Global}{
+		\text{after execution of "pre", each of the local steps can transition from }
+		\sigma_i \text{ to } \sigma'_i \text{ and timeout passed}
+	}{
+		\text{ "pre" is executed, } \sigma_i \text{ transition to } \sigma'_i \text{ and "post" is executed}
+	}
+\end{align*}
+
 
 For \lit{join role[n]} the fold expression \texttt{let (\_, n) := fold 0 ($\lambda$ x.x)} is added. 
 \lit{join role} is a syntactic sugar for \lit{join role[1]}.
 
-The syntax for combining the languages above is best described in a tabular form,
-demonstrating a $2$-player games:
+The syntax for combining the languages above is best described in a tabular form, demonstrating a $2$-player games:
 
 \begin{table}[h]
 		\begin{tabular}[t]{|c|c|c|}
@@ -229,6 +274,7 @@ Transposing the program, the syntax is:
 \pagebreak
 
 \subsection{Semantics}
+
 
 We define two semantic functions: join semantics and message semantics.
 
