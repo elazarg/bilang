@@ -34,3 +34,4 @@ coq/#*.v#
 coq/*.aux
 coq/*.glob
 coq/*.vo
+.DS_Store
