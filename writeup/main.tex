@@ -154,9 +154,9 @@ Denote $\mathbb{S} = (Env \times Env)$
 \newcommand{\R}{\overline{\s}}
 
 We assume $Exec: \texttt{Stmt*} \times \mathbb{S} \mapsto Env $, and $Eval: Exp \times \mathbb{S} \mapsto Value$.
-$\mathcal{f} = abs(f)$ for the fold expression returns a function $\mathbb(S) \times Value^n \mapsto Value^n$.
+$\mathcal{F} = abs(f)$ for the fold expression returns a function $\mathbb(S) \times Value^n \mapsto Value^n$.
 
-We also define $fold(initial, \mathcal{f}, \R)= f(initial, \mathcal{f}(\R_0, \mathcal{f}(\R_1, ...)))$ but in no particular order and not necessarily exhaustively.
+We also define $fold(initial, \mathcal{F}, \R)= f(initial, \mathcal{F}(\R_0, \mathcal{F}(\R_1, ...)))$ but in no particular order and not necessarily exhaustively.
 This is not uniquely defined - i.e. it's multifunction (if the operation is commutative the result is a singleton).
 
 We omit timeout notation.
