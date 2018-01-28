@@ -133,7 +133,7 @@ e &: \text{list of Event} \\
 
 	<LocalStep> ::= "public" <ID>* "where" <Exp>
 	
-	<Fold>      ::= "fold" <Stmt>*
+	<Fold>      ::= "fold" <Exp> <Exp>
 \end{grammar}
 
 Syntactically, we forbid assignment to global variables in the local steps;
@@ -141,31 +141,46 @@ we forbid reference to variables of other roles from the same big step;
 assignments and bindings are always to a new variable.
 fold expressions can only assign role-static variables, and must be commutative.
 
-For each role $r$, let $A^r$ be the set of players bound to the role $r$.
-The state is 
+A state is a tuple 
 \[
-	(\Sigma: Var \mapsto Value, \{ \sigma^r_a: Var \mapsto Value | a \in A^r \} )
+	(\Sigma: Var \mapsto Value, \overline{\sigma}: Agent \times Var \mapsto Value )
 \].
 
 Denote $\mathbb{S} = (Env \times Env)$
 
+
+\newcommand{\G}{\Sigma}
+\newcommand{\s}{\sigma}
+\newcommand{\R}{\overline{\s}}
+
 We assume $Exec: \texttt{Stmt*} \times \mathbb{S} \mapsto Env $, and $Eval: Exp \times \mathbb{S} \mapsto Value$.
+$\mathcal{f} = abs(f)$ for the fold expression returns a function $\mathbb(S) \times Value^n \mapsto Value^n$.
+
+We also define $fold(initial, \mathcal{f}, \R)= f(initial, \mathcal{f}(\R_0, \mathcal{f}(\R_1, ...)))$ but in no particular order and not necessarily exhaustively.
+This is not uniquely defined - i.e. it's multifunction (if the operation is commutative the result is a singleton).
+
 We omit timeout notation.
 
 \begin{align*}
 	\judge{&Local}{
-		\sigma' = \sigma[s_1\mapsto v_1, ..., s_n \mapsto v_n] \;\;\;
-		Eval(cond, (\Sigma, \sigma')) = \emph{tt} \;\;\;
-		\Sigma' = Exec(f, (\Sigma, \sigma')) \;\;\;
+		\s' = \s[\overline{s} \mapsto \overline{v}] \;\;\;
+		Eval(cond, (\G, \s')) = \emph{tt}
 	}{
-		(\texttt{public }(s_1 ... s_n) \texttt{ where } cond\texttt{ fold }f, (\Sigma, \sigma)) \rightsquigarrow (\Sigma', \sigma')
+		(\texttt{public }(\overline{s}) \texttt{ where } cond, (\G, \s)) \rightsquigarrow \s'
+	}\\
+	\\
+	\judge{&Fold}{
+		\forall a, (local, (\G, \R_a)) \rightsquigarrow \R'_a \;\;\;
+		\G' \in fold(s, abs(f, \G), \R)
+	}{
+		(local \texttt{ fold } s \texttt{ } f, (\G, \R)) \Downarrow (\G', \R')
 	}\\
 	\\
 	\judge{&Global}{
-		\forall s\in steps, t\in Roles(s), (s, (Exec(pre, S), \sigma_t)) \longrightarrow_r (\Sigma', \sigma'_t)
-	}{ % fix: roles
-		(\overline{steps} \texttt{pre } pre \texttt{ post } post, (\Sigma, \{\sigma_t | t \in T \}))
-		\Downarrow (Exec(post, \Sigma'), \{\sigma'_t | t\in T \})
+		\forall r \in \overline{r}, (s, (Exec(pre, (\G, \emptyset)), \R)) \longrightarrow (\G'_r, \R'_r)
+	}{
+		(\overline{r} \texttt{ pre } pre \texttt{ post } post, (\G, \R))
+		\Downarrow (Exec(post, (\G', \emptyset)), \bigcup_{r\in \overline{r}} \R'_r)
 	}
 \end{align*}
 
