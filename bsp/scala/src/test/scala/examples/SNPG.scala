@@ -51,6 +51,7 @@ object SNPGRun extends GameRun {
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
     Send(0), Send(1), Deliver(0), Deliver(1), Progress(0), Deliver(0),
   )
+
   override val expectedEvents: List[StepState] =
     List(
       StepState(Map(),Map(players(1) -> Map(), players(0) -> Map())),

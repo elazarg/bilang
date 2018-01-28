@@ -69,7 +69,7 @@ contract Bsp {
         require(done0 && done1 
             ||  (timeout() && (done0 || done1)));
         
-        next_generic(2);
+        next_generic();
     }
 
     function next_2() public {
@@ -78,16 +78,16 @@ contract Bsp {
         require(done0 && done1 
             ||  (timeout() && (done0 || done1)));
         
-        next_generic(2);
+        next_generic();
 
         win = C[0] == C[1] ? 0 : 1;
         if (!C_played[0]) win = 1;
         if (!C_played[1]) win = 0;
     }
 
-    function next_generic(uint next_count) internal {
+    function next_generic() internal {
         require(_count == 0);
-        _count = next_count;
+        _count = total;
         step++;
         reset_timer();
         NextStep();
@@ -139,7 +139,6 @@ contract Session {
     }
 
     function step_3() public view returns(string) {
-        require(_server.step() == 3);
         if (_server.win() == _client_num)
             return "won";
         else

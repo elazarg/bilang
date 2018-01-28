@@ -26,6 +26,10 @@ library/session/packages/
 /writeup/.texpadtmp/main.bbl
 /writeup/.texpadtmp/main.out
 /writeup/.texpadtmp/main.log
+target/
+scala.iml
+*.sbt
+
 coq/#*.v#
 coq/*.aux
 coq/*.glob

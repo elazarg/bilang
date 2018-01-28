@@ -33,11 +33,6 @@ object Syntax {
 
   case class Public(varname: Name, where: Exp = Bool(true))
 
-/* Sugar:
-  sealed abstract case class Action(name: Name)
-  case class Private(override val name: Name) extends Action(name)
-  case class Publish(override val name: Name, where: Exp = Bool(true)) extends Action(name)
-*/
   sealed abstract class Stmt
   case class Assign(name: Var, e: Exp) extends Stmt
 
@@ -45,7 +40,6 @@ object Syntax {
 
   case class LocalStep(action: Option[Public], fold: Fold = Fold(Seq(), Seq()))
 
-  // TODO: commands only at the end? or only for money
   case class BigStep(action: Map[RoleName, LocalStep], timeout: Int)
 
   case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep], finalCommands: Seq[Stmt] = Seq())

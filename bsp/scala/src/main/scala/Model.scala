@@ -42,7 +42,7 @@ class Model(program: ProgramRows) {
 
   def pc: Int = state.size - 1
 
-  def receive(packet: Packet): Unit = packet match {
+  def receive(packet: Packet, time: Int): Unit = packet match {
     case JoinPacket(sender, _pc, role) =>
       require(_pc == -1)
       require(_pc == pc)
@@ -54,21 +54,23 @@ class Model(program: ProgramRows) {
 
     case ProgressPacket(_pc) =>
       require(_pc == pc)
-      if (pc >= 0)
-        progress(program.steps(pc))
+      if (pc >= 0) {
+        require(time - steptime >= program.steps(pc).timeout)
+        steptime = time
+      }
       state :+= pendingState.freezeAndClear()
       if (program.steps.lengthCompare(pc) > 0) { // pc < steps.size
         for ((_, step) <- program.steps(pc).action)
           execFold(step.fold.inits)
       } else {
-        exec(program.finalCommands)
+        Eval.exec(program.finalCommands, lookup(_, None))
       }
 
     case DisconnectPacket(_, _pc, _) =>
       require(_pc == pc)
   }
 
-  var time = 100
+  var steptime = 0
 
   private def join(single: Boolean, sender: Agent, role: RoleName): Unit = {
     if (single) require(pendingState.objects.get(sender).isEmpty)
@@ -97,7 +99,7 @@ class Model(program: ProgramRows) {
     def ctx(v1: Var): Value =
       if (v == v1) value else lookup(v1, Some(sender))
 
-    require(eval(action.where, ctx) == Bool(true))
+    require(Eval.eval(action.where, ctx) == Bool(true))
 
     pendingState.objects(sender)(v) = value
     execFold(step.fold.stmts, ctx)
@@ -106,13 +108,9 @@ class Model(program: ProgramRows) {
   private def execFold(stmts: Seq[Stmt], ctx: Var => Value = lookup(_, None)): Unit = {
     println(stmts)
     // Lookup on fold should consider pending state. This is not the elegant solution though
-    val more = exec(stmts, v=> pendingState.static.getOrElse(v, ctx(v)))
+    val more = Eval.exec(stmts, v => pendingState.static.getOrElse(v, ctx(v)))
     println(" -> " + more)
     pendingState.static ++= more
-  }
-
-  private def progress(s: BigStep): Unit = {
-    require(s.timeout <= time)
   }
 
   private def require(condition: Boolean): Unit = {
@@ -120,7 +118,12 @@ class Model(program: ProgramRows) {
       throw new Exception()
   }
 
-  def exec(block: Iterable[Stmt], ctx: Var => Value = lookup(_, None)): Map[Var, Value] = {
+  override def toString: String = (state, pendingState).toString
+}
+
+object Eval {
+
+  def exec(block: Iterable[Stmt], ctx: Var => Value): Map[Var, Value] = {
     val tempScope = mutable.Map[Var, Value]()
     for (Assign(v, exp) <- block)
       tempScope += v -> eval(exp, v => tempScope.getOrElse(v, ctx(v)))
@@ -135,7 +138,7 @@ class Model(program: ProgramRows) {
     }
   }
 
-  private def applyOp(op: Op, left: Value, right: Value) : Value = {
+   def applyOp(op: Op, left: Value, right: Value) : Value = {
     (op, left, right) match {
       case (Op.EQ, _, _) =>  Bool(left == right)
       case (Op.LT, Num(x), Num(y)) => Bool(x < y)
@@ -148,7 +151,7 @@ class Model(program: ProgramRows) {
     }
   }
 
-  private def eval(e: Exp, ctx: Var => Value): Value = {
+   def eval(e: Exp, ctx: Var => Value): Value = {
     def eval(e: Exp) = this.eval(e, ctx)
     e match {
       case x : Value => x
@@ -162,5 +165,4 @@ class Model(program: ProgramRows) {
     }
   }
 
-  override def toString: String = (state, pendingState).toString
 }
