@@ -13,7 +13,7 @@ object MontyHall extends Game {
   private val guest: RoleName = "Guest"
   private val finalCommands = Seq(
     Assign(Var("Global", "Car"), Var(host, "car")),
-    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(host, "car"), Var(guest, "door2")))
+    Assign(Var("Guest", "Prize"), IfThenElse(BinOp(Op.EQ, Var(host, "car"), Var(guest, "door2")), Num(1), Num(0)))
   )
 
   private def singlePublic(role: RoleName, v: Name, where : Exp = Bool(true)) =

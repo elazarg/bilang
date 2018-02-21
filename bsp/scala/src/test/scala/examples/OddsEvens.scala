@@ -13,7 +13,7 @@ object OddsEvens extends Game {
   private val odd: RoleName = "Odd"
   private val even: RoleName = "Even"
   private val finalCommands = Seq(
-    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(odd, "ch"), Var(even, "ch")))
+    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))
   )
 
   private def singlePublic(role: RoleName) =
