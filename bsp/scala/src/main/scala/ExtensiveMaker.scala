@@ -30,11 +30,11 @@ object ExtensiveNetwork {
         case (role, LocalStep(Some(a), _)) :: varstail =>
           val newVar = Var(role, a.varname)
           if (a.public && env.contains(newVar)) {
-            val subjEnv1 = subjEnv.map{ case (r, ss) => r -> (ss - newVar + (newVar -> env(newVar)))}
+            val subjEnv1 = subjEnv.map{ case (r, ss) => r -> (ss + (newVar -> env(newVar)))}
             varsToNode(varstail, rest, env, subjEnv1)
           } else {
             def abs(r: RoleName, v: Value) = if (a.public || r == role) { v } else { hide(v) }
-            def subjEnv1(v: Value) = subjEnv.map{ case (r, ss) => r -> (ss - newVar + (newVar -> abs(r, v))) }
+            def subjEnv1(v: Value) = subjEnv.map{ case (r, ss) => r -> (ss + (newVar -> abs(r, v))) }
             val filteredValues =
               if (env.exists{ case (vr, vl) => vr.role == role && vl == ImOut()}) List(ImOut())
               else valuesOfType(a.varname)
@@ -43,7 +43,7 @@ object ExtensiveNetwork {
               for {
                 v <- filteredValues
                 env1 = env + (Var(role, a.varname) -> v)
-                if Eval.eval(a.where, env1) == Bool(true)
+                if Eval.eval(a.where, env1) == Bool(true) || v == ImOut()
               } yield v -> varsToNode(varstail, rest, env1, subjEnv1(v))
             // todo: force ImOut if quit at any time
             // assume independence:
