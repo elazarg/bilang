@@ -9,8 +9,24 @@ object OddsEvensSimple extends Game {
   private val odd: RoleName = "Odd"
   private val even: RoleName = "Even"
   private val finalCommands = Seq(
-    Assign(Var(even, "Prize"), IfThenElse(BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")), Num(1), Num(-1))),
-    Assign(Var(odd, "Prize"), IfThenElse(BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")), Num(-1), Num(1)))
+    Assign(Var(even, "Prize"),
+      IfThenElse(BinOp(Op.EQ, Var(even, "c"), ImOut()),
+        Num(-1),
+        IfThenElse(BinOp(Op.EQ, Var(odd, "c"), ImOut()),
+          Num(1),
+          IfThenElse(BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")), Num(1), Num(-1))
+        )
+      )
+    ),
+    Assign(Var(odd, "Prize"),
+      IfThenElse(BinOp(Op.EQ, Var(odd, "c"), ImOut()),
+        Num(-1),
+        IfThenElse(BinOp(Op.EQ, Var(even, "c"), ImOut()),
+          Num(1),
+          IfThenElse(BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")), Num(-1), Num(1))
+        )
+      )
+    )
   )
 
   private val oddReveal: LocalStep = reveal(odd)

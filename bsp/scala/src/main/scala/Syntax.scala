@@ -27,6 +27,7 @@ object Syntax {
   case class Hash(e: Exp) extends Exp
 
   sealed abstract class Value extends Exp
+  case class ImOut() extends Value
   case class Num(n: Int) extends Value
   case class Bool(t: Boolean) extends Value
   case class Tuple(vs: Value*) extends Value

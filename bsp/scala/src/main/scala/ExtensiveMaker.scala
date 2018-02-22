@@ -16,16 +16,18 @@ object ExtensiveNetwork {
           def getPayoff(name: String) = name -> (env1.get(Var(name, "Prize")) match { case Some(Num(n)) => n case _ => 0 })
           Leaf(roles.map(getPayoff).toMap)
         case action :: rest =>
-          val vars = (for ((role, LocalStep(Some(Public(varname, _)), _)) <- action) yield (role, varname)).toList
+          val vars = (for ((role, LocalStep(Some(Public(varname, where)), _)) <- action) yield (role, varname, where)).toList
           varsToNode(vars, rest, env)
       }
     }
 
-    def varsToNode(vars: List[(RoleName, Name)], rest: List[Map[RoleName, LocalStep]], env: Map[Var, Value]): Tree = {
+    def varsToNode(vars: List[(RoleName, Name, Exp)], rest: List[Map[RoleName, LocalStep]], env: Map[Var, Value]): Tree = {
       vars match {
         case Nil => actionToNode(rest, env)
-        case (owner, varname) :: varstail =>
-          val children = valuesOfType(varname).map(v => v -> varsToNode(varstail, rest, env + (Var(owner, varname) -> v)))
+        case (owner, varname, where) :: varstail =>
+          val children = valuesOfType(varname)
+            .filter(v => Eval.eval(where, env + (Var(owner, varname) -> v)) == Bool(true))
+            .map(v => v -> varsToNode(varstail, rest, env + (Var(owner, varname) -> v)))
           // assume independence:
           Node(owner, rest.size, children.toMap)
       }
@@ -48,15 +50,16 @@ object ExtensiveNetwork {
         val owner: Int = roleOrder.indexOf(node.owner)+1
         val infset: Int = node.infset+1
         val infsetName: String = ""
-        val actionNamesForInfSet: String = stringList(List("1", "2"))
+        val actionNamesForInfSet: String = stringList(node.children.keys.map(valueToName))
         val outcome: Int = 0
         val nameOfOutcome: String = ""
         val payoffs: Int = 0
-        val children = valuesOfType("").map(node.children(_))
+        val children = valuesOfType("").map(node.children.apply)
         List(s"p ${q(nodeName)} $owner $infset ${q(infsetName)} $actionNamesForInfSet $payoffs") ++ children.flatMap(toEfg(_, roleOrder))
       case leaf: Leaf =>
         val name: String = ""
-        val outcome: Int = n
+        val outcome: Int = n // TODO: what is this exactly? must it be sequential?
+        // Seems like outcomes are "named payoffs" and should define the payoff uniquely
         n += 1
         val nameOfOutcome: String = ""
         val payoffs = roleOrder.map(leaf.payoff(_)).mkString("{ ", ", ", " }")
@@ -66,9 +69,18 @@ object ExtensiveNetwork {
   def q(name: String) = '"' + name + '"'
   def stringList(ss: Iterable[String]) = ss.map(q).mkString("{ ", " ", " }")
 
+  def valueToName(v: Value): String = {
+    v match {
+      case Bool(b) => b.toString
+      case Num(n) => n.toString
+      case ImOut() => "None"
+      case x => throw new Exception(x.toString)
+    }
+  }
+
   def valuesOfType(name: Name): List[Value] = {
     // assume bool for now
-    List(Bool(true), Bool(false))
+    List(Bool(true), Bool(false), ImOut())
   }
 
 }
