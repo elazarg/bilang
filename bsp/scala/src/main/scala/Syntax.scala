@@ -9,7 +9,7 @@ object Syntax {
 
   object Op extends Enumeration {
     type Op = Value
-    val EQ, LT, ADD, SUB, MUL, DIV, MAX = Value
+    val EQ, LT, ADD, SUB, MUL, DIV, MAX, AND = Value
   }
   import Op.Op
 

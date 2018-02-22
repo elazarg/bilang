@@ -13,7 +13,11 @@ object MontyHall extends Game {
   private val guest: RoleName = "Guest"
   private val finalCommands = Seq(
     Assign(Var("Global", "Car"), Var(host, "car")),
-    Assign(Var("Guest", "Prize"), IfThenElse(BinOp(Op.EQ, Var(host, "car"), Var(guest, "door2")), Num(1), Num(0)))
+    Assign(Var("Guest", "Prize"), IfThenElse(
+      BinOp(Op.EQ, Var(host, "car"), ImOut()),
+      Num(-100),
+      IfThenElse(BinOp(Op.EQ, Var(host, "car"), Var(guest, "door2")), Num(1), Num(0)))),
+    Assign(Var("Host", "Prize"), IfThenElse(BinOp(Op.EQ, Var(host, "goat"), ImOut()), Num(-100), Num(0)))
   )
 
   private def singleAction(role: RoleName, v: Name, public: Boolean = true, where : Exp = Bool(true)) =
@@ -21,7 +25,12 @@ object MontyHall extends Game {
 
   private val hostCarh: LocalStep = singleAction(host, "car", public=false)
   private val guestDoor1: LocalStep = singleAction(guest, "door1")
-  private val hostGoat: LocalStep = singleAction(host, "goat", where = UnOp(Op1.NOT, BinOp(Op.EQ, Var("Host", "goat"), Var("Guest", "door1"))))
+  private val hostGoat: LocalStep = singleAction(host, "goat",
+    where = BinOp(Op.AND,
+      UnOp(Op1.NOT, BinOp(Op.EQ, Var("Host", "goat"), Var("Guest", "door1"))),
+      UnOp(Op1.NOT, BinOp(Op.EQ, Var("Host", "goat"), Var("Host", "car")))
+    )
+  )
   private val guestDoor2: LocalStep = singleAction(guest, "door2")
   private val hostReveal: LocalStep = reveal(host, "car")
 

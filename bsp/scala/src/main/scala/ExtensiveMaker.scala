@@ -4,7 +4,9 @@ sealed abstract class Tree
 case class Node(owner: String, infset: Int, children: List[(Value, Tree)]) extends Tree
 case class Leaf(payoff: Map[String, Int]) extends Tree
 
-object ExtensiveNetwork {
+// FIX: handling of where where the value is hidden?
+
+class ExtensiveNetwork(types: Map[Var, List[Value]] = Map()) {
   def make(rows: ProgramRows): List[String] = {
     val roles = rows.roles.keys
 
@@ -37,7 +39,7 @@ object ExtensiveNetwork {
             def subjEnv1(v: Value) = subjEnv.map{ case (r, ss) => r -> (ss + (newVar -> abs(r, v))) }
             val filteredValues =
               if (env.exists{ case (vr, vl) => vr.role == role && vl == ImOut()}) List(ImOut())
-              else valuesOfType(a.varname)
+              else valuesOfType(newVar)
 
             val children =
               for {
@@ -64,9 +66,8 @@ object ExtensiveNetwork {
 
   def hide(v: Value): Value = {
     v match {
-      case Bool(_) => Hidden()
       case ImOut() => ImOut()
-      case x => throw new Exception("" + x)
+      case _ => Hidden()
     }
   }
 
@@ -106,9 +107,9 @@ object ExtensiveNetwork {
     }
   }
 
-  def valuesOfType(name: Name): List[Value] = {
-    // assume bool for now
-    List(Bool(true), Bool(false), ImOut())
+  def valuesOfType(v: Var): List[Value] = {
+    // bool as default
+    types.getOrElse(v, List(Bool(true), Bool(false))) :+ ImOut()
   }
 
 }

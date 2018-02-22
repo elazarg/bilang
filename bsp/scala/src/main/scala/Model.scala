@@ -141,6 +141,7 @@ object Eval {
 
    def applyOp(op: Op, left: Value, right: Value) : Value = {
     (op, left, right) match {
+      case (Op.AND, Bool(x), Bool(y)) => Bool(x && y)
       case (Op.EQ, _, _) =>  Bool(left == right)
       case (Op.LT, Num(x), Num(y)) => Bool(x < y)
       case (Op.ADD, Num(x), Num(y)) => Num(x + y)
