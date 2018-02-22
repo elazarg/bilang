@@ -15,13 +15,14 @@ object OddsEvensSimple extends Game {
 
   private val oddReveal: LocalStep = reveal(odd)
   private val evenReveal: LocalStep = reveal(even)
-
+  private val gameName = "Odds and Evens game"
   override val rows = ProgramRows(
     Map(odd -> true, even -> true),
     Seq(
       BigStep(Map(even -> evenReveal, odd -> oddReveal), 1)
     ),
-    finalCommands
+    finalCommands,
+    gameName
   )
 
   override val cols = ProgramCols(
@@ -30,7 +31,8 @@ object OddsEvensSimple extends Game {
       odd -> (true, Seq(oddReveal))
     ),
     Seq(1, 1), // FIX: no join timeout
-    finalCommands
+    finalCommands,
+    gameName
   )
 }
 

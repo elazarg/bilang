@@ -42,12 +42,15 @@ object Syntax {
 
   case class BigStep(action: Map[RoleName, LocalStep], timeout: Int)
 
-  case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep], finalCommands: Seq[Stmt] = Seq())
+  case class ProgramRows(roles: Map[RoleName, Boolean], steps: Seq[BigStep], finalCommands: Seq[Stmt] = Seq(),
+                         name: String = "", description: String = "")
 
   case class ProgramCols(
     cols: Map[RoleName, (Boolean, Seq[LocalStep])],
     progress: Seq[Int],
-    finalCommands: Seq[Stmt] = Seq()
+    finalCommands: Seq[Stmt] = Seq(),
+    name: String = "",
+    description: String = ""
   )
 
   def transpose(p: ProgramCols) : ProgramRows = {

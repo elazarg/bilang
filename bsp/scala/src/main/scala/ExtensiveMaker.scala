@@ -5,15 +5,16 @@ case class Node(owner: String, infset: Int, children: Map[Value, Tree]) extends 
 case class Leaf(payoff: Map[String, Int]) extends Tree
 
 object ExtensiveNetwork {
-  def make(rows: ProgramRows): Tree = {
+  def make(rows: ProgramRows): List[String] = {
     val actions = rows.steps.map(bs => bs.action)
+    val roles = rows.roles.keys
 
     def actionToNode(actions: List[Map[RoleName, LocalStep]], env: Map[Var, Value]): Tree = {
       actions match {
         case Nil =>
           val env1 = Eval.exec(rows.finalCommands, env)
           def getPayoff(name: String) = name -> (env1.get(Var(name, "Prize")) match { case Some(Num(n)) => n case _ => 0 })
-          Leaf(rows.roles.keys.map(getPayoff).toMap)
+          Leaf(roles.map(getPayoff).toMap)
         case action :: rest =>
           val vars = (for ((role, LocalStep(Some(Public(varname, _)), _)) <- action) yield (role, varname)).toList
           varsToNode(vars, rest, env)
@@ -30,7 +31,13 @@ object ExtensiveNetwork {
       }
     }
 
-    actionToNode(actions.toList, env=Map())
+    val tree = actionToNode(actions.toList, env=Map())
+    val players = stringList(roles)
+    List(
+      s"EFG 2 R ${q(rows.name)} $players",
+      q(rows.description),
+      ""
+    ) ++ toEfg(tree, roles.toList)
   }
 
   var n = 1
@@ -41,7 +48,7 @@ object ExtensiveNetwork {
         val owner: Int = roleOrder.indexOf(node.owner)+1
         val infset: Int = node.infset+1
         val infsetName: String = ""
-        val actionNamesForInfSet: String = List(q("1"), q("2")).mkString("{ ", " ", " }")
+        val actionNamesForInfSet: String = stringList(List("1", "2"))
         val outcome: Int = 0
         val nameOfOutcome: String = ""
         val payoffs: Int = 0
@@ -57,6 +64,8 @@ object ExtensiveNetwork {
     }
   }
   def q(name: String) = '"' + name + '"'
+  def stringList(ss: Iterable[String]) = ss.map(q).mkString("{ ", " ", " }")
+
   def valuesOfType(name: Name): List[Value] = {
     // assume bool for now
     List(Bool(true), Bool(false))
