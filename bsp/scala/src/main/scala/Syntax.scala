@@ -28,18 +28,20 @@ object Syntax {
 
   sealed abstract class Value extends Exp
   case class ImOut() extends Value
+  case class Hidden() extends Value
   case class Num(n: Int) extends Value
   case class Bool(t: Boolean) extends Value
   case class Tuple(vs: Value*) extends Value
 
-  case class Public(varname: Name, where: Exp = Bool(true))
+  // Action existing == publish; where must be identical
+  case class Action(varname: Name, public: Boolean = true, where: Exp = Bool(true))
 
   sealed abstract class Stmt
   case class Assign(name: Var, e: Exp) extends Stmt
 
   case class Fold(inits: Seq[Stmt], stmts: Seq[Stmt])
 
-  case class LocalStep(action: Option[Public], fold: Fold = Fold(Seq(), Seq()))
+  case class LocalStep(action: Option[Action], fold: Fold = Fold(Seq(), Seq()))
 
   case class BigStep(action: Map[RoleName, LocalStep], timeout: Int)
 
@@ -80,7 +82,7 @@ object Syntax {
     for (bigstep <- rows.steps) {
       if (bigstep.action.keySet != roles)
         return false
-      for ( (role, LocalStep(Some(Public(varname, where)), Fold(inits, stmts)) ) <- bigstep.action ){
+      for ( (role, LocalStep(Some(Action(varname, public, where)), Fold(inits, stmts)) ) <- bigstep.action ){
         defined += varname
 
         if (! freeVars(where).subsetOf(defined)) return false

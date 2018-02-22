@@ -5,22 +5,39 @@ import Syntax._
 object OddsEvens extends Game {
   def reveal(role: Name): LocalStep = {
     LocalStep(
-      Some(Public("c", where = BinOp(Op.EQ, Hash(Var(role, "c")), Var(role, "ch")))),
-      Fold(Seq(), Seq(Assign(Var(role, "c"), Var(role, "ch"))))
+      Some(Action("c", public=true)),
+      Fold(Seq(), Seq(Assign(Var(role, "c"), Var(role, "c"))))
     )
   }
 
   private val odd: RoleName = "Odd"
   private val even: RoleName = "Even"
   private val finalCommands = Seq(
-    Assign(Var("Global", "Winner"), BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")))
+    Assign(Var(even, "Prize"),
+      IfThenElse(BinOp(Op.EQ, Var(even, "c"), ImOut()),
+        Num(-1),
+        IfThenElse(BinOp(Op.EQ, Var(odd, "c"), ImOut()),
+          Num(1),
+          IfThenElse(BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")), Num(1), Num(-1))
+        )
+      )
+    ),
+    Assign(Var(odd, "Prize"),
+      IfThenElse(BinOp(Op.EQ, Var(odd, "c"), ImOut()),
+        Num(-1),
+        IfThenElse(BinOp(Op.EQ, Var(even, "c"), ImOut()),
+          Num(1),
+          IfThenElse(BinOp(Op.EQ, Var(odd, "c"), Var(even, "c")), Num(-1), Num(1))
+        )
+      )
+    )
   )
 
-  private def singlePublic(role: RoleName) =
-    LocalStep(Some(Public("ch")), Fold(Seq(), Seq(Assign(Var(role, "ch"), Var(role, "ch")))))
+  private def singleAction(role: RoleName, public: Boolean = true) =
+    LocalStep(Some(Action("c", public)), Fold(Seq(), Seq(Assign(Var(role, "c"), Var(role, "c")))))
 
-  private val oddCh: LocalStep = singlePublic(odd)
-  private val evenCh: LocalStep = singlePublic(even)
+  private val oddCh: LocalStep = singleAction(odd, public=false)
+  private val evenCh: LocalStep = singleAction(even, public=false)
   private val oddReveal: LocalStep = reveal(odd)
   private val evenReveal: LocalStep = reveal(even)
 
@@ -64,7 +81,7 @@ object OddsEvensRun extends GameRun {
   override val expectedEvents: List[StepState] =
     List(
       StepState(Map(),Map(odd -> Map(), even -> Map())),
-      StepState(Map(Var("Even","ch") -> Num(818387364), Var("Odd","ch") -> Num(-1669410282)),Map(odd -> Map(Var("Odd","ch") -> Num(-1669410282)), even -> Map(Var("Even","ch") -> Num(818387364)))),
+      StepState(Map(Var("Even","c") -> Num(818387364), Var("Odd","c") -> Num(-1669410282)),Map(odd -> Map(Var("Odd","c") -> Num(-1669410282)), even -> Map(Var("Even","c") -> Num(818387364)))),
       StepState(Map(Var("Odd","c") -> Num(-1669410282), Var("Even","c") -> Num(818387364)),Map(odd -> Map(Var("Odd","c") -> Num(0)), even -> Map(Var("Even","c") -> Num(1))))
     )
 }

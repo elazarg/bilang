@@ -2,10 +2,10 @@ import Model.Event
 import Syntax._
 
 object MontyHall extends Game {
-  def reveal(role: Name, v: Name, c: Name): LocalStep = {
+  def reveal(role: Name, v: Name): LocalStep = {
     LocalStep(
-      Some(Public(v, where = BinOp(Op.EQ, Hash(Var(role, v)), Var(role, c)))),
-      Fold(Seq(), Seq(Assign(Var(role, v), Var(role, c))))
+      Some(Action(v, public=true)),
+      Fold(Seq(), Seq(Assign(Var(role, v), Var(role, v))))
     )
   }
 
@@ -16,14 +16,14 @@ object MontyHall extends Game {
     Assign(Var("Guest", "Prize"), IfThenElse(BinOp(Op.EQ, Var(host, "car"), Var(guest, "door2")), Num(1), Num(0)))
   )
 
-  private def singlePublic(role: RoleName, v: Name, where : Exp = Bool(true)) =
-    LocalStep(Some(Public(v, where)), Fold(Seq(), Seq(Assign(Var(role, v), Var(role, v)))))
+  private def singleAction(role: RoleName, v: Name, public: Boolean = true, where : Exp = Bool(true)) =
+    LocalStep(Some(Action(v, public, where)), Fold(Seq(), Seq(Assign(Var(role, v), Var(role, v)))))
 
-  private val hostCarh: LocalStep = singlePublic(host, "carh")
-  private val guestDoor1: LocalStep = singlePublic(guest, "door1")
-  private val hostGoat: LocalStep = singlePublic(host, "goat", where = UnOp(Op1.NOT, BinOp(Op.EQ, Var("Host", "goat"), Var("Guest", "door1"))))
-  private val guestDoor2: LocalStep = singlePublic(guest, "door2")
-  private val hostReveal: LocalStep = reveal(host, "car", "carh")
+  private val hostCarh: LocalStep = singleAction(host, "car", public=false)
+  private val guestDoor1: LocalStep = singleAction(guest, "door1")
+  private val hostGoat: LocalStep = singleAction(host, "goat", where = UnOp(Op1.NOT, BinOp(Op.EQ, Var("Host", "goat"), Var("Guest", "door1"))))
+  private val guestDoor2: LocalStep = singleAction(guest, "door2")
+  private val hostReveal: LocalStep = reveal(host, "car")
 
   private val NOP = LocalStep(None, Fold(Seq(), Seq()))
   override val rows = ProgramRows(
@@ -94,7 +94,7 @@ object MontyHallRun extends GameRun {
   override val expectedEvents: List[StepState] =
     List(
       StepState(Map(),Map(host -> Map(), guest -> Map())),
-      StepState(Map(Var("Host","carh") -> Num(-1669410282)),Map(host -> Map(Var("Host","carh") -> Num(-1669410282)), guest -> Map())),
+      StepState(Map(Var("Host","car") -> Num(-1669410282)),Map(host -> Map(Var("Host","car") -> Num(-1669410282)), guest -> Map())),
       StepState(Map(Var("Guest","door1") -> Num(0)),Map(host -> Map(), guest -> Map(Var("Guest","door1") -> Num(0)))),
       StepState(Map(Var("Host","goat") -> Num(1)),Map(host -> Map(Var("Host","goat") -> Num(1)), guest -> Map())),
       StepState(Map(Var("Guest","door2") -> Num(2)),Map(host -> Map(), guest -> Map(Var("Guest","door2") -> Num(2)))),

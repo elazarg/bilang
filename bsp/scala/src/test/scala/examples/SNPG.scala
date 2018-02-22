@@ -13,8 +13,8 @@ object SNPG extends Game {
     )
   )
 
-  private val commit = LocalStep(Some(Public("beth")))
-  private val reveal = LocalStep(Some(Public("bet", where = BinOp(Op.EQ, Hash(Var("Player", "bet")), Var("Player", "beth")))), fold)
+  private val commit = LocalStep(Some(Action("bet", public=false)))
+  private val reveal = LocalStep(Some(Action("bet", public=true)), fold)
   private val finalCommands = Seq(Assign(Var("Global", "Payment"), BinOp(Op.DIV, Var("Player", "S"), Var("Player", "Count"))))
 
   override val rows = ProgramRows(
@@ -55,7 +55,7 @@ object SNPGRun extends GameRun {
   override val expectedEvents: List[StepState] =
     List(
       StepState(Map(),Map(players(1) -> Map(), players(0) -> Map())),
-      StepState(Map(),Map(players(1) -> Map(Var("Player","beth") -> Num(-215980852)), players(0) -> Map(Var("Player","beth") -> Num(1749213749)))),
+      StepState(Map(),Map(players(1) -> Map(Var("Player","bet") -> Num(-215980852)), players(0) -> Map(Var("Player","bet") -> Num(1749213749)))),
       StepState(Map(Var("Player","S") -> Num(200), Var("Player","Count") -> Num(2)),Map(players(1) -> Map(Var("Player","bet") -> Num(150)), players(0) -> Map(Var("Player","bet") -> Num(50))))
     )
 }

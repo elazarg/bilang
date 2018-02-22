@@ -3,7 +3,7 @@ import Syntax._
 
 object OddsEvensSimple extends Game {
   def reveal(role: Name): LocalStep = {
-    LocalStep(Some(Public("c")), Fold(Seq(), Seq(Assign(Var(role, "c"), Var(role, "c")))))
+    LocalStep(Some(Action("c", public=true)), Fold(Seq(), Seq(Assign(Var(role, "c"), Var(role, "c")))))
   }
 
   private val odd: RoleName = "Odd"
@@ -35,7 +35,7 @@ object OddsEvensSimple extends Game {
   override val rows = ProgramRows(
     Map(odd -> true, even -> true),
     Seq(
-      BigStep(Map(even -> evenReveal, odd -> oddReveal), 1)
+      BigStep(Map(odd -> oddReveal, even -> evenReveal), 1)
     ),
     finalCommands,
     gameName
@@ -43,8 +43,8 @@ object OddsEvensSimple extends Game {
 
   override val cols = ProgramCols(
     Map(
+      odd -> (true, Seq(oddReveal)),
       even -> (true, Seq(evenReveal)),
-      odd -> (true, Seq(oddReveal))
     ),
     Seq(1, 1), // FIX: no join timeout
     finalCommands,

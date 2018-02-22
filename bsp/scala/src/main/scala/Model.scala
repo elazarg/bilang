@@ -90,6 +90,7 @@ class Model(program: ProgramRows) {
 
   private def doSmallStep(step: LocalStep, sender: Agent, role: RoleName, value: Value): Unit = {
     // assume each sender must only send one message
+    // todo: private and publish
     if (step.action.isEmpty) return
     val action = step.action.get
 

@@ -15,8 +15,8 @@ object Auction extends Game {
     )
   )
 
-  private val commit = LocalStep(Some(Public("offerh")))
-  private val reveal = LocalStep(Some(Public("offer", where = BinOp(Op.EQ, Hash(offer), Var("Bidder", "offerh")))), fold)
+  private val commit = LocalStep(Some(Action("offer", public=false)))
+  private val reveal = LocalStep(Some(Action("offer", public=true)), fold)
   private val finalCommands = Seq(Assign(Var("Global", "Highest"), highest))
 
   override val rows = ProgramRows(
