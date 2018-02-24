@@ -35,3 +35,13 @@ coq/*.aux
 coq/*.glob
 coq/*.vo
 .DS_Store
+oopsla/main.synctex.gz
+oopsla/comment.cut
+oopsla/*.aux
+oopsla/*.bbl
+oopsla/*.blg
+oopsla/*.fdb_latexmk
+oopsla/*.fls
+oopsla/*.log
+oopsla/*.out
+oopsla/main.pdf
