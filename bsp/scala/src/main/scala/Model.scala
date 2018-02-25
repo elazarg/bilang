@@ -139,21 +139,23 @@ object Eval {
     }
   }
 
-   def applyOp(op: Op, left: Value, right: Value) : Value = {
+  private def applyOp(op: Op, left: Value, right: Value) : Value = {
     (op, left, right) match {
       case (Op.AND, Bool(x), Bool(y)) => Bool(x && y)
+      case (Op.OR, Bool(x), Bool(y)) => Bool(x || y)
       case (Op.EQ, _, _) =>  Bool(left == right)
       case (Op.LT, Num(x), Num(y)) => Bool(x < y)
       case (Op.ADD, Num(x), Num(y)) => Num(x + y)
       case (Op.SUB, Num(x), Num(y)) => Num(x - y)
-      case (Op.MAX, Num(x), Num(y)) => Num(Math.max(x, y))
+      case (Op.MUL, Num(x), Num(y)) => Num(x * y)
       case (Op.DIV, Num(_), Num(0)) => ???
       case (Op.DIV, Num(x), Num(y)) => Num(x / y)
-      case _ => ???
+      case (Op.MAX, Num(x), Num(y)) => Num(Math.max(x, y))
+      case x => throw new Exception("Not implemented" + x)
     }
   }
 
-   def eval(e: Exp, ctx: Var => Value): Value = {
+  def eval(e: Exp, ctx: Var => Value): Value = {
     def eval(e: Exp) = this.eval(e, ctx)
     e match {
       case x : Value => x
