@@ -56,7 +56,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     public Void visitVarDef(VarDefContext ctx) {
         // reorder visit, to prohibit "int x = x"
         Type initType = (ctx.init != null) ? expChecker.accept(ctx.init) : null;
-        accept(ctx.varDec());
+        accept(ctx.dec);
         if (initType != null) {
             Type lvalueType = lookupTypename(ctx.dec.type.getText(), ctx);
             require(compatible(initType, lvalueType), "Incompatible initializer", ctx.init);

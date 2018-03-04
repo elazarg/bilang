@@ -16,7 +16,7 @@ exp
     | left=exp ('=='|'!=') right=exp       # BinOpEqExp
     | INT                                  # NumLiteral
     | ID                                   # Id
-    | ID '.' 'value'                       # IdValue
+    | ID '.' ID                            # MemberExp
     | 'undefined'                          # UndefExp
     | exp '?' exp ':' exp                  # IfExp
     ;
@@ -26,15 +26,18 @@ stmt
     | ID ':=' exp ';'                      # AssignStmt
     | 'reveal' ID ';'                      # RevealStmt
     | 'if'    '(' exp ')' '{' block '}' ('else' '{' block '}')? # IfStmt
+    | 'for' 'yield' packet 'from' ID where? '{' block '}'  # ForYieldStmt
     | 'transfer' exp 'from' exp 'to' exp ';' # TransferStmt
     ;
 
 varDef
     : 'var' dec=varDec ('=' init=exp)? ';'
-    | 'yield' 'hidden'? (ID '(' decls+=varDec (',' decls+=varDec)* ')')+ ('where' exp)? ';'
-    | 'join' ID ';'
+    | 'yield' 'hidden'? packet+ where? ';'
+    | 'join' 'many'? ID ';'
     ;
 
+packet : (ID '(' (decls+=varDec (',' decls+=varDec)*)? ')') ;
+where : 'where' exp ;
 varDec : name=ID ':' type=ID  ;
 
 // LEXER
