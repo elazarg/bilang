@@ -18,7 +18,7 @@ public final class Main {
 
     static public void main(String argv[]) throws IOException {
         final BiLangParser.ProgramContext program = parse(Paths.get("/dev/stdin"));
-        System.out.println(program.toStringTree());
+        typecheck(program);
     }
 
     private static String typecheck(BiLangParser.ProgramContext program) {
