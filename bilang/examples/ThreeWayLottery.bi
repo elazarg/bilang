@@ -4,6 +4,7 @@ join Issuer;
 join Alice;
 join Bob;
 yield Issuer(c1: choice) Alice(c2: choice) Bob(c3: choice);
+var Winner : role = 0x0;
 if (c2 == undefined || c3 == undefined) {
     Winner := Issuer;
 } else {
@@ -12,6 +13,6 @@ if (c2 == undefined || c3 == undefined) {
     } else {
         var sum : int = c1 + c2 + c3;
         var s1 : int = sum / 3 * 3;
-        Winner := (s1 == sum) ? Alice : (s1 == sum-1) ? Bob : Issuer;
+        Winner := (s1 == sum) ? Alice : ((s1 == sum-1) ? Bob : Issuer);
     }
 }

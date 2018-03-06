@@ -1,13 +1,13 @@
 type door = {0, 1, 2}
 
-join Host;
-join Guest;
+join Host();
+join Guest();
 yield hidden Host(car: door);
 yield Guest(d: door);
-yield Host(goat: door) where goat != d && goat != car;
+yield Host(goat: door) where goat != d;
 yield Guest(switch: bool);
-reveal car;
-if (car == None || goat == None) {
+reveal car where goat != car;
+if (car == undefined || goat == undefined) {
     transfer Host.value from Host to Guest;
 } else {
     var Winner: role = ((d != car) == switch) ? Guest : Host;

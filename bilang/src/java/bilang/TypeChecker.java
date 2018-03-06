@@ -49,7 +49,6 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitVarDef(VarDefContext ctx) {
-        // reorder visit, to prohibit "int x = x"
         Type initType = (ctx.init != null) ? expChecker.accept(ctx.init) : null;
         accept(ctx.dec);
         if (initType != null) {
@@ -59,29 +58,62 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
         return null;
     }
 
+    boolean hidden = false;
     @Override
     public Void visitYieldDef(YieldDefContext ctx) {
-        ctx.packets.forEach(d->requireCompatible(Value.ROLE, d.role));
-        ctx.packets.forEach(this::accept);
-        return null;
-    }
-
-    @Override
-    public Void visitForYieldStmt(ForYieldStmtContext ctx) {
-        accept(ctx.where);
-        //declare(ctx.packet.role, Value.ROLE);
+        this.hidden = ctx.hidden != null;
+        super.visitYieldDef(ctx);
+        this.hidden = false;
         return null;
     }
 
     @Override
     public Void visitJoinDef(JoinDefContext ctx) {
-        declare(ctx.role, Value.ROLE);
+        return super.visitJoinDef(ctx);
+    }
+
+    @Override
+    public Void visitJoinManyDef(JoinManyDefContext ctx) {
+        declare(ctx.role, Value.ROLE_SET);
+        return null;
+    }
+
+    @Override
+    public Void visitForYieldStmt(ForYieldStmtContext ctx) {
+        symbolTable.push();
+        accept(ctx.packetsBind());
+        require(symbolTable.lookup(ctx.from.getText()).isCompatible(Value.ROLE_SET),
+                "Variable must refer to a role set", ctx.from);
+        accept(ctx.block());
+        symbolTable.pop();
+        return null;
+    }
+
+    @Override
+    public Void visitPacketsBind(PacketsBindContext ctx) {
+        ctx.packets().packet().forEach(p -> declare(p.role, Value.ROLE));
+        accept(ctx.packets());
+        return null;
+    }
+
+    @Override
+    public Void visitPackets(PacketsContext ctx) {
+        super.visitPackets(ctx);
         return null;
     }
 
     @Override
     public Void visitWhereClause(WhereClauseContext ctx) {
-        requireCompatible(Value.BOOL, ctx.exp());
+        if (ctx.cond != null)
+            requireCompatible(Value.BOOL, ctx.cond);
+        return null;
+    }
+
+    @Override
+    public Void visitPacket(PacketContext ctx) {
+        require(symbolTable.lookup(ctx.role.getText()).isCompatible(Value.ROLE),
+                "Variable must refer to a role", ctx.role);
+        super.visitPacket(ctx);
         return null;
     }
 
@@ -92,10 +124,13 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     }
 
     private void declare(Token ctx, Type type) {
+        if (hidden && type != Value.ROLE) {
+            type = new Hidden(type);
+        }
         String name = ctx.getText();
+        require(!types.containsKey(name),"Cannot redeclare type name as name", ctx);
         Map<String, Type> scope = symbolTable.currentScope();
         require(!scope.containsKey(name),"Name already declared", ctx);
-        require(!types.containsKey(name),"Cannot redeclare type name as name", ctx);
         scope.put(name, type);
     }
 
@@ -104,19 +139,48 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
         String name = typeDec.name.getText();
         require(!types.containsKey(name),
                 "Type name already declared", typeDec.name);
-        types.put(name, typedef.visit(typeDec.typeDef()));
+        types.put(name, typedef.visit(typeDec.typeExp()));
+        return null;
+    }
+
+    @Override
+    public Void visitSubsetTypeExp(SubsetTypeExpContext ctx) {
+        assert false;
+        return null;
+    }
+
+    @Override
+    public Void visitRangeTypeExp(RangeTypeExpContext ctx) {
+        assert false;
         return null;
     }
 
     @Override
     public Void visitAssignStmt(AssignStmtContext ctx) {
-        requireCompatible(symbolTable.lookup(ctx.lvalue.getText()), ctx.exp());
+        requireCompatible(symbolTable.lookup(ctx.target.getText()), ctx.exp());
         return null;
+    }
+
+    @Override
+    public Void visitRevealStmt(RevealStmtContext ctx) {
+        Type t = symbolTable.lookup(ctx.target.getText());
+        require(t != null, "Undefined variable", ctx.target);
+        require(t instanceof Hidden, "Expression must be hidden", ctx);
+        symbolTable.currentScope().put(ctx.target.getText(), ((Hidden) t).t);
+        return super.visitRevealStmt(ctx);
     }
 
     @Override
     public Void visitTransferStmt(TransferStmtContext ctx) {
         requireCompatible(Value.ROLE, ctx.from, ctx.to);
+        return null;
+    }
+
+    @Override
+    public Void visitIfStmt(IfStmtContext ctx) {
+        requireCompatible(Value.BOOL, ctx.exp());
+        accept(ctx.ifTrue);
+        accept(ctx.ifFalse);
         return null;
     }
 
@@ -129,17 +193,26 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
     private void requireCompatible(Type t, ExpContext ... exps) {
         for (ExpContext exp : exps) {
-            require(expChecker.accept(exp).isCompatible(t), "Expression must be " + t, exp);
+            Type t1 = expChecker.accept(exp);
+            require(t1.isCompatible(t),
+                    String.format("Expression \"%s\" must be %s not %s", exp.getText(), t, t1),
+                    exp);
         }
     }
-
+    private void requireCompatible(Type t, Token token) {
+        Type t1 = symbolTable.lookup(token.getText());
+        require(t1.isCompatible(t),
+                String.format("Expression \"%s\" must be %s not %s", token.getText(), t, t1),
+                token);
+    }
+    
     public class TypeDefiner extends BiLangBaseVisitor<Type> {
         @Override
-        public Type visitSubsetTypeDef(SubsetTypeDefContext ctx)  {
+        public Type visitSubsetTypeExp(SubsetTypeExpContext ctx)  {
             return new Subset(ctx.vals.stream().map(x->Integer.parseInt(x.getText())).collect(Collectors.toSet()));
         }
         @Override
-        public Type visitRangeTypeDef(RangeTypeDefContext ctx)  {
+        public Type visitRangeTypeExp(RangeTypeExpContext ctx)  {
             return new Range(Integer.parseInt(ctx.start.getText()), Integer.parseInt(ctx.end.getText()));
         }
     }
@@ -157,6 +230,12 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
             Type t = symbolTable.lookup(name);
             require(t != null, "Undefined name " + name, ctx);
             return t;
+        }
+
+        @Override
+        public Type visitMemberExp(MemberExpContext ctx) {
+            requireCompatible(Value.ROLE, ctx.role);
+            return Value.UNDEF;
         }
 
         @Override
@@ -200,7 +279,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
                     return Value.BOOL;
                 case "-":
                     requireCompatible(Value.INT, ctx.exp());
-                    return Value.BOOL;
+                    return Value.INT;
             }
             assert false;
             return null;
@@ -233,6 +312,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
             return Value.BOOL;
         }
 
+
         @Override
         public Type visitBinOpEqExp(BinOpEqExpContext ctx) {
             Type leftType = accept(ctx.left);
@@ -252,7 +332,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
             return compatible(left, right) || compatible(right, left);
         }
 
-        private Type accept(ParserRuleContext ctx) {
+        Type accept(ParserRuleContext ctx) {
             assert ctx != null;
             Type result = ctx.accept(this);
             assert result != null;

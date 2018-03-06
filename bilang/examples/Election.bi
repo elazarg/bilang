@@ -1,6 +1,7 @@
 join many Voters;
 var total: int = 0;
-for yield Voter(vote: int) from Voters where vote == -1 || vote == 1 {
+for yield Voter(vote: int) where vote == -1 || vote == 1
+    from Voters {
     total := total + vote;
 }
-var Result : bool = total > 0;
+var result : bool = total > 0;

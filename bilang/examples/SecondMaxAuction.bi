@@ -1,5 +1,4 @@
-join Owner;
-yield Owner(minimal: int);
+join Owner(minimal: int);
 var maxValue: int = minimal;
 var Winner: role = Owner;
 var secondMaxValue: int = 0;

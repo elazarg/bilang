@@ -8,7 +8,7 @@ import java.util.Set;
 
 interface Type {
     default boolean isCompatible(Type other) {
-        return this == other;
+        return this == other || this == Value.UNDEF;
     }
 
     static boolean compatible(Type left, Type right) {
@@ -51,9 +51,17 @@ class Subset implements Type {
     }
 }
 
+class Hidden implements Type {
+    Type t;
+    Hidden(Type t) {
+        this.t = t;
+    }
+}
+
 enum Value implements Type {
     INT,
     BOOL,
     ROLE,
+    ROLE_SET,
     UNDEF,
 }
