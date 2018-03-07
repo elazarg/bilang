@@ -3,7 +3,6 @@ package bilang;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import bilang.generated.BiLangParser;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import bilang.generated.BiLangBaseVisitor;
@@ -15,13 +14,13 @@ import static bilang.Main.require;
 
 class TypeChecker extends BiLangBaseVisitor<Void> {
     private final Map<String, Type> types = new HashMap<>(Map.of(
-            "role", Value.ROLE,
-            "address", Value.ROLE,
-            "int", Value.INT,
-            "bool", Value.BOOL
+            "role", ValueType.ROLE,
+            "address", ValueType.ROLE,
+            "int", ValueType.INT,
+            "bool", ValueType.BOOL
     ));
 
-    private final SymbolTable symbolTable = new SymbolTable(Map.of());
+    private final SymbolTable<Type> symbolTable = new SymbolTable<>(Map.of());
 
     private final ExpTypeChecker expChecker = new ExpTypeChecker();
     private final TypeDefiner typedef = new TypeDefiner();
@@ -74,7 +73,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitJoinManyDef(JoinManyDefContext ctx) {
-        declare(ctx.role, Value.ROLE_SET);
+        declare(ctx.role, ValueType.ROLE_SET);
         return null;
     }
 
@@ -82,7 +81,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     public Void visitForYieldStmt(ForYieldStmtContext ctx) {
         symbolTable.push();
         accept(ctx.packetsBind());
-        require(symbolTable.lookup(ctx.from.getText()).isCompatible(Value.ROLE_SET),
+        require(symbolTable.lookup(ctx.from.getText()).isCompatible(ValueType.ROLE_SET),
                 "Variable must refer to a role set", ctx.from);
         accept(ctx.block());
         symbolTable.pop();
@@ -91,7 +90,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitPacketsBind(PacketsBindContext ctx) {
-        ctx.packets().packet().forEach(p -> declare(p.role, Value.ROLE));
+        ctx.packets().packet().forEach(p -> declare(p.role, ValueType.ROLE));
         accept(ctx.packets());
         return null;
     }
@@ -105,13 +104,13 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     @Override
     public Void visitWhereClause(WhereClauseContext ctx) {
         if (ctx.cond != null)
-            requireCompatible(Value.BOOL, ctx.cond);
+            requireCompatible(ValueType.BOOL, ctx.cond);
         return null;
     }
 
     @Override
     public Void visitPacket(PacketContext ctx) {
-        require(symbolTable.lookup(ctx.role.getText()).isCompatible(Value.ROLE),
+        require(symbolTable.lookup(ctx.role.getText()).isCompatible(ValueType.ROLE),
                 "Variable must refer to a role", ctx.role);
         super.visitPacket(ctx);
         return null;
@@ -124,8 +123,8 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     }
 
     private void declare(Token ctx, Type type) {
-        if (hidden && type != Value.ROLE) {
-            type = new Hidden(type);
+        if (hidden && type != ValueType.ROLE) {
+            type = new HiddenType(type);
         }
         String name = ctx.getText();
         require(!types.containsKey(name),"Cannot redeclare type name as name", ctx);
@@ -165,20 +164,21 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     public Void visitRevealStmt(RevealStmtContext ctx) {
         Type t = symbolTable.lookup(ctx.target.getText());
         require(t != null, "Undefined variable", ctx.target);
-        require(t instanceof Hidden, "Expression must be hidden", ctx);
-        symbolTable.currentScope().put(ctx.target.getText(), ((Hidden) t).t);
+        require(t instanceof HiddenType, "Expression must be hidden", ctx);
+        symbolTable.currentScope().put(ctx.target.getText(), ((HiddenType) t).t);
         return super.visitRevealStmt(ctx);
     }
 
     @Override
     public Void visitTransferStmt(TransferStmtContext ctx) {
-        requireCompatible(Value.ROLE, ctx.from, ctx.to);
+        requireCompatible(ValueType.ROLE, ctx.from, ctx.to);
+        requireCompatible(ValueType.INT, ctx.amount);
         return null;
     }
 
     @Override
     public Void visitIfStmt(IfStmtContext ctx) {
-        requireCompatible(Value.BOOL, ctx.exp());
+        requireCompatible(ValueType.BOOL, ctx.exp());
         accept(ctx.ifTrue);
         accept(ctx.ifFalse);
         return null;
@@ -234,52 +234,52 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
         @Override
         public Type visitMemberExp(MemberExpContext ctx) {
-            requireCompatible(Value.ROLE, ctx.role);
-            return Value.UNDEF;
+            requireCompatible(ValueType.ROLE, ctx.role);
+            return ValueType.UNDEF;
         }
 
         @Override
         public Type visitUndefExp(UndefExpContext ctx) {
-            return Value.UNDEF;
+            return ValueType.UNDEF;
         }
 
         @Override
         public Type visitNumLiteralExp(NumLiteralExpContext ctx) {
-            return Value.INT;
+            return ValueType.INT;
         }
 
         @Override
         public Type visitAddressLiteralExp(AddressLiteralExpContext ctx) {
-            return Value.ROLE;
+            return ValueType.ROLE;
         }
 
         @Override
         public Type visitBinOpMultExp(BinOpMultExpContext ctx) {
             binopInt(ctx.left, ctx.right);
-            return Value.INT;
+            return ValueType.INT;
         }
 
         @Override
         public Type visitBinOpAddExp(BinOpAddExpContext ctx) {
             binopInt(ctx.left, ctx.right);
-            return Value.INT;
+            return ValueType.INT;
         }
 
         @Override
         public Type visitBinOpCompExp(BinOpCompExpContext ctx) {
             binopInt(ctx.left, ctx.right);
-            return Value.BOOL;
+            return ValueType.BOOL;
         }
 
         @Override
         public Type visitUnOpExp(UnOpExpContext ctx) {
             switch (ctx.op.getText()) {
                 case "!":
-                    requireCompatible(Value.BOOL, ctx.exp());
-                    return Value.BOOL;
+                    requireCompatible(ValueType.BOOL, ctx.exp());
+                    return ValueType.BOOL;
                 case "-":
-                    requireCompatible(Value.INT, ctx.exp());
-                    return Value.INT;
+                    requireCompatible(ValueType.INT, ctx.exp());
+                    return ValueType.INT;
             }
             assert false;
             return null;
@@ -290,8 +290,8 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
             switch (ctx.callee.getText()) {
                 case "abs":
                     require(ctx.args.size() == 1, "abs should have 1 arg", ctx);
-                    requireCompatible(Value.INT, ctx.args.get(0));
-                    return Value.INT;
+                    requireCompatible(ValueType.INT, ctx.args.get(0));
+                    return ValueType.INT;
             }
             assert false;
             return null;
@@ -299,7 +299,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
         @Override
         public Type visitIfExp(IfExpContext ctx) {
-            requireCompatible(Value.BOOL, ctx.cond);
+            requireCompatible(ValueType.BOOL, ctx.cond);
             Type t = accept(ctx.ifTrue);
             Type f = accept(ctx.ifFalse);
             require(compatible(t, f) && compatible(f, t),"Unrelated condition operands", ctx);
@@ -308,8 +308,8 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
         @Override
         public Type visitBinOpBoolExp(BinOpBoolExpContext ctx) {
-            requireCompatible(Value.BOOL, ctx.left, ctx.right);
-            return Value.BOOL;
+            requireCompatible(ValueType.BOOL, ctx.left, ctx.right);
+            return ValueType.BOOL;
         }
 
 
@@ -321,11 +321,11 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
                     String.format("Unrelated equality operands %s:%s and %s:%s",
                             ctx.left.getText(), leftType, ctx.right.getText(), rightType),
                     ctx);
-            return Value.BOOL;
+            return ValueType.BOOL;
         }
 
         private void binopInt(ExpContext left, ExpContext right) {
-            requireCompatible(Value.INT, left, right);
+            requireCompatible(ValueType.INT, left, right);
         }
 
         private boolean related(Type left, Type right) {

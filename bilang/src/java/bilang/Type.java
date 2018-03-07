@@ -1,14 +1,11 @@
 package bilang;
 
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 interface Type {
     default boolean isCompatible(Type other) {
-        return this == other || this == Value.UNDEF;
+        return this == other || this == ValueType.UNDEF;
     }
 
     static boolean compatible(Type left, Type right) {
@@ -26,7 +23,7 @@ class Range implements Type {
 
     @Override
     public boolean isCompatible(Type other) {
-        if (other == this || other == Value.INT)
+        if (other == this || other == ValueType.INT)
             return true;
         if (other instanceof Range) {
             Range range = ((Range) other);
@@ -45,20 +42,20 @@ class Subset implements Type {
     @Override
     public boolean isCompatible(Type other) {
         return other == this
-            || other == Value.INT
+            || other == ValueType.INT
             || other instanceof Range && items.stream().allMatch(x->((Range)other).start <= x && ((Range)other).end >= x)
             || other instanceof Subset && items.containsAll(((Subset) other).items);
     }
 }
 
-class Hidden implements Type {
+class HiddenType implements Type {
     Type t;
-    Hidden(Type t) {
+    HiddenType(Type t) {
         this.t = t;
     }
 }
 
-enum Value implements Type {
+enum ValueType implements Type {
     INT,
     BOOL,
     ROLE,

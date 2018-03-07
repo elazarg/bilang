@@ -1,0 +1,388 @@
+package bilang;
+
+import bilang.generated.BiLangBaseVisitor;
+import bilang.generated.BiLangParser;
+import org.antlr.v4.runtime.Token;
+
+import java.util.*;
+
+import static bilang.Main.require;
+import static bilang.generated.BiLangParser.*;
+
+interface Value {}
+
+enum Vals implements Value {
+    UNDEFINED
+}
+
+final class Bool implements Value {
+    boolean value;
+    private Bool(boolean b) { this.value = b;}
+    static final Bool TRUE = new Bool(true);
+    static final Bool FALSE = new Bool(false);
+    @Override
+    public String toString() {
+        return this == TRUE ? "TRUE" : "FALSE";
+    }
+}
+
+final class Int implements Value {
+    int value;
+    Int(int i) { this.value = i;}
+    @Override
+    public String toString() {
+        return Integer.toString(value);
+    }
+}
+
+final class Address implements Value {
+    int value;
+    Address(int i) { this.value = i;}
+    public String toString() {
+        return Integer.toHexString(value);
+    }
+}
+
+final class AddressSet implements Value {
+    List<Address> addresses;
+    AddressSet(List<Address> addresses) { this.addresses = addresses;}
+    public String toString() {
+        return "Set(" + addresses + ")";
+    }
+}
+final class Hidden<T extends Value> implements Value {
+    T v;
+    Hidden(T v) { this.v = v;}
+    public String toString() {
+        return "[" + v + "]";
+    }
+}
+
+interface Strategy {
+    List<Map<String,Value>> respondTo(List<Map<String, Value>> last);
+}
+
+final class Interpreter extends BiLangBaseVisitor<Void> {
+    private SymbolTable<Value> state = new SymbolTable<>(Map.of());
+
+    private Evaluator evaluator = new Evaluator();
+
+    private Strategy players;
+    Interpreter(Strategy players) {
+        this.players = players;
+    }
+
+    private Value eval(ExpContext exp) {
+        System.out.println(exp.getText());
+        Value res = exp.accept(evaluator);
+        require(res != null);
+        return res;
+    }
+
+    private Value evalDefined(ExpContext exp) {
+        Value res = eval(exp);
+        require(res != Vals.UNDEFINED);
+        return res;
+    }
+
+    @Override
+    public Void visitProgram(ProgramContext ctx) {
+        return ctx.block().accept(this);
+    }
+
+    @Override
+    public Void visitTypeDec(TypeDecContext ctx) {
+        require(false);
+        return super.visitTypeDec(ctx);
+    }
+
+    @Override
+    public Void visitSubsetTypeExp(SubsetTypeExpContext ctx) {
+        require(false);
+        return super.visitSubsetTypeExp(ctx);
+    }
+
+    @Override
+    public Void visitRangeTypeExp(RangeTypeExpContext ctx) {
+        require(false);
+        return super.visitRangeTypeExp(ctx);
+    }
+
+    @Override
+    public Void visitBlock(BlockContext ctx) {
+        state.push();
+        for (StmtContext x : ctx.stmt())
+            x.accept(this);
+        state.pop();
+        return null;
+    }
+
+    final class Evaluator extends BiLangBaseVisitor<Value> {
+        @Override
+        public Bool visitBinOpEqExp(BinOpEqExpContext ctx) {
+            Value left = eval(ctx.left);
+            Value right = eval(ctx.right);
+            return "==".equals(ctx.op.getText()) == left.equals(right) ? Bool.TRUE : Bool.FALSE;
+        }
+
+        @Override
+        public Value visitUndefExp(UndefExpContext ctx) {
+            return Vals.UNDEFINED;
+        }
+
+        @Override
+        public Int visitBinOpAddExp(BinOpAddExpContext ctx) {
+            return binOpInt(ctx.op, ctx.left, ctx.right);
+        }
+
+        @Override
+        public Value visitBinOpMultExp(BinOpMultExpContext ctx) {
+            return binOpInt(ctx.op, ctx.left, ctx.right);
+        }
+
+        private Int binOpInt(Token op, ExpContext _1, ExpContext _2) {
+            int left = ((Int)evalDefined(_1)).value;
+            int right = ((Int)evalDefined(_2)).value;
+            switch (op.getText()) {
+                case "+": return new Int(left + right);
+                case "-": return new Int(left - right);
+                case "*": return new Int(left * right);
+                case "/": return new Int(left / right);
+            }
+            assert false;
+            return null;
+        }
+
+        @Override
+        public Value visitBinOpCompExp(BinOpCompExpContext ctx) {
+            return super.visitBinOpCompExp(ctx);
+        }
+
+        @Override
+        public Value visitUnOpExp(UnOpExpContext ctx) {
+            Value val = evalDefined(ctx.exp());
+            switch (ctx.op.getText()) {
+                case "-": return new Int(-((Int)val).value);
+                case "!": return ((Bool)val).value ? Bool.FALSE : Bool.TRUE;
+            }
+            assert false;
+            return null;
+        }
+
+        @Override
+        public Value visitIdExp(IdExpContext ctx) {
+            Value res = state.lookup(ctx.name.getText());
+            require(res != null);
+            return res;
+        }
+
+        @Override
+        public Value visitMemberExp(MemberExpContext ctx) {
+            require(false);
+            return null;
+        }
+
+        @Override
+        public Value visitCallExp(CallExpContext ctx) {
+            require(false);
+            return null;
+        }
+
+        @Override
+        public Value visitIfExp(IfExpContext ctx) {
+            Bool b = (Bool)eval(ctx.cond);
+            return eval(b.value ? ctx.ifTrue : ctx.ifFalse);
+        }
+
+        @Override
+        public Value visitBinOpBoolExp(BinOpBoolExpContext ctx) {
+            return binOpBool(ctx.op, ctx.left, ctx.right);
+        }
+
+        @Override
+        public Value visitParenExp(ParenExpContext ctx) {
+            return eval(ctx.exp());
+        }
+
+        private Bool binOpBool(Token op, ExpContext _left, ExpContext _right) {
+            boolean left = ((Bool) evalDefined(_left)).value;
+            switch (op.getText()) {
+                case "&&": if (!left) return Bool.FALSE;
+                case "||": if (left) return Bool.TRUE;
+                default: assert false;
+            }
+            return ((Bool) evalDefined(_right)).value ? Bool.TRUE : Bool.FALSE;
+        }
+
+        @Override
+        public Value visitAddressLiteralExp(AddressLiteralExpContext ctx) {
+            return new Address(Integer.parseInt(ctx.ADDRESS().getText(), 16));
+        }
+
+        @Override
+        public Value visitNumLiteralExp(NumLiteralExpContext ctx) {
+            return new Int(Integer.parseInt(ctx.INT().getText()));
+        }
+
+        @Override
+        public Value visitVarRef(VarRefContext ctx) {
+            assert false;
+            System.out.println("VarRef: " + ctx.getText());
+            return state.lookup(ctx.ID().getText());
+        }
+    }
+
+    @Override
+    public Void visitVarDef(VarDefContext ctx) {
+        defineVar(ctx.dec, eval(ctx.init));
+        return null;
+    }
+
+    private void defineVar(VarDecContext dec, Value value) {
+        dec.accept(this);
+        updateVar(varName(dec), value);
+    }
+
+    private Value updateVar(String var, Value value) {
+        return state.currentScope().put(var, value);
+    }
+
+    List<Map<String, Value>> last = new LinkedList<>();
+    @Override
+    public Void visitYieldDef(YieldDefContext ctx) {
+        this.last = players.respondTo(this.last);
+        List<PacketContext> packets = ctx.packets().packet();
+        require(this.last.size() == packets.size());
+        for (int i = 0; i < last.size(); i++) {
+            Map<String, Value> msg = last.get(i);
+            //System.out.println(msg);
+            state.currentScope().putAll(msg);
+            // check for matching
+            require(packets.get(i).decls.size() == msg.size());
+        }
+        ExpContext cond = ctx.packets().where.cond;
+        if (cond != null)
+            require(eval(cond) == Bool.TRUE);
+        return null;
+    }
+
+    private String varName(VarDecContext dec) {
+        return dec.name.getText();
+    }
+
+    @Override
+    public Void visitJoinDef(JoinDefContext ctx) {
+        awaitResponse();
+        String var = ctx.packetsBind().packets().packet(0).role.getText();
+        Address a = (Address)last.get(0).get(var);
+        state.currentScope().put(var, a);
+        // TODO: put the rest of the msg
+        return super.visitJoinDef(ctx);
+    }
+
+    @Override
+    public Void visitJoinManyDef(JoinManyDefContext ctx) {
+        awaitResponse();
+        require(last.size() == 1 && last.get(0).size() == 1);
+        String var = ctx.role.getText();
+        AddressSet a = (AddressSet)last.get(0).get(var);
+        state.currentScope().put(var, a);
+        return null;
+    }
+
+    private void awaitResponse() {
+        this.last = players.respondTo(last);
+    }
+
+    @Override
+    public Void visitRevealStmt(RevealStmtContext ctx) {
+        String var = ctx.target.ID().getText();
+        Value _h = state.lookup(var);
+        require(_h != null);
+        require(_h instanceof Hidden);
+
+        awaitResponse();
+        require(last.size() == 1 && last.get(0).size() == 1);
+        Hidden<Value> h = (Hidden<Value>)_h;
+        boolean reveal = ((Bool)last.get(0).get(var)).value;
+        System.out.println("Revealing: " + reveal);
+        state.update(var, reveal ? h.v : Vals.UNDEFINED);
+        return null;
+    }
+
+    @Override
+    public Void visitAssignStmt(AssignStmtContext ctx) {
+        state.update(ctx.target.ID().getText(), eval(ctx.exp()));
+        return super.visitAssignStmt(ctx);
+    }
+
+    @Override
+    public Void visitIfStmt(IfStmtContext ctx) {
+        Bool cond = (Bool)eval(ctx.exp());
+        return (cond.value ? ctx.ifTrue : ctx.ifFalse).accept(this);
+    }
+
+    private Address joinFrom(String var, AddressSet ads) {
+        awaitResponse();
+        require(last.size() == 1 && last.get(0).size() == 1);
+        Address a = (Address)last.get(0).get(var);
+        require(ads.addresses.contains(a));
+        return a;
+    }
+
+    @Override
+    public Void visitForYieldStmt(ForYieldStmtContext ctx) {
+        awaitResponse();
+
+        return super.visitForYieldStmt(ctx);
+    }
+
+    @Override
+    public Void visitTransferStmt(TransferStmtContext ctx) {
+        Int amount = (Int)eval(ctx.amount);
+        Address from = (Address)eval(ctx.from);
+        Address to = (Address)eval(ctx.to);
+        // TODO: actual transfer
+        return null;
+    }
+
+    @Override
+    public Void visitPacketsBind(PacketsBindContext ctx) {
+        return super.visitPacketsBind(ctx);
+    }
+
+    @Override
+    public Void visitPackets(PacketsContext ctx) {
+        return super.visitPackets(ctx);
+    }
+
+    @Override
+    public Void visitPacket(PacketContext ctx) {
+        return super.visitPacket(ctx);
+    }
+
+    @Override
+    public Void visitVarDec(VarDecContext ctx) {
+        updateVar(varName(ctx), Vals.UNDEFINED);
+        return null;
+    }
+    
+    private void require(boolean b) {
+        if (!b)
+            throw new RuntimeException();
+    }
+}
+
+
+class PredefinedStrategy implements Strategy {
+    Iterator<List<Map<String, Value>>> it;
+
+    PredefinedStrategy(Iterable<List<Map<String, Value>>> msgs) {
+        it = msgs.iterator();
+    }
+
+    @Override
+    public List<Map<String, Value>> respondTo(List<Map<String, Value>> last) {
+        return it.next();
+    }
+}

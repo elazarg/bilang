@@ -5,10 +5,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-class SymbolTable {
-    final private LinkedList<Map<String, Type>> scope;
+class SymbolTable<T> {
+    final private LinkedList<Map<String, T>> scope;
 
-    SymbolTable(Map<String, Type> initial) {
+    SymbolTable(Map<String, T> initial) {
         this.scope = new LinkedList<>(Collections.singletonList(initial));
     }
 
@@ -20,15 +20,30 @@ class SymbolTable {
         scope.removeFirst();
     }
 
-    Map<String, Type> currentScope() {
+    Map<String, T> currentScope() {
         return scope.peekFirst();
     }
 
-    Type lookup(String text) {
-        for (Map<String, Type> m : scope) {
-            if (m.containsKey(text))
-                return m.get(text);
+    T lookup(String v) {
+        for (Map<String, T> m : scope) {
+            if (m.containsKey(v))
+                return m.get(v);
         }
         return null;
+    }
+
+    void update(String v, T val) {
+        for (Map<String, T> m : scope) {
+            if (m.containsKey(v)) {
+                m.put(v, val);
+                return;
+            }
+        }
+        throw new RuntimeException("Undefined variable " + v);
+    }
+
+    @Override
+    public String toString() {
+        return scope.toString();
     }
 }

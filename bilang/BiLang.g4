@@ -29,7 +29,7 @@ exp
 
 stmt
     : 'var' dec=varDec ('=' init=exp)? ';'   # VarDef
-    | 'yield' hidden='hidden'? packets ';'          # YieldDef
+    | 'yield' hidden='hidden'? packets ';'   # YieldDef
     | 'join' packetsBind ';'                 # JoinDef
     | 'join' 'many' role=ID ';'              # JoinManyDef
 
@@ -39,7 +39,7 @@ stmt
        ('else' '{' ifFalse=block '}')?               # IfStmt
     | 'for' 'yield' packetsBind
       'from' from=ID '{' block '}'           # ForYieldStmt
-    | 'transfer' target=exp 'from' from=exp 'to' to=exp ';' # TransferStmt
+    | 'transfer' amount=exp 'from' from=exp 'to' to=exp ';' # TransferStmt
     ;
 
 packetsBind : packets;

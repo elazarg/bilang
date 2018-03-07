@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,7 +19,11 @@ public final class Main {
 
     static public void main(String argv[]) throws IOException {
         final BiLangParser.ProgramContext program = parse(Paths.get("/dev/stdin"));
-        typecheck(program);
+        String t = typecheck(program);
+        System.out.println(t);
+        if (t.equals("OK")) {
+            run(program);
+        }
     }
 
     private static String typecheck(BiLangParser.ProgramContext program) {
@@ -29,6 +34,20 @@ public final class Main {
             return String.format("ERROR(%d)", ex.line);
         }
         return "OK";
+    }
+
+    private static void run(BiLangParser.ProgramContext program) {
+        // FIX: this is program-specific and should not be here
+        List<List<Map<String, Value>>> msgsForMontyHall = List.of(
+                List.of(Map.of("Host", new Address(0x15))),
+                List.of(Map.of("Guest", new Address(0x16))),
+                List.of(Map.of("car", new Hidden<>(new Int(2)))),
+                List.of(Map.of("d", new Int(1))),
+                List.of(Map.of("goat", new Int(3))),
+                List.of(Map.of("switch", Bool.TRUE)),
+                List.of(Map.of("car", Bool.TRUE))
+        );
+        program.accept(new Interpreter(new PredefinedStrategy(msgsForMontyHall)));
     }
 
     private static BiLangParser.ProgramContext parse(Path inputFilename) throws IOException {

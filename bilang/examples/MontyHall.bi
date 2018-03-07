@@ -11,6 +11,6 @@ if (car == undefined || goat == undefined) {
     transfer Host.value from Host to Guest;
 } else {
     var Winner: role = ((d != car) == switch) ? Guest : Host;
-    transfer Host.value from Host to Winner;
-    transfer Guest.value from Guest to Winner;
+    transfer 20 from Host to Winner;
+    transfer 20 from Guest to Winner;
 }
