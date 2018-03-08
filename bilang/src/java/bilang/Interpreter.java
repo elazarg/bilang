@@ -1,7 +1,6 @@
 package bilang;
 
 import bilang.generated.BiLangBaseVisitor;
-import bilang.generated.BiLangParser;
 import org.antlr.v4.runtime.Token;
 
 import java.util.*;
@@ -15,20 +14,20 @@ enum Vals implements Value {
     UNDEFINED
 }
 
-final class Bool implements Value {
+final class BoolVals implements Value {
     boolean value;
-    private Bool(boolean b) { this.value = b;}
-    static final Bool TRUE = new Bool(true);
-    static final Bool FALSE = new Bool(false);
+    private BoolVals(boolean b) { this.value = b;}
+    static final BoolVals TRUE = new BoolVals(true);
+    static final BoolVals FALSE = new BoolVals(false);
     @Override
     public String toString() {
         return this == TRUE ? "TRUE" : "FALSE";
     }
 }
 
-final class Int implements Value {
+final class IntVals implements Value {
     int value;
-    Int(int i) { this.value = i;}
+    IntVals(int i) { this.value = i;}
     @Override
     public String toString() {
         return Integer.toString(value);
@@ -119,10 +118,10 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
 
     final class Evaluator extends BiLangBaseVisitor<Value> {
         @Override
-        public Bool visitBinOpEqExp(BinOpEqExpContext ctx) {
+        public BoolVals visitBinOpEqExp(BinOpEqExpContext ctx) {
             Value left = eval(ctx.left);
             Value right = eval(ctx.right);
-            return "==".equals(ctx.op.getText()) == left.equals(right) ? Bool.TRUE : Bool.FALSE;
+            return "==".equals(ctx.op.getText()) == left.equals(right) ? BoolVals.TRUE : BoolVals.FALSE;
         }
 
         @Override
@@ -131,7 +130,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         }
 
         @Override
-        public Int visitBinOpAddExp(BinOpAddExpContext ctx) {
+        public IntVals visitBinOpAddExp(BinOpAddExpContext ctx) {
             return binOpInt(ctx.op, ctx.left, ctx.right);
         }
 
@@ -140,14 +139,14 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
             return binOpInt(ctx.op, ctx.left, ctx.right);
         }
 
-        private Int binOpInt(Token op, ExpContext _1, ExpContext _2) {
-            int left = ((Int)evalDefined(_1)).value;
-            int right = ((Int)evalDefined(_2)).value;
+        private IntVals binOpInt(Token op, ExpContext _1, ExpContext _2) {
+            int left = ((IntVals)evalDefined(_1)).value;
+            int right = ((IntVals)evalDefined(_2)).value;
             switch (op.getText()) {
-                case "+": return new Int(left + right);
-                case "-": return new Int(left - right);
-                case "*": return new Int(left * right);
-                case "/": return new Int(left / right);
+                case "+": return new IntVals(left + right);
+                case "-": return new IntVals(left - right);
+                case "*": return new IntVals(left * right);
+                case "/": return new IntVals(left / right);
             }
             assert false;
             return null;
@@ -162,8 +161,8 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         public Value visitUnOpExp(UnOpExpContext ctx) {
             Value val = evalDefined(ctx.exp());
             switch (ctx.op.getText()) {
-                case "-": return new Int(-((Int)val).value);
-                case "!": return ((Bool)val).value ? Bool.FALSE : Bool.TRUE;
+                case "-": return new IntVals(-((IntVals)val).value);
+                case "!": return ((BoolVals)val).value ? BoolVals.FALSE : BoolVals.TRUE;
             }
             assert false;
             return null;
@@ -190,7 +189,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
 
         @Override
         public Value visitIfExp(IfExpContext ctx) {
-            Bool b = (Bool)eval(ctx.cond);
+            BoolVals b = (BoolVals)eval(ctx.cond);
             return eval(b.value ? ctx.ifTrue : ctx.ifFalse);
         }
 
@@ -204,14 +203,14 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
             return eval(ctx.exp());
         }
 
-        private Bool binOpBool(Token op, ExpContext _left, ExpContext _right) {
-            boolean left = ((Bool) evalDefined(_left)).value;
+        private BoolVals binOpBool(Token op, ExpContext _left, ExpContext _right) {
+            boolean left = ((BoolVals) evalDefined(_left)).value;
             switch (op.getText()) {
-                case "&&": if (!left) return Bool.FALSE;
-                case "||": if (left) return Bool.TRUE;
+                case "&&": if (!left) return BoolVals.FALSE;
+                case "||": if (left) return BoolVals.TRUE;
                 default: assert false;
             }
-            return ((Bool) evalDefined(_right)).value ? Bool.TRUE : Bool.FALSE;
+            return ((BoolVals) evalDefined(_right)).value ? BoolVals.TRUE : BoolVals.FALSE;
         }
 
         @Override
@@ -221,7 +220,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
 
         @Override
         public Value visitNumLiteralExp(NumLiteralExpContext ctx) {
-            return new Int(Integer.parseInt(ctx.INT().getText()));
+            return new IntVals(Integer.parseInt(ctx.INT().getText()));
         }
 
         @Override
@@ -262,7 +261,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         }
         ExpContext cond = ctx.packets().where.cond;
         if (cond != null)
-            require(eval(cond) == Bool.TRUE);
+            require(eval(cond) == BoolVals.TRUE);
         return null;
     }
 
@@ -304,7 +303,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         awaitResponse();
         require(last.size() == 1 && last.get(0).size() == 1);
         Hidden<Value> h = (Hidden<Value>)_h;
-        boolean reveal = ((Bool)last.get(0).get(var)).value;
+        boolean reveal = ((BoolVals)last.get(0).get(var)).value;
         System.out.println("Revealing: " + reveal);
         state.update(var, reveal ? h.v : Vals.UNDEFINED);
         return null;
@@ -318,7 +317,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitIfStmt(IfStmtContext ctx) {
-        Bool cond = (Bool)eval(ctx.exp());
+        BoolVals cond = (BoolVals)eval(ctx.exp());
         return (cond.value ? ctx.ifTrue : ctx.ifFalse).accept(this);
     }
 
@@ -339,7 +338,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitTransferStmt(TransferStmtContext ctx) {
-        Int amount = (Int)eval(ctx.amount);
+        IntVals amount = (IntVals)eval(ctx.amount);
         Address from = (Address)eval(ctx.from);
         Address to = (Address)eval(ctx.to);
         // TODO: actual transfer

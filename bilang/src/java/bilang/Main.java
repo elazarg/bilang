@@ -1,8 +1,6 @@
 package bilang;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
@@ -41,11 +39,11 @@ public final class Main {
         List<List<Map<String, Value>>> msgsForMontyHall = List.of(
                 List.of(Map.of("Host", new Address(0x15))),
                 List.of(Map.of("Guest", new Address(0x16))),
-                List.of(Map.of("car", new Hidden<>(new Int(2)))),
-                List.of(Map.of("d", new Int(1))),
-                List.of(Map.of("goat", new Int(3))),
-                List.of(Map.of("switch", Bool.TRUE)),
-                List.of(Map.of("car", Bool.TRUE))
+                List.of(Map.of("car", new Hidden<>(new IntVals(2)))),
+                List.of(Map.of("d", new IntVals(1))),
+                List.of(Map.of("goat", new IntVals(3))),
+                List.of(Map.of("switch", BoolVals.TRUE)),
+                List.of(Map.of("car", BoolVals.TRUE))
         );
         program.accept(new Interpreter(new PredefinedStrategy(msgsForMontyHall)));
     }
