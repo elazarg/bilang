@@ -1,12 +1,12 @@
 package bilang
 
-sealed class ScribbleAst {
+sealed class Sast {
 
-    data class Protocol(val roles: Set<Role>, val block: Block) : ScribbleAst()
+    data class Protocol(val roles: Set<Role>, val block: Block) : Sast()
 
-    data class Block(val stmts: List<Action>): ScribbleAst()
+    data class Block(val stmts: List<Action>): Sast()
 
-    sealed class Action : ScribbleAst() {
+    sealed class Action : Sast() {
         data class Send(val label: String, val params: List<VarDec>, val from: Role, val to: Set<Role>): Action()
         data class Connect(val to: Role): Action()
         data class Choice(val at: Role, val choices: List<Block>): Action()
@@ -20,7 +20,7 @@ sealed class ScribbleAst {
     data class VarDec(val name: String, val type: Type)
 
     fun prettyPrint(indent: Int): String {
-        fun pretty(x: ScribbleAst) = x.prettyPrint(indent)
+        fun pretty(x: Sast) = x.prettyPrint(indent)
 
         val code = when (this) {
             is Action.Send -> {
@@ -35,7 +35,7 @@ sealed class ScribbleAst {
             is Action.Rec -> "rec " + pretty(actions)
             is Action.Continue -> "continue $label"
             is Block -> stmts.joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n") { stmt -> stmt.prettyPrint(indent + 1) }
-            is ScribbleAst.Protocol -> {
+            is Sast.Protocol -> {
                 assert(indent == 0)
                 val ps = if (roles.isEmpty()) "" else (", " + roles.joinToString(", ") { x -> "role " + x.name })
                 "explicit global protocol MyProtocol(role Server$ps) " + pretty(block)
@@ -46,45 +46,73 @@ sealed class ScribbleAst {
 }
 
 object XXX {
-    fun programToScribble(p: Program): ScribbleAst.Protocol {
+    fun programToScribble(p: Program): Sast.Protocol {
         val roles = findRoles(p.block)
-        return ScribbleAst.Protocol(
+        val hides = matchRevealToHide(p.block)
+        return Sast.Protocol(
             roles,
-            ScribbleAst.Block(p.block.stmts.flatMap { stmt -> stmtToScribble(stmt, roles) })
+            Sast.Block(p.block.stmts.flatMap { stmt -> stmtToScribble(stmt, roles, hides) })
         )
     }
+    private val server = Sast.Role("Server")
 
-    private fun stmtToScribble(stmt: Stmt, roles: Set<ScribbleAst.Role>): List<ScribbleAst.Action> = when (stmt) {
-        is Stmt.Def.JoinDef -> listOf(ScribbleAst.Action.Connect(ScribbleAst.Role(stmt.packets.packets[0].role)))
+    private fun stmtToScribble(stmt: Stmt, roles: Set<Sast.Role>, hides: Map<Stmt.Reveal, Packet>): List<Sast.Action> = when (stmt) {
+        is Stmt.Def.JoinDef -> listOf(Sast.Action.Connect(Sast.Role(stmt.packets.packets[0].role)))
         is Stmt.Def.YieldDef -> {
-            val server = ScribbleAst.Role("Server")
-            stmt.packets.packets.flatMap { p ->
-                val params = packetToParams(p)
-                listOf(
-                        ScribbleAst.Action.Send("SomeLabel", params, ScribbleAst.Role(p.role), setOf(server)),
-                        ScribbleAst.Action.Send("SomeLabel", params, server, roles)
-                )
+            val packets = stmt.packets.packets
+            val rec = if (packets.size > 1) {
+                packets.map { p ->
+                    Sast.Action.Send("Hidden", packetToParams(p), Sast.Role(p.role), setOf(server))
+                }
+            } else listOf()
+            val pub = packets.map { p ->
+                Sast.Action.Send("Public", packetToParams(p), Sast.Role(p.role), setOf(server))
             }
+            val bcast = packets.map { p ->
+                Sast.Action.Send("Broadcast", packetToParams(p), server, roles)
+            }
+            if (stmt.hidden) rec else rec + pub + bcast
+        }
+        is Stmt.Reveal -> {
+            val hiddenPacket = hides.getValue(stmt)
+            listOf(Sast.Action.Send("Public", packetToParams(hiddenPacket), Sast.Role(hiddenPacket.role), setOf(server)),
+                    Sast.Action.Send("Reveal", packetToParams(hiddenPacket), server, roles))
         }
         else -> {
             listOf()
         }
     }
 
-    private fun packetToParams(p: Packet): List<ScribbleAst.VarDec> {
+    private fun packetToParams(p: Packet): List<Sast.VarDec> {
         return p.params.map { param ->
-            ScribbleAst.VarDec(param.name, ScribbleAst.Type((param.type as TypeExp.TypeId).name))
+            Sast.VarDec(param.name, Sast.Type((param.type as TypeExp.TypeId).name))
         }
     }
 
-    fun findRoles(block: Block): Set<ScribbleAst.Role> {
-        val res : MutableSet<ScribbleAst.Role> = mutableSetOf()
+    private fun findRoles(block: Block): Set<Sast.Role> {
+        val res : MutableSet<Sast.Role> = mutableSetOf()
         for (stmt in block.stmts) when (stmt) {
-            is Stmt.Def.JoinDef -> res += stmt.packets.packets.map{ p->ScribbleAst.Role(p.role) }
+            is Stmt.Def.JoinDef -> res += stmt.packets.packets.map{ p->Sast.Role(p.role) }
             is Stmt.ForYield -> res += findRoles(stmt.block)
             is Stmt.If -> res += findRoles(stmt.ifTrue) + findRoles(stmt.ifFalse)
             else -> {}
         }
         return res.toSet()
+    }
+
+    private fun matchRevealToHide(block: Block) : Map<Stmt.Reveal, Packet> {
+        // FIX: ad-hoc - does not respect scope, flow, etc.
+        val yields: MutableMap<String, Packet> = mutableMapOf()
+        val hides: MutableMap<Stmt.Reveal, Packet> = mutableMapOf()
+        for (stmt in block.stmts) when (stmt) {
+            is Stmt.Def.YieldDef ->
+                if (stmt.hidden)
+                    for (v in stmt.packets.packets)
+                        for (p in v.params)
+                            yields[p.name] = v
+            is Stmt.Reveal ->
+                    hides[stmt] = yields.getValue(stmt.target)
+        }
+        return hides.toMap()
     }
 }

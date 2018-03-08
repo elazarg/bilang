@@ -20,11 +20,9 @@ public final class Main {
         System.out.println(argv[0]);
         final BiLangParser.ProgramContext program = parse(Paths.get(argv[0]));
         String t = typecheck(program);
-        ScribbleAst.Protocol scribble = INSTANCE.programToScribble(new AstTranslator().visitProgram(program));
+        Sast.Protocol scribble = INSTANCE.programToScribble(new AstTranslator().visitProgram(program));
         System.out.println(scribble.prettyPrint(0));
-        if (t.equals("OK")) {
-            run(program);
-        }
+        //if (t.equals("OK")) { run(program); }
     }
 
     private static String typecheck(BiLangParser.ProgramContext program) {
