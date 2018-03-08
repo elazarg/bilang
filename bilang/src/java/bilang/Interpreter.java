@@ -72,7 +72,6 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
     }
 
     private Value eval(ExpContext exp) {
-        System.out.println(exp.getText());
         Value res = exp.accept(evaluator);
         require(res != null);
         return res;
@@ -226,7 +225,6 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         @Override
         public Value visitVarRef(VarRefContext ctx) {
             assert false;
-            System.out.println("VarRef: " + ctx.getText());
             return state.lookup(ctx.ID().getText());
         }
     }
@@ -254,7 +252,6 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         require(this.last.size() == packets.size());
         for (int i = 0; i < last.size(); i++) {
             Map<String, Value> msg = last.get(i);
-            //System.out.println(msg);
             state.currentScope().putAll(msg);
             // check for matching
             require(packets.get(i).decls.size() == msg.size());
@@ -304,7 +301,6 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         require(last.size() == 1 && last.get(0).size() == 1);
         Hidden<Value> h = (Hidden<Value>)_h;
         boolean reveal = ((BoolVals)last.get(0).get(var)).value;
-        System.out.println("Revealing: " + reveal);
         state.update(var, reveal ? h.v : Vals.UNDEFINED);
         return null;
     }

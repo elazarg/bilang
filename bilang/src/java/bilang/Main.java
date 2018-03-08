@@ -10,15 +10,18 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.antlr.v4.runtime.*;
-
+import static bilang.XXX.INSTANCE;
 import bilang.generated.*;
 
 public final class Main {
 
     static public void main(String argv[]) throws IOException {
-        final BiLangParser.ProgramContext program = parse(Paths.get("/dev/stdin"));
+        //final String infile = argv.length > 1 ? argv[0] : "/dev/stdin";
+        System.out.println(argv[0]);
+        final BiLangParser.ProgramContext program = parse(Paths.get(argv[0]));
         String t = typecheck(program);
-        System.out.println(t);
+        ScribbleAst.Protocol scribble = INSTANCE.programToScribble(new AstTranslator().visitProgram(program));
+        System.out.println(scribble.prettyPrint(0));
         if (t.equals("OK")) {
             run(program);
         }

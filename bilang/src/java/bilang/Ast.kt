@@ -38,7 +38,7 @@ sealed class Stmt : Ast() {
 
     data class Assign(val target: String , val exp: Exp): Stmt()
     data class Reveal(val target: String, val where: Exp): Stmt()
-    data class If(val cond: Exp, val IfTrue: Block, val ifFalse: Block): Stmt()
+    data class If(val cond: Exp, val ifTrue: Block, val ifFalse: Block): Stmt()
     data class ForYield(val from: String, val packets: Packets, val block: Block): Stmt()
     data class Transfer(val amount: Exp, val from: Exp, val to: Exp): Stmt()
 }

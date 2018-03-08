@@ -6,6 +6,7 @@ typeDec : 'type' name=ID '=' typeExp ;
 typeExp
     : '{' vals+=INT (',' vals+=INT)* '}'  # SubsetTypeExp
     | '{' start=INT '..' end=INT '}'      # RangeTypeExp
+    | name=ID                             # TypeId
     ;
 
 block : stmt+ ;
@@ -19,12 +20,12 @@ exp
     | left=exp op=('<' | '<=' | '>=' | '>') right=exp    # BinOpCompExp
     | left=exp op=('==' | '!=') right=exp  # BinOpEqExp
     | left=exp op=('&&' | '||') right=exp  # BinOpBoolExp
+    | role=ID '.' field=ID                 # MemberExp
+    | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
+    | name=varRef                          # IdExp
     | INT                                  # NumLiteralExp
     | ADDRESS                              # AddressLiteralExp
-    | name=varRef                          # IdExp
-    | role=ID '.' field=ID                 # MemberExp
     | 'undefined'                          # UndefExp
-    | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
     ;
 
 stmt
