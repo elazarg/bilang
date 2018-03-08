@@ -25,7 +25,8 @@ sealed class Sast {
         val code = when (this) {
             is Action.Send -> {
                 val args = params.joinToString(", ") { x -> x.type.name }
-                "$label($args) from ${from.name} to ${to.joinToString(", ") { x->x.name}}"
+                val names = params.joinToString("_") { x -> x.name }
+                "${label}_$names($args) from ${from.name} to ${to.joinToString(", ") { x->x.name}}"
             }
             is Action.Connect -> "connect Server to ${to.name}"
             is Action.Choice -> {
@@ -34,11 +35,40 @@ sealed class Sast {
             }
             is Action.Rec -> "rec " + pretty(actions)
             is Action.Continue -> "continue $label"
-            is Block -> stmts.joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n") { stmt -> stmt.prettyPrint(indent + 1) }
+            is Block -> stmts.map { stmt -> stmt.prettyPrint(indent + 1) }.filter{x->x.isNotBlank()}.joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
             is Sast.Protocol -> {
                 assert(indent == 0)
-                val ps = if (roles.isEmpty()) "" else (", " + roles.joinToString(", ") { x -> "role " + x.name })
+                val ps = ", " + roles.joinToString(", ") { x -> "role " + x.name }
                 "explicit global protocol MyProtocol(role Server$ps) " + pretty(block)
+            }
+        }
+        return "    ".repeat(indent) + code
+    }
+
+    fun project(role: String, indent: Int): String {
+        fun pretty(x: Sast) = x.project(role, indent)
+        val code = when (this) {
+            is Action.Send -> {
+                val args = params.joinToString(", ") { x -> x.type.name }
+                val names = params.joinToString("_") { x -> x.name }
+                when {
+                    from.name == role -> "${label}_$names($args) to ${to.joinToString(", ") { x -> x.name }}"
+                    to.contains(Role(role)) -> "$label($args) from ${from.name}"
+                    else -> ""
+                }
+            }
+            is Action.Connect -> if (to.name == role) "connect Server" else ""
+            is Action.Choice -> {
+                val blocks = choices.joinToString(" or ") { x -> pretty(x) }
+                "choice at $at $blocks"
+            }
+            is Action.Rec -> "rec " + pretty(actions)
+            is Action.Continue -> "continue $label"
+            is Block -> stmts.map { stmt -> stmt.project(role, indent + 1) }.filter{x->x.isNotBlank()}.joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
+            is Sast.Protocol -> {
+                assert(indent == 0)
+                val ps = ", " + roles.joinToString(", ") { x -> "role " + x.name }
+                "explicit local protocol MyProtocol_$role(role Server$ps) " + pretty(block)
             }
         }
         return "    ".repeat(indent) + code
@@ -60,7 +90,7 @@ object XXX {
         is Stmt.Def.JoinDef -> listOf(Sast.Action.Connect(Sast.Role(stmt.packets.packets[0].role)))
         is Stmt.Def.YieldDef -> {
             val packets = stmt.packets.packets
-            val rec = if (packets.size > 1) {
+            val rec = if (packets.size > 1 || stmt.hidden) {
                 packets.map { p ->
                     Sast.Action.Send("Hidden", packetToParams(p), Sast.Role(p.role), setOf(server))
                 }
@@ -69,14 +99,14 @@ object XXX {
                 Sast.Action.Send("Public", packetToParams(p), Sast.Role(p.role), setOf(server))
             }
             val bcast = packets.map { p ->
-                Sast.Action.Send("Broadcast", packetToParams(p), server, roles)
+                Sast.Action.Send("Broadcast", packetToParams(p), server, roles - Sast.Role(p.role))
             }
             if (stmt.hidden) rec else rec + pub + bcast
         }
         is Stmt.Reveal -> {
-            val hiddenPacket = hides.getValue(stmt)
-            listOf(Sast.Action.Send("Public", packetToParams(hiddenPacket), Sast.Role(hiddenPacket.role), setOf(server)),
-                    Sast.Action.Send("Reveal", packetToParams(hiddenPacket), server, roles))
+            val p = hides.getValue(stmt)
+            listOf(Sast.Action.Send("Public", packetToParams(p), Sast.Role(p.role), setOf(server)),
+                    Sast.Action.Send("Reveal", packetToParams(p), server, roles - Sast.Role(p.role)))
         }
         else -> {
             listOf()

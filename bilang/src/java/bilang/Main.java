@@ -22,6 +22,7 @@ public final class Main {
         String t = typecheck(program);
         Sast.Protocol scribble = INSTANCE.programToScribble(new AstTranslator().visitProgram(program));
         System.out.println(scribble.prettyPrint(0));
+        System.out.println(scribble.project("Host", 0));
         //if (t.equals("OK")) { run(program); }
     }
 
