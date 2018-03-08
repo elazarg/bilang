@@ -19,57 +19,41 @@ sealed class Sast {
     data class Role(val name: String)
     data class VarDec(val name: String, val type: Type)
 
-    fun prettyPrint(indent: Int): String {
-        fun pretty(x: Sast) = x.prettyPrint(indent)
-
+    fun prettyPrint(role: String? = null, indent: Int = 0): String {
+        fun pretty(x: Sast) = x.prettyPrint(role, indent)
         val code = when (this) {
-            is Action.Send -> {
-                val args = params.joinToString(", ") { x -> x.type.name }
-                val names = params.joinToString("_") { x -> x.name }
-                "${label}_$names($args) from ${from.name} to ${to.joinToString(", ") { x->x.name}}"
-            }
-            is Action.Connect -> "connect Server to ${to.name}"
-            is Action.Choice -> {
-                val blocks = choices.joinToString(" or ") { x -> pretty(x) }
-                "choice at $at $blocks"
-            }
-            is Action.Rec -> "rec " + pretty(actions)
-            is Action.Continue -> "continue $label"
-            is Block -> stmts.map { stmt -> stmt.prettyPrint(indent + 1) }.filter{x->x.isNotBlank()}.joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
             is Sast.Protocol -> {
                 assert(indent == 0)
                 val ps = ", " + roles.joinToString(", ") { x -> "role " + x.name }
-                "explicit global protocol MyProtocol(role Server$ps) " + pretty(block)
+                val scope = if (role == null) "global" else "local"
+                "explicit $scope protocol MyProtocol_$role(role Server$ps) " + pretty(block)
             }
-        }
-        return "    ".repeat(indent) + code
-    }
-
-    fun project(role: String, indent: Int): String {
-        fun pretty(x: Sast) = x.project(role, indent)
-        val code = when (this) {
+            is Block -> stmts
+                    .map { stmt -> stmt.prettyPrint(role, indent + 1) }
+                    .filter{ x->x.isNotBlank() }
+                    .joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
             is Action.Send -> {
                 val args = params.joinToString(", ") { x -> x.type.name }
                 val names = params.joinToString("_") { x -> x.name }
-                when {
-                    from.name == role -> "${label}_$names($args) to ${to.joinToString(", ") { x -> x.name }}"
-                    to.contains(Role(role)) -> "$label($args) from ${from.name}"
+                var res = "${label}_$names($args)"
+                if (role == null || to.contains(Role(role)))
+                    res += " from ${from.name}"
+                if (role == null || from.name == role)
+                    res += " to ${to.joinToString(", ") { x -> x.name }}"
+                res
+            }
+            is Action.Connect ->
+                when (role) {
+                    null -> "connect Server to ${to.name}"
+                    to.name -> "connect Server"
                     else -> ""
                 }
-            }
-            is Action.Connect -> if (to.name == role) "connect Server" else ""
             is Action.Choice -> {
                 val blocks = choices.joinToString(" or ") { x -> pretty(x) }
                 "choice at $at $blocks"
             }
             is Action.Rec -> "rec " + pretty(actions)
             is Action.Continue -> "continue $label"
-            is Block -> stmts.map { stmt -> stmt.project(role, indent + 1) }.filter{x->x.isNotBlank()}.joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
-            is Sast.Protocol -> {
-                assert(indent == 0)
-                val ps = ", " + roles.joinToString(", ") { x -> "role " + x.name }
-                "explicit local protocol MyProtocol_$role(role Server$ps) " + pretty(block)
-            }
         }
         return "    ".repeat(indent) + code
     }

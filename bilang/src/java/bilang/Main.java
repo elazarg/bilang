@@ -21,8 +21,8 @@ public final class Main {
         final BiLangParser.ProgramContext program = parse(Paths.get(argv[0]));
         String t = typecheck(program);
         Sast.Protocol scribble = INSTANCE.programToScribble(new AstTranslator().visitProgram(program));
-        System.out.println(scribble.prettyPrint(0));
-        System.out.println(scribble.project("Host", 0));
+        System.out.println(scribble.prettyPrint(null, 0));
+        System.out.println(scribble.prettyPrint("Host", 0));
         //if (t.equals("OK")) { run(program); }
     }
 
