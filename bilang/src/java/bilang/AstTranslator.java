@@ -44,8 +44,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Block visitBlock(BlockContext ctx) {
-        return new Block(list(ctx.stmt(), this::makeStmt));
+    public Stmt.Block visitBlock(BlockContext ctx) {
+        return new Stmt.Block(list(ctx.stmt(), this::makeStmt));
     }
 
     private Exp exp(ExpContext ctx) {
@@ -129,12 +129,12 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Stmt.Def.YieldDef visitYieldDef(YieldDefContext ctx) {
-        return new Stmt.Def.YieldDef(this.visitPackets(ctx.packets()), ctx.hidden != null);
+        return new Stmt.Def.YieldDef(list(ctx.packet(), this::visitPacket), ctx.hidden != null);
     }
 
     @Override
     public Stmt.Def.JoinDef visitJoinDef(JoinDefContext ctx) {
-        return new Stmt.Def.JoinDef(this.visitPacketsBind(ctx.packetsBind()), false);
+        return new Stmt.Def.JoinDef(list(ctx.packet(), this::visitPacket), false);
     }
 
     @Override
@@ -154,14 +154,17 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Stmt.If visitIfStmt(IfStmtContext ctx) {
-        return new Stmt.If(exp(ctx.exp()), this.visitBlock(ctx.ifTrue), this.visitBlock(ctx.ifFalse));
+        return new Stmt.If(exp(ctx.exp()),
+                this.visitBlock(ctx.ifTrue),
+                ctx.ifFalse == null ? new Stmt.Block(List.of()) : this.visitBlock(ctx.ifFalse)
+        );
     }
 
     @Override
     public Stmt.ForYield visitForYieldStmt(ForYieldStmtContext ctx) {
         return new Stmt.ForYield(
                 ctx.from.getText(),
-                this.visitPacketsBind(ctx.packetsBind()),
+                this.visitPacket(ctx.packet()),
                 this.visitBlock(ctx.block())
         );
     }
@@ -169,16 +172,6 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     @Override
     public Stmt.Transfer visitTransferStmt(TransferStmtContext ctx) {
         return new Stmt.Transfer(exp(ctx.amount), exp(ctx.from), exp(ctx.to));
-    }
-
-    @Override
-    public Packets visitPacketsBind(PacketsBindContext ctx) {
-        return this.visitPackets(ctx.packets());
-    }
-
-    @Override
-    public Packets visitPackets(PacketsContext ctx) {
-        return new Packets(list(ctx.packet(), this::visitPacket), this.visitWhereClause(ctx.where));
     }
 
     private <T1, T2> List<T2> list(List<T1> iterable, Function<T1, T2> f) {
@@ -192,7 +185,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Packet visitPacket(PacketContext ctx) {
-        return new Packet(ctx.role.getText(), list(ctx.decls, this::visitVarDec));
+        return new Packet(ctx.role.getText(), list(ctx.decls, this::visitVarDec), this.visitWhereClause(ctx.whereClause()));
     }
 
     @Override

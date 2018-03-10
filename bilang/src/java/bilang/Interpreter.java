@@ -248,17 +248,19 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
     @Override
     public Void visitYieldDef(YieldDefContext ctx) {
         this.last = players.respondTo(this.last);
-        List<PacketContext> packets = ctx.packets().packet();
+        List<PacketContext> packets = ctx.packet();
         require(this.last.size() == packets.size());
         for (int i = 0; i < last.size(); i++) {
             Map<String, Value> msg = last.get(i);
             state.currentScope().putAll(msg);
             // check for matching
-            require(packets.get(i).decls.size() == msg.size());
+            PacketContext p = packets.get(i);
+            require(p.decls.size() == msg.size());
+            if (!checkWhereClause(p.whereClause())) {
+                msg.replaceAll((k, v) -> Vals.UNDEFINED);
+                state.currentScope().putAll(msg);
+            }
         }
-        ExpContext cond = ctx.packets().where.cond;
-        if (cond != null)
-            require(eval(cond) == BoolVals.TRUE);
         return null;
     }
 
@@ -269,7 +271,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
     @Override
     public Void visitJoinDef(JoinDefContext ctx) {
         awaitResponse();
-        String var = ctx.packetsBind().packets().packet(0).role.getText();
+        String var = ctx.packet(0).role.getText();
         Address a = (Address)last.get(0).get(var);
         state.currentScope().put(var, a);
         // TODO: put the rest of the msg
@@ -341,19 +343,9 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         return null;
     }
 
-    @Override
-    public Void visitPacketsBind(PacketsBindContext ctx) {
-        return super.visitPacketsBind(ctx);
-    }
-
-    @Override
-    public Void visitPackets(PacketsContext ctx) {
-        return super.visitPackets(ctx);
-    }
-
-    @Override
-    public Void visitPacket(PacketContext ctx) {
-        return super.visitPacket(ctx);
+    private boolean checkWhereClause(WhereClauseContext ctx) {
+        ExpContext cond = ctx.cond;
+        return cond == null || eval(cond) == BoolVals.TRUE;
     }
 
     @Override

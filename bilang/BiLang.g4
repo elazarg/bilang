@@ -30,23 +30,22 @@ exp
 
 stmt
     : 'var' dec=varDec ('=' init=exp)? ';'   # VarDef
-    | 'yield' hidden='hidden'? packets ';'   # YieldDef
-    | 'join' packetsBind ';'                 # JoinDef
+    | 'yield' hidden='hidden'? packet+ ';'   # YieldDef
+    | 'join' packet+ ';'                     # JoinDef
     | 'join' 'many' role=ID ';'              # JoinManyDef
 
     | target=varRef ':=' exp ';'             # AssignStmt
     | 'reveal' target=varRef where=whereClause';'             # RevealStmt
     | 'if' '(' exp ')' '{' ifTrue=block '}'
        ('else' '{' ifFalse=block '}')?               # IfStmt
-    | 'for' 'yield' packetsBind
+    | 'for' 'yield' packet
       'from' from=ID '{' block '}'           # ForYieldStmt
     | 'transfer' amount=exp 'from' from=exp 'to' to=exp ';' # TransferStmt
     ;
 
-packetsBind : packets;
-packets : packet+ where=whereClause;
+packet : (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
+
 whereClause : ('where' cond=exp)? ;
-packet : (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) ;
 
 varRef: ID ;
 

@@ -57,7 +57,7 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
         return null;
     }
 
-    boolean hidden = false;
+    private boolean hidden = false;
     @Override
     public Void visitYieldDef(YieldDefContext ctx) {
         this.hidden = ctx.hidden != null;
@@ -68,7 +68,8 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitJoinDef(JoinDefContext ctx) {
-        return super.visitJoinDef(ctx);
+        ctx.packet().forEach(this::bindPacket);
+        return null;
     }
 
     @Override
@@ -80,7 +81,8 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     @Override
     public Void visitForYieldStmt(ForYieldStmtContext ctx) {
         symbolTable.push();
-        accept(ctx.packetsBind());
+        declare(ctx.packet().role, ValueType.ROLE);
+        accept(ctx.packet());
         require(symbolTable.lookup(ctx.from.getText()).isCompatible(ValueType.ROLE_SET),
                 "Variable must refer to a role set", ctx.from);
         accept(ctx.block());
@@ -88,17 +90,9 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
         return null;
     }
 
-    @Override
-    public Void visitPacketsBind(PacketsBindContext ctx) {
-        ctx.packets().packet().forEach(p -> declare(p.role, ValueType.ROLE));
-        accept(ctx.packets());
-        return null;
-    }
-
-    @Override
-    public Void visitPackets(PacketsContext ctx) {
-        super.visitPackets(ctx);
-        return null;
+    private void bindPacket(PacketContext packet) {
+        declare(packet.role, ValueType.ROLE);
+        accept(packet);
     }
 
     @Override

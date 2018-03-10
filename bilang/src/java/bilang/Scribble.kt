@@ -65,48 +65,55 @@ object XXX {
         val hides = matchRevealToHide(p.block)
         return Sast.Protocol(
             roles,
-            Sast.Block(p.block.stmts.flatMap { stmt -> stmtToScribble(stmt, roles, hides) })
+            Sast.Block(stmtToScribble(p.block, roles, hides))
         )
     }
     private val server = Sast.Role("Server")
 
     private fun stmtToScribble(stmt: Stmt, roles: Set<Sast.Role>, hides: Map<Stmt.Reveal, Packet>): List<Sast.Action> = when (stmt) {
-        is Stmt.Def.JoinDef -> listOf(Sast.Action.Connect(Sast.Role(stmt.packets.packets[0].role)))
+        is Stmt.Def.JoinDef -> listOf(Sast.Action.Connect(Sast.Role(stmt.packets[0].role)))
         is Stmt.Def.YieldDef -> {
-            val packets = stmt.packets.packets
+            val packets = stmt.packets
             val rec = if (packets.size > 1 || stmt.hidden) {
                 packets.map { p ->
-                    Sast.Action.Send("Hidden", packetToParams(p), Sast.Role(p.role), setOf(server))
+                    Sast.Action.Send("Hidden", decls(p), Sast.Role(p.role), setOf(server))
                 }
             } else listOf()
             val pub = packets.map { p ->
-                Sast.Action.Send("Public", packetToParams(p), Sast.Role(p.role), setOf(server))
+                Sast.Action.Send("Public", decls(p), Sast.Role(p.role), setOf(server))
             }
             val bcast = packets.map { p ->
-                Sast.Action.Send("Broadcast", packetToParams(p), server, roles - Sast.Role(p.role))
+                Sast.Action.Send("Broadcast", decls(p), server, roles - Sast.Role(p.role))
             }
             if (stmt.hidden) rec else rec + pub + bcast
         }
         is Stmt.Reveal -> {
             val p = hides.getValue(stmt)
-            listOf(Sast.Action.Send("Public", packetToParams(p), Sast.Role(p.role), setOf(server)),
-                    Sast.Action.Send("Reveal", packetToParams(p), server, roles - Sast.Role(p.role)))
+            listOf(Sast.Action.Send("Public", decls(p), Sast.Role(p.role), setOf(server)),
+                    Sast.Action.Send("Reveal", decls(p), server, roles - Sast.Role(p.role)))
         }
+        is Stmt.If -> {
+            val ifTrue = stmtToScribble(stmt.ifTrue, roles, hides)
+            val ifFalse = stmtToScribble(stmt.ifFalse, roles, hides)
+            assert(ifTrue == ifFalse)
+            ifTrue
+        }
+        is Stmt.Block -> stmt.stmts.flatMap { s -> stmtToScribble(s, roles, hides) }
         else -> {
             listOf()
         }
     }
 
-    private fun packetToParams(p: Packet): List<Sast.VarDec> {
+    private fun decls(p: Packet): List<Sast.VarDec> {
         return p.params.map { param ->
             Sast.VarDec(param.name, Sast.Type((param.type as TypeExp.TypeId).name))
         }
     }
 
-    private fun findRoles(block: Block): Set<Sast.Role> {
+    private fun findRoles(block: Stmt.Block): Set<Sast.Role> {
         val res : MutableSet<Sast.Role> = mutableSetOf()
         for (stmt in block.stmts) when (stmt) {
-            is Stmt.Def.JoinDef -> res += stmt.packets.packets.map{ p->Sast.Role(p.role) }
+            is Stmt.Def.JoinDef -> res += stmt.packets.map{ p->Sast.Role(p.role) }
             is Stmt.ForYield -> res += findRoles(stmt.block)
             is Stmt.If -> res += findRoles(stmt.ifTrue) + findRoles(stmt.ifFalse)
             else -> {}
@@ -114,18 +121,22 @@ object XXX {
         return res.toSet()
     }
 
-    private fun matchRevealToHide(block: Block) : Map<Stmt.Reveal, Packet> {
+    private fun matchRevealToHide(block: Stmt.Block, yields: MutableMap<String, Packet> = mutableMapOf()) : Map<Stmt.Reveal, Packet> {
         // FIX: ad-hoc - does not respect scope, flow, etc.
-        val yields: MutableMap<String, Packet> = mutableMapOf()
         val hides: MutableMap<Stmt.Reveal, Packet> = mutableMapOf()
         for (stmt in block.stmts) when (stmt) {
             is Stmt.Def.YieldDef ->
                 if (stmt.hidden)
-                    for (v in stmt.packets.packets)
+                    for (v in stmt.packets)
                         for (p in v.params)
                             yields[p.name] = v
             is Stmt.Reveal ->
                     hides[stmt] = yields.getValue(stmt.target)
+            is Stmt.If -> {
+                hides.putAll(matchRevealToHide(stmt.ifTrue, yields))
+                hides.putAll(matchRevealToHide(stmt.ifFalse, yields))
+            }
+            else -> { }
         }
         return hides.toMap()
     }
