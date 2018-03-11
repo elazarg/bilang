@@ -1,4 +1,5 @@
 package bilang;
+/*
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -10,7 +11,6 @@ import bilang.generated.BiLangBaseVisitor;
 import static bilang.generated.BiLangParser.*;
 import static bilang.Type.compatible;
 import static bilang.Main.require;
-
 
 class TypeChecker extends BiLangBaseVisitor<Void> {
     private final Map<String, Type> types = new HashMap<>(Map.of(
@@ -336,3 +336,4 @@ class TypeChecker extends BiLangBaseVisitor<Void> {
     }
 
 }
+*/

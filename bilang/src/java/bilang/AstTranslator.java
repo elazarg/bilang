@@ -3,6 +3,7 @@ package bilang;
 import bilang.generated.BiLangBaseVisitor;
 import bilang.generated.BiLangParser.*;
 import org.antlr.v4.runtime.Token;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.function.Function;
@@ -139,17 +140,23 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Stmt.Def.JoinManyDef visitJoinManyDef(JoinManyDefContext ctx) {
-        return new Stmt.Def.JoinManyDef(ctx.role.getText());
+        return new Stmt.Def.JoinManyDef(var(ctx.role));
     }
 
     @Override
     public Stmt.Assign visitAssignStmt(AssignStmtContext ctx) {
-        return new Stmt.Assign(ctx.target.getText(), exp(ctx.exp()));
+        Token target = ctx.target;
+        return new Stmt.Assign(var(target), exp(ctx.exp()));
+    }
+
+    @NotNull
+    private Exp.Var var(Token target) {
+        return new Exp.Var(target.getText());
     }
 
     @Override
     public Stmt.Reveal visitRevealStmt(RevealStmtContext ctx) {
-        return new Stmt.Reveal(ctx.target.getText(), this.visitWhereClause(ctx.where));
+        return new Stmt.Reveal(var(ctx.target), this.visitWhereClause(ctx.where));
     }
 
     @Override
@@ -163,7 +170,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     @Override
     public Stmt.ForYield visitForYieldStmt(ForYieldStmtContext ctx) {
         return new Stmt.ForYield(
-                ctx.from.getText(),
+                new Exp.Var(ctx.from.getText()),
                 this.visitPacket(ctx.packet()),
                 this.visitBlock(ctx.block())
         );
@@ -185,16 +192,11 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Packet visitPacket(PacketContext ctx) {
-        return new Packet(ctx.role.getText(), list(ctx.decls, this::visitVarDec), this.visitWhereClause(ctx.whereClause()));
-    }
-
-    @Override
-    public Ast visitVarRef(VarRefContext ctx) {
-        return new Exp.Var(ctx.ID().getText());
+        return new Packet(var(ctx.role), list(ctx.decls, this::visitVarDec), this.visitWhereClause(ctx.whereClause()));
     }
 
     @Override
     public VarDec visitVarDec(VarDecContext ctx) {
-        return new VarDec(ctx.name.getText(), new TypeExp.TypeId(ctx.type.getText()));
+        return new VarDec(var(ctx.name), new TypeExp.TypeId(ctx.type.getText()));
     }
 }

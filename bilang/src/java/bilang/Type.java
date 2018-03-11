@@ -1,6 +1,6 @@
 package bilang;
 
-
+/*
 import java.util.Set;
 
 interface Type {
@@ -62,3 +62,4 @@ enum ValueType implements Type {
     ROLE_SET,
     UNDEF,
 }
+*/

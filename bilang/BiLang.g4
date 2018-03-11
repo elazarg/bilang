@@ -13,7 +13,7 @@ block : stmt+ ;
 
 exp
     : '(' exp ')'                          # ParenExp
-    | callee=varRef '(' (args+=exp (',' args+=exp)*)?  ')' # CallExp
+    | callee=ID '(' (args+=exp (',' args+=exp)*)?  ')' # CallExp
     | op=('-' | '!') exp                   # UnOpExp
     | left=exp op=('*' | '/') right=exp    # BinOpMultExp
     | left=exp op=('+' | '-') right=exp    # BinOpAddExp
@@ -22,7 +22,7 @@ exp
     | left=exp op=('&&' | '||') right=exp  # BinOpBoolExp
     | role=ID '.' field=ID                 # MemberExp
     | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
-    | name=varRef                          # IdExp
+    | name=ID                              # IdExp
     | INT                                  # NumLiteralExp
     | ADDRESS                              # AddressLiteralExp
     | 'undefined'                          # UndefExp
@@ -34,8 +34,8 @@ stmt
     | 'join' packet+ ';'                     # JoinDef
     | 'join' 'many' role=ID ';'              # JoinManyDef
 
-    | target=varRef ':=' exp ';'             # AssignStmt
-    | 'reveal' target=varRef where=whereClause';'             # RevealStmt
+    | target=ID ':=' exp ';'             # AssignStmt
+    | 'reveal' target=ID where=whereClause';'             # RevealStmt
     | 'if' '(' exp ')' '{' ifTrue=block '}'
        ('else' '{' ifFalse=block '}')?               # IfStmt
     | 'for' 'yield' packet
@@ -46,8 +46,6 @@ stmt
 packet : (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
 
 whereClause : ('where' cond=exp)? ;
-
-varRef: ID ;
 
 varDec : name=ID ':' type=ID;
 

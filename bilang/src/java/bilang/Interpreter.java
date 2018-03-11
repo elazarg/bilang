@@ -221,12 +221,6 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
         public Value visitNumLiteralExp(NumLiteralExpContext ctx) {
             return new IntVals(Integer.parseInt(ctx.INT().getText()));
         }
-
-        @Override
-        public Value visitVarRef(VarRefContext ctx) {
-            assert false;
-            return state.lookup(ctx.ID().getText());
-        }
     }
 
     @Override
@@ -294,7 +288,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitRevealStmt(RevealStmtContext ctx) {
-        String var = ctx.target.ID().getText();
+        String var = ctx.target.getText();
         Value _h = state.lookup(var);
         require(_h != null);
         require(_h instanceof Hidden);
@@ -309,7 +303,7 @@ final class Interpreter extends BiLangBaseVisitor<Void> {
 
     @Override
     public Void visitAssignStmt(AssignStmtContext ctx) {
-        state.update(ctx.target.ID().getText(), eval(ctx.exp()));
+        state.update(ctx.target.getText(), eval(ctx.exp()));
         return super.visitAssignStmt(ctx);
     }
 

@@ -71,26 +71,26 @@ object XXX {
     private val server = Sast.Role("Server")
 
     private fun stmtToScribble(stmt: Stmt, roles: Set<Sast.Role>, hides: Map<Stmt.Reveal, Packet>): List<Sast.Action> = when (stmt) {
-        is Stmt.Def.JoinDef -> listOf(Sast.Action.Connect(Sast.Role(stmt.packets[0].role)))
+        is Stmt.Def.JoinDef -> listOf(Sast.Action.Connect(makeRole(stmt.packets[0].role)))
         is Stmt.Def.YieldDef -> {
             val packets = stmt.packets
             val rec = if (packets.size > 1 || stmt.hidden) {
                 packets.map { p ->
-                    Sast.Action.Send("Hidden", decls(p), Sast.Role(p.role), setOf(server))
+                    Sast.Action.Send("Hidden", decls(p), makeRole(p.role), setOf(server))
                 }
             } else listOf()
             val pub = packets.map { p ->
-                Sast.Action.Send("Public", decls(p), Sast.Role(p.role), setOf(server))
+                Sast.Action.Send("Public", decls(p), makeRole(p.role), setOf(server))
             }
             val bcast = packets.map { p ->
-                Sast.Action.Send("Broadcast", decls(p), server, roles - Sast.Role(p.role))
+                Sast.Action.Send("Broadcast", decls(p), server, roles - makeRole(p.role))
             }
             if (stmt.hidden) rec else rec + pub + bcast
         }
         is Stmt.Reveal -> {
             val p = hides.getValue(stmt)
-            listOf(Sast.Action.Send("Public", decls(p), Sast.Role(p.role), setOf(server)),
-                    Sast.Action.Send("Reveal", decls(p), server, roles - Sast.Role(p.role)))
+            listOf(Sast.Action.Send("Public", decls(p), makeRole(p.role), setOf(server)),
+                    Sast.Action.Send("Reveal", decls(p), server, roles - makeRole(p.role)))
         }
         is Stmt.If -> {
             val ifTrue = stmtToScribble(stmt.ifTrue, roles, hides)
@@ -106,20 +106,22 @@ object XXX {
 
     private fun decls(p: Packet): List<Sast.VarDec> {
         return p.params.map { param ->
-            Sast.VarDec(param.name, Sast.Type((param.type as TypeExp.TypeId).name))
+            Sast.VarDec(param.name.name, Sast.Type((param.type as TypeExp.TypeId).name))
         }
     }
 
     private fun findRoles(block: Stmt.Block): Set<Sast.Role> {
         val res : MutableSet<Sast.Role> = mutableSetOf()
         for (stmt in block.stmts) when (stmt) {
-            is Stmt.Def.JoinDef -> res += stmt.packets.map{ p->Sast.Role(p.role) }
+            is Stmt.Def.JoinDef -> res += stmt.packets.map{ p-> makeRole(p.role) }
             is Stmt.ForYield -> res += findRoles(stmt.block)
             is Stmt.If -> res += findRoles(stmt.ifTrue) + findRoles(stmt.ifFalse)
             else -> {}
         }
         return res.toSet()
     }
+
+    private fun makeRole(role: Exp.Var) = Sast.Role(role.name)
 
     private fun matchRevealToHide(block: Stmt.Block, yields: MutableMap<String, Packet> = mutableMapOf()) : Map<Stmt.Reveal, Packet> {
         // FIX: ad-hoc - does not respect scope, flow, etc.
@@ -129,9 +131,9 @@ object XXX {
                 if (stmt.hidden)
                     for (v in stmt.packets)
                         for (p in v.params)
-                            yields[p.name] = v
+                            yields[p.name.name] = v
             is Stmt.Reveal ->
-                    hides[stmt] = yields.getValue(stmt.target)
+                    hides[stmt] = yields.getValue(stmt.target.name)
             is Stmt.If -> {
                 hides.putAll(matchRevealToHide(stmt.ifTrue, yields))
                 hides.putAll(matchRevealToHide(stmt.ifFalse, yields))

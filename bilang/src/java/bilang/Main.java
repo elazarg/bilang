@@ -18,17 +18,22 @@ public final class Main {
     static public void main(String argv[]) throws IOException {
         //final String infile = argv.length > 1 ? argv[0] : "/dev/stdin";
         System.out.println(argv[0]);
-        final BiLangParser.ProgramContext program = parse(Paths.get(argv[0]));
+        Program program = new AstTranslator().visitProgram(parse(Paths.get(argv[0])));
         String t = typecheck(program);
-        Sast.Protocol scribble = INSTANCE.programToScribble(new AstTranslator().visitProgram(program));
-        System.out.println(scribble.prettyPrint(null, 0));
-        System.out.println(scribble.prettyPrint("Host", 0));
+        System.out.println(t);
+        toScribble(program);
         //if (t.equals("OK")) { run(program); }
     }
 
-    private static String typecheck(BiLangParser.ProgramContext program) {
+    private static void toScribble(Program program) {
+        Sast.Protocol scribble = INSTANCE.programToScribble(program);
+        System.out.println(scribble.prettyPrint(null, 0));
+        System.out.println(scribble.prettyPrint("Host", 0));
+    }
+
+    private static String typecheck(Program program) {
         try {
-            program.accept(new TypeChecker());
+            Checker.Companion.typeCheck(program);
         } catch (StaticError ex) {
             System.err.println(String.format("ERROR(%d): %s", ex.line, ex.getMessage()));
             return String.format("ERROR(%d)", ex.line);
