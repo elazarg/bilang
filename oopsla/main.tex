@@ -94,7 +94,7 @@
   \postcode{Post-Code1}
   \country{Israel}                    %% \country is recommended
 }
-\email{elazarg@cs.tau.ac.il}          %% \email is recommended
+\email{elazarg@mail.tau.ac.il}          %% \email is recommended
 
 \author{Noam Rinetzky}
 \authornote{with author1 note}          %% \authornote is optional;
@@ -110,7 +110,7 @@
   \postcode{Post-Code1}
   \country{Israel}                    %% \country is recommended
 }
-\email{elazarg@cs.tau.ac.il}          %% \email is recommended
+\email{maon@cs.tau.ac.il}          %% \email is recommended
 
 
 %% Abstract
@@ -162,6 +162,10 @@ Text of paper \ldots
 
 
 \subsection{Execution Model}
+The execution model consists of a single stateful server, infinite number of clients, and a message-passing channel between them.
+The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly.
+
+
 
 \subsection{Running Example}
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
@@ -172,11 +176,42 @@ Text of paper \ldots
 
 \subsection{Syntax}
 
+\subsubsection{Multi-player Game}
+
+\subsubsection{n-player Role: Aggregation}
+
+\subsubsection{Combining Roles}
+
 \subsection{Semantics}
 
+\subsubsection{Quitting, Deadlines and the Global Clock}
+Over the blockchain, we cannot avoid the possibility that any party can stop playing at any time. Additionally, players might not `live up to their promises' by failing to reveal commitments, or revealing commitments that do not hold to the contract.
+Therefore, very similar to velner et al., we assume a global clock. Each step takes a single tick. If a player does not play when its turn comes, anyone can play for her, and the value of its choice is a special \texttt{None} value (thus all external choices are nullable types). The intention is that None is a sign of player deviating from the rules of the game, and such deviation should be punished. Static analysis (see below) can warn about failure to punish players for None values.
+
 \subsection{Implementation}
+\subsubsection{Translation to Solidity}
+
 
 \section{Analysis}
+
+\subsection{No Rule-breaking (Well Separation)}
+The \texttt{where} clauses enables an important safety analysis: we would like to know that the opposing player cannot force us to break the rules. This question, like others, can be asked both for a well-behaved opponent and for a malicious one. For a malicious player, we want to know whether $\exists \overline{x} \forall \overline{y}: P(\overline{x})\wedge \neg Q(\overline{y})$, where $P$ and $Q$ are the formulae representing the \texttt{where} clauses of the opponent and ourselves, respectively. 
+
+For a well-behaved opponent, the analysis will use a DQBF formula similar to the one described above.
+
+\subsection{Finding Dominant Strategy}
+A dominant strategy for a player is a sequence of choices such that no matter what the opponent does, the payoff cannot be any better. Formally, given a payoff function for a player 
+$F : \mathbb{N}^n \times \mathbb{N}^k \rightarrow \mathbb{N}$ 
+over the game, we can look for a dominant strategy by solving
+$\exists \overline{x} \forall \overline{x'} \overline{y}: F(\overline{x}, \overline{y})\geq F(\overline{x'}, \overline{y})$.
+
+\subsubsection{Multplayer Game}
+
+\subsubsection{N-player Game}
+
+\subsubsection{Absence of Communication Mismatches}
+We use simple session types to do sanity check on the server code, and to verify the conformance of clients to the protocol
+
 \subsection{Equilibria}
 The game is translated to an extensive form, with information sets reflecting the use of \emph{private} and \emph{publish}. 
 This format can be analyzed to find Nash equilibria, taking into account the possibility of players quitting in the middle of the game.
@@ -184,6 +219,9 @@ This format can be analyzed to find Nash equilibria, taking into account the pos
 
 
 \subsection{DQBF}
+The language for full-information 2-player finite seuquential games is QBF: for example the formula $\exists x \forall y: x > y$ refers to the game where the player chooses $x$ and shows it, then the opponent chooses $y$, and the first player wins iff $x > y$. Obviously the second player has a winning strategy, e.g. always choose $y=x$.
+
+In QBF, there is a order of quanitifiers define uniquely the information on which they depend; i.e. information dependncy is a chain. In order to model partial information, we need to be able to specify a DAG of dependencies. DQBF consists of formulae of the form $\forall x_1, x_2, \ldots x_n \exists y_1 \{\overline{z_1}\}, y_2 \{\overline{z_2}\}, \ldots y_k \{\overline{z_k}\}: P(\overline{x}, \overline{y})$ where each $z_i$ is a list of variables on which $y_i$ depends. For example, the game $\exists x \forall y\{\}: x > y$ is the symmetric game in which both players make their choices independently; in this game the second player has no winning strategy.
 
 \section{Evaluation}
 
