@@ -23,12 +23,15 @@ sealed class Exp : Ast() {
     data class Call(val target: Var, val args: List<Exp>) : Exp()
     data class UnOp(val op: String, val operand: Exp) : Exp()
     data class BinOp(val op: String, val left: Exp, val right: Exp) : Exp()
-    data class Num(val n: Int) : Exp()
-    data class Address(val n: Int) : Exp()
+
     data class Var(val name: String) : Exp()
     data class Member(val target: Var, val field: String) : Exp()
     data class Cond(val cond: Exp, val ifTrue: Exp, val ifFalse: Exp) : Exp()
-    object UNDEFINED : Exp()
+
+    interface Const
+    object UNDEFINED : Exp(), Const
+    data class Num(val n: Int) : Exp(), Const
+    data class Address(val n: Int) : Exp(), Const
 }
 
 sealed class Stmt : Ast() {

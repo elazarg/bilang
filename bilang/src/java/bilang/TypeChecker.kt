@@ -2,20 +2,6 @@ package bilang
 
 import bilang.TypeExp.*
 
-
-/*
-class Node(val b: List<Stmt>, nextList: List<Node>)
-
-fun toCfg(b: Stmt.Block) : Node {
-
-
-}
-
-fun toSSA(p: Program) : Program {
-
-}
-*/
-
 data class IncompatibleTypeError(val s: String) : Exception()
 
 class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, TypeExp>) {
@@ -40,7 +26,6 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
     private fun typeCheck(block: Stmt.Block) {
         fun check(expected: TypeExp, exp: Exp) = checkOp(expected, type(exp))
 
-
         fun checkPackets(packets: List<Packet>): Map<Packet, Map<Exp.Var, TypeExp>> {
             val newEnv = packets.map { p -> Pair(p, p.params.map { d -> Pair(d.name, d.type) }.toMap()) }.toMap()
             for (p in packets)
@@ -48,45 +33,43 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             return newEnv
         }
 
-        for (stmt in block.stmts) {
-            when (stmt) {
-                is Stmt.Def.VarDef -> {
-                    check(stmt.dec.type, stmt.init)
-                    env[stmt.dec.name] = stmt.dec.type
-                }
-                is Stmt.Def.YieldDef -> {
-                    for (p in stmt.packets) check(ROLE, p.role)
-                    val newEnv = checkPackets(stmt.packets)
-                    for (k in newEnv.values)
-                        env.plusAssign(k)
-                }
-                is Stmt.Def.JoinDef -> {
-                    val newEnv = checkPackets(stmt.packets)
-                    for (k in newEnv.values)
-                        env.plusAssign(k)
-                    for (p in stmt.packets)
-                        env[p.role] = ROLE
-                }
-                is Stmt.Def.JoinManyDef -> env[stmt.role] = ROLESET
-                is Stmt.Block -> Checker(env, typeMap).typeCheck(stmt)
-                is Stmt.Assign -> check(env.getValue(stmt.target), stmt.exp)
-                is Stmt.Reveal -> { } //TODO()
-                is Stmt.If -> {
-                    check(BOOL, stmt.cond)
-                    Checker(env, typeMap).typeCheck(stmt.ifTrue)
-                    Checker(env, typeMap).typeCheck(stmt.ifFalse)
-                }
-                is Stmt.ForYield -> {
-                    checkPackets(listOf(stmt.packet))
-                    typeCheck(stmt.block)
-                    check(ROLESET, stmt.from)
-                    env[stmt.packet.role] = ROLE
-                }
-                is Stmt.Transfer -> {
-                    check(INT, stmt.amount)
-                    check(ROLE, stmt.from)
-                    check(ROLE, stmt.to)
-                }
+        for (stmt in block.stmts) when (stmt) {
+            is Stmt.Def.VarDef -> {
+                check(stmt.dec.type, stmt.init)
+                env[stmt.dec.name] = stmt.dec.type
+            }
+            is Stmt.Def.YieldDef -> {
+                for (p in stmt.packets) check(ROLE, p.role)
+                val newEnv = checkPackets(stmt.packets)
+                for (k in newEnv.values)
+                    env.plusAssign(k)
+            }
+            is Stmt.Def.JoinDef -> {
+                val newEnv = checkPackets(stmt.packets)
+                for (k in newEnv.values)
+                    env.plusAssign(k)
+                for (p in stmt.packets)
+                    env[p.role] = ROLE
+            }
+            is Stmt.Def.JoinManyDef -> env[stmt.role] = ROLESET
+            is Stmt.Block -> Checker(env, typeMap).typeCheck(stmt)
+            is Stmt.Assign -> check(env.getValue(stmt.target), stmt.exp)
+            is Stmt.Reveal -> { } //TODO: Type check reveal
+            is Stmt.If -> {
+                check(BOOL, stmt.cond)
+                Checker(env, typeMap).typeCheck(stmt.ifTrue)
+                Checker(env, typeMap).typeCheck(stmt.ifFalse)
+            }
+            is Stmt.ForYield -> {
+                checkPackets(listOf(stmt.packet))
+                typeCheck(stmt.block)
+                check(ROLESET, stmt.from)
+                env[stmt.packet.role] = ROLE
+            }
+            is Stmt.Transfer -> {
+                check(INT, stmt.amount)
+                check(ROLE, stmt.from)
+                check(ROLE, stmt.to)
             }
         }
     }
@@ -94,26 +77,20 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
     private fun type(exp: Exp): TypeExp {
         return when (exp) {
             is Exp.Call -> when (exp.target.name) {
-                "abs" -> {
-                    checkOp(INT, exp.args.map { e -> type(e) }); INT
-                }
+                "abs" -> { checkOp(INT, exp.args.map { type(it) }); INT }
                 else -> throw IllegalArgumentException(exp.target.name)
             }
             is Exp.UnOp -> when (exp.op) {
-                "-" -> {
-                    checkOp(INT, type(exp.operand)); INT
-                }
-                "!" -> {
-                    checkOp(BOOL, type(exp.operand)); BOOL
-                }
+                "-" -> { checkOp(INT,  type(exp.operand)); INT  }
+                "!" -> { checkOp(BOOL, type(exp.operand)); BOOL }
                 else -> throw IllegalArgumentException(exp.op)
             }
             is Exp.BinOp -> {
                 val left = type(exp.left)
                 val right = type(exp.right)
                 when (exp.op) {
-                    "+", "-", "*", "/"   -> { checkOp(INT, left, right); INT }
-                    ">", ">=", "<", "<=" -> { checkOp(INT, left, right); BOOL }
+                    "+", "-", "*", "/"   -> { checkOp(INT,  left, right); INT  }
+                    ">", ">=", "<", "<=" -> { checkOp(INT,  left, right); BOOL }
                     "||", "&&" ->           { checkOp(BOOL, left, right); BOOL }
                     "==", "!=" -> {
                         require(compatible(left, right) || compatible(right, left), { "$left <> $right"})
@@ -173,7 +150,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         t1 is Range && t2 is Range -> Range(Exp.Num(minOf(t1.min.n, t2.min.n)), Exp.Num(maxOf(t1.max.n, t2.max.n)))
         t1 is Subset && t2 is Range -> join(t2, t2)
         t1 is Range && t2 is Subset -> {
-            val values = t2.values.map { x -> x.n }
+            val values = t2.values.map { it.n }
             val min = minOf(t1.min.n, values.min()!!)
             val max = minOf(t1.max.n, values.max()!!)
             if (t2.values.size == max - min) t2
@@ -183,3 +160,4 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
     }
 
 }
+

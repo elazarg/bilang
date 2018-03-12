@@ -19,9 +19,11 @@ public final class Main {
         //final String infile = argv.length > 1 ? argv[0] : "/dev/stdin";
         System.out.println(argv[0]);
         Program program = new AstTranslator().visitProgram(parse(Paths.get(argv[0])));
-        String t = typecheck(program);
-        System.out.println(t);
-        toScribble(program);
+        Node n = CFG.INSTANCE.toCfg(program);
+        System.out.println(n);
+        //String t = typecheck(program);
+        //System.out.println(t);
+        //toScribble(program);
         //if (t.equals("OK")) { run(program); }
     }
 

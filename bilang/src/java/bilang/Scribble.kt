@@ -24,22 +24,22 @@ sealed class Sast {
         val code = when (this) {
             is Sast.Protocol -> {
                 assert(indent == 0)
-                val ps = ", " + roles.joinToString(", ") { x -> "role " + x.name }
+                val ps = ", " + roles.joinToString(", ") { "role ${it.name}" }
                 val scope = if (role == null) "global" else "local"
                 "explicit $scope protocol MyProtocol_$role(role Server$ps) " + pretty(block)
             }
             is Block -> stmts
-                    .map { stmt -> stmt.prettyPrint(role, indent + 1) }
-                    .filter{ x->x.isNotBlank() }
+                    .map { it.prettyPrint(role, indent + 1) }
+                    .filter{ it.isNotBlank() }
                     .joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
             is Action.Send -> {
-                val args = params.joinToString(", ") { x -> x.type.name }
-                val names = params.joinToString("_") { x -> x.name }
+                val args = params.joinToString(", ") { it.type.name }
+                val names = params.joinToString("_") { it.name }
                 var res = "${label}_$names($args)"
                 if (role == null || to.contains(Role(role)))
                     res += " from ${from.name}"
                 if (role == null || from.name == role)
-                    res += " to ${to.joinToString(", ") { x -> x.name }}"
+                    res += " to ${to.joinToString(", ") { it.name }}"
                 res
             }
             is Action.Connect ->
@@ -49,7 +49,7 @@ sealed class Sast {
                     else -> ""
                 }
             is Action.Choice -> {
-                val blocks = choices.joinToString(" or ") { x -> pretty(x) }
+                val blocks = choices.joinToString(" or ") { pretty(it) }
                 "choice at $at $blocks"
             }
             is Action.Rec -> "rec " + pretty(actions)
@@ -113,7 +113,7 @@ object XXX {
     private fun findRoles(block: Stmt.Block): Set<Sast.Role> {
         val res : MutableSet<Sast.Role> = mutableSetOf()
         for (stmt in block.stmts) when (stmt) {
-            is Stmt.Def.JoinDef -> res += stmt.packets.map{ p-> makeRole(p.role) }
+            is Stmt.Def.JoinDef -> res += stmt.packets.map{ makeRole(it.role) }
             is Stmt.ForYield -> res += findRoles(stmt.block)
             is Stmt.If -> res += findRoles(stmt.ifTrue) + findRoles(stmt.ifFalse)
             else -> {}
