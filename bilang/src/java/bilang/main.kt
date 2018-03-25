@@ -10,8 +10,7 @@ fun parse(inputFilename: String): BiLangParser.ProgramContext =
         BiLangParser(CommonTokenStream(BiLangLexer(CharStreams.fromPath(Paths.get(inputFilename))))).program()
 
 fun main(args: Array<String>) {
-    val program = AstTranslator().visitProgram(parse(args[0]))
-    println(CFG.toCfg(program))
-    val p = inline(program)
+    val program = AstTranslator().visitProgram(parse("examples/MontyHall.bi"))
+    val p = inline(inlineWhere(program))
     println(prettyPrint(p))
 }

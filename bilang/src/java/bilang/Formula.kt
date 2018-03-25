@@ -1,10 +1,11 @@
 package bilang
 
-fun makeFormula(block: List<Stmt>, _next: Exp = Exp.Var("true")): Exp {
+val TRUE = Exp.Var("true")
+
+fun makeFormula(block: List<Stmt.External>, _next: Exp = TRUE): Exp {
     var next: Exp = _next
     for (stmt in block.reversed()) next = when (stmt) {
-        is Stmt.Def.VarDef -> Exp.Q.Let(stmt.dec, stmt.init)
-        is Stmt.Def.YieldDef -> {
+        is Stmt.YieldDef -> {
             var n = next
             for (p in stmt.packets.reversed())
                 n = Exp.Q.Y(p, n, true)
@@ -12,22 +13,14 @@ fun makeFormula(block: List<Stmt>, _next: Exp = Exp.Var("true")): Exp {
                 n = makeFormula(listOf(Stmt.Reveal(p.params[0].name, p.where)), n)
             n
         }
-        is Stmt.Def.JoinDef ->  {
+        is Stmt.JoinDef ->  {
             var n = next
             for (p in stmt.packets.reversed())
-                n = Exp.Q.Y(p, makeFormula(listOf(Stmt.Def.YieldDef(stmt.packets, stmt.hidden)), next))
+                n = Exp.Q.Y(p, makeFormula(listOf(Stmt.YieldDef(stmt.packets, stmt.hidden)), next))
             n
         }
-        is Stmt.Def.JoinManyDef -> throw RuntimeException()
-        is Stmt.Block -> makeFormula(stmt.stmts, next)
-        is Stmt.Assign -> throw RuntimeException()
-        is Stmt.Reveal -> next
-        is Stmt.If -> Exp.Cond(stmt.cond,
-                makeFormula(stmt.ifTrue.stmts, next),
-                makeFormula(stmt.ifFalse.stmts, next)
-        )
-        is Stmt.ForYield -> throw RuntimeException()
-        is Stmt.Transfer -> Exp.Q.Transfers((next as Exp.Q.Transfers).ts + stmt) //FIX
+        is Stmt.JoinManyDef -> throw RuntimeException()
+        else -> TODO()
     }
     return next
 }
@@ -43,11 +36,11 @@ private fun inline(block: List<Stmt>, _env: Map<Exp.Var, Exp> = mapOf()): Pair<L
     val transfers: MutableList<Stmt.Transfer> = mutableListOf()
     for (stmt in block) {
         when (stmt) {
-            is Stmt.Def.VarDef -> env[stmt.dec.name] = inline(stmt.init, env)
+            is Stmt.VarDef -> env[stmt.dec.name] = inline(stmt.init, env)
             is Stmt.Assign -> env[stmt.target] = inline(stmt.exp, env)
-            is Stmt.Def.YieldDef -> external.add(stmt.copy(packets=stmt.packets.map { inline(it, env) }))
-            is Stmt.Def.JoinDef -> external.add(stmt.copy(packets=stmt.packets.map { inline(it, env) }))
-            is Stmt.Def.JoinManyDef -> external.add(stmt)
+            is Stmt.YieldDef -> external.add(stmt.copy(packets=stmt.packets.map { inline(it, env) }))
+            is Stmt.JoinDef -> external.add(stmt.copy(packets=stmt.packets.map { inline(it, env) }))
+            is Stmt.JoinManyDef -> external.add(stmt)
             is Stmt.Reveal -> external.add(stmt.copy(where=inline(stmt.where, env)))
             is Stmt.Block -> {
                 val (e, t) = inline(stmt.stmts, env)
@@ -86,33 +79,29 @@ private fun inline(exp: Exp, env: Map<Exp.Var, Exp>): Exp {
         Exp.UNDEFINED, is Exp.Num, is Exp.Address -> exp
         is Exp.Q.Y -> TODO()
         is Exp.Q.Let -> TODO()
-        is Exp.Q.Transfers -> TODO()
+        is Exp.Q.Transfers -> exp.copy(ts=exp.ts.map{it.copy(amount=inline(it.amount, env))})
     }
 }
 
 fun prettyPrint(p: Program): String {
     val stmts = pretty(p.block.stmts)
-    val typedecls = p.typedecls.map{x->"type ${x.name} = ${pretty(x.definition)})"}
+    val typedecls = p.typedecls.map{"type ${it.name} = ${pretty(it.definition)})"}
     return(typedecls + stmts).joinToString("\n")
 }
 
-fun pretty(block: List<Stmt>): List<String> {
-    val res = mutableListOf<String>()
-    for (stmt in block) {
-        res.addAll(when (stmt) {
-            is Stmt.Def.VarDef -> listOf("var ${pretty(stmt.dec.name)}: ${pretty(stmt.dec.type)} = ${pretty(stmt.init)}")
-            is Stmt.Def.YieldDef -> listOf("yield " + stmt.packets.joinToString(" ") {pretty(it)})
-            is Stmt.Def.JoinDef -> listOf("join " + stmt.packets.joinToString(" ") {pretty(it)})
-            is Stmt.Def.JoinManyDef -> listOf("join many ${pretty(stmt.role)}")
-            is Stmt.Block -> listOf("{") + pretty(stmt.stmts).map{ "    $it"} + listOf("}")
-            is Stmt.Assign -> listOf("${pretty(stmt.target)} = ${pretty(stmt.exp)}")
-            is Stmt.Reveal -> listOf("reveal ${pretty(stmt.target)} where ${pretty(stmt.where)}")
-            is Stmt.If -> TODO()
-            is Stmt.ForYield -> TODO()
-            is Stmt.Transfer -> listOf("transfer ${pretty(stmt.amount)} from ${pretty(stmt.from)} to ${pretty(stmt.to)}")
-        })
-    }
-    return res
+fun pretty(block: List<Stmt>): List<String> = block.flatMap { pretty(it) }
+
+private fun pretty(stmt: Stmt) = when (stmt) {
+    is Stmt.VarDef -> listOf("var ${pretty(stmt.dec.name)}: ${pretty(stmt.dec.type)} = ${pretty(stmt.init)};")
+    is Stmt.YieldDef -> listOf("yield ${if (stmt.hidden) "hidden " else ""}${stmt.packets.joinToString(" ") { pretty(it) }};")
+    is Stmt.JoinDef -> listOf("join ${stmt.packets.joinToString(" ") { pretty(it) }};")
+    is Stmt.JoinManyDef -> listOf("join many ${pretty(stmt.role)};")
+    is Stmt.Block -> listOf("{") + pretty(stmt.stmts).map { "    $it" } + listOf("}")
+    is Stmt.Assign -> listOf("${pretty(stmt.target)} = ${pretty(stmt.exp)}")
+    is Stmt.Reveal -> listOf("reveal ${pretty(stmt.target)} where ${pretty(stmt.where)}")
+    is Stmt.If -> listOf("if (${pretty(stmt.cond)})") + pretty(listOf(stmt.ifTrue)) + listOf("else ") + pretty(listOf(stmt.ifFalse))
+    is Stmt.ForYield -> TODO()
+    is Stmt.Transfer -> listOf("transfer ${pretty(stmt.amount)} from ${pretty(stmt.from)} to ${pretty(stmt.to)};")
 }
 
 fun pretty(p: Packet): String {
@@ -145,4 +134,29 @@ fun pretty(texp: TypeExp): String = when (texp) {
     is TypeExp.TypeId -> texp.name
     is TypeExp.Subset -> "{${texp.values.joinToString(", ") { pretty(it)}}"
     is TypeExp.Range -> "{${pretty(texp.min)}, ${pretty(texp.max)}}"
+}
+fun inlineWhere(p: Program): Program = p.copy (block=Stmt.Block(p.block.stmts.flatMap { inlineWhere(it) }))
+
+fun inlineWhere(s: Stmt): List<Stmt> = when (s) {
+    is Stmt.JoinDef -> {
+        val hides: List<Stmt> = s.packets.map { Stmt.JoinDef(listOf(Packet(it.role, listOf(), TRUE)), true) }
+        val reveals: List<Stmt> = if (s.hidden) listOf() else s.packets.flatMap { p -> p.params.map { vd -> Stmt.Reveal(vd.name, TRUE) } }
+        val wheres: List<Stmt> = s.packets.flatMap { inlineWhere(it) }
+        hides + reveals + wheres
+    }
+    is Stmt.YieldDef -> {
+        val hides: List<Stmt> = s.packets.flatMap { p -> p.params.map { vd -> Stmt.YieldDef(listOf(Packet(p.role, listOf(vd), TRUE)), true) } }
+        val reveals: List<Stmt> = if (s.hidden) listOf() else s.packets.flatMap { p -> p.params.map { vd -> Stmt.Reveal(vd.name, TRUE) } }
+        val wheres: List<Stmt> = s.packets.flatMap { inlineWhere(it) }
+        hides + reveals + wheres
+    }
+    is Stmt.Reveal -> listOf(s.copy(where = TRUE),
+            Stmt.Assign(s.target, Exp.Cond(s.where, s.target, Exp.UNDEFINED)))
+    is Stmt.Block -> s.stmts.flatMap { inlineWhere(it) }
+
+    else -> listOf(s)
+}
+
+fun inlineWhere(p: Packet): List<Stmt> = p.params.map {
+    vd -> Stmt.VarDef(vd, Exp.Cond(p.where, vd.name, Exp.UNDEFINED))
 }

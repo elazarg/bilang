@@ -37,24 +37,24 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         }
 
         for (stmt in block.stmts) when (stmt) {
-            is Stmt.Def.VarDef -> {
+            is Stmt.VarDef -> {
                 check(stmt.dec.type, stmt.init)
                 env[stmt.dec.name] = stmt.dec.type
             }
-            is Stmt.Def.YieldDef -> {
+            is Stmt.YieldDef -> {
                 for (p in stmt.packets) check(ROLE, p.role)
                 val newEnv = checkPackets(stmt.packets)
                 for (k in newEnv.values)
                     env.plusAssign(k)
             }
-            is Stmt.Def.JoinDef -> {
+            is Stmt.JoinDef -> {
                 val newEnv = checkPackets(stmt.packets)
                 for (k in newEnv.values)
                     env.plusAssign(k)
                 for (p in stmt.packets)
                     env[p.role] = ROLE
             }
-            is Stmt.Def.JoinManyDef -> env[stmt.role] = ROLESET
+            is Stmt.JoinManyDef -> env[stmt.role] = ROLESET
             is Stmt.Block -> Checker(env, typeMap).typeCheck(stmt)
             is Stmt.Assign -> check(env.getValue(stmt.target), stmt.exp)
             is Stmt.Reveal -> { } //TODO: Type check reveal

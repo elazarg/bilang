@@ -124,23 +124,23 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Stmt.Def.VarDef visitVarDef(VarDefContext ctx) {
-        return new Stmt.Def.VarDef(this.visitVarDec(ctx.dec), exp(ctx.init));
+    public Stmt.VarDef visitVarDef(VarDefContext ctx) {
+        return new Stmt.VarDef(this.visitVarDec(ctx.dec), exp(ctx.init));
     }
 
     @Override
-    public Stmt.Def.YieldDef visitYieldDef(YieldDefContext ctx) {
-        return new Stmt.Def.YieldDef(list(ctx.packet(), this::visitPacket), ctx.hidden != null);
+    public Stmt.YieldDef visitYieldDef(YieldDefContext ctx) {
+        return new Stmt.YieldDef(list(ctx.packet(), this::visitPacket), ctx.hidden != null);
     }
 
     @Override
-    public Stmt.Def.JoinDef visitJoinDef(JoinDefContext ctx) {
-        return new Stmt.Def.JoinDef(list(ctx.packet(), this::visitPacket), false);
+    public Stmt.JoinDef visitJoinDef(JoinDefContext ctx) {
+        return new Stmt.JoinDef(list(ctx.packet(), this::visitPacket), false);
     }
 
     @Override
-    public Stmt.Def.JoinManyDef visitJoinManyDef(JoinManyDefContext ctx) {
-        return new Stmt.Def.JoinManyDef(var(ctx.role));
+    public Stmt.JoinManyDef visitJoinManyDef(JoinManyDefContext ctx) {
+        return new Stmt.JoinManyDef(var(ctx.role));
     }
 
     @Override

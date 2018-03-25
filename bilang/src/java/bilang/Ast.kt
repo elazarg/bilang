@@ -44,19 +44,18 @@ sealed class Exp : Ast() {
 sealed class Stmt : Ast() {
     interface External
 
-    sealed class Def: Stmt() {
-        data class VarDef(val dec: VarDec, val init: Exp) : Def()
-        data class YieldDef(val packets: List<Packet>, val hidden: Boolean) : Def(), External
-        data class JoinDef(val packets: List<Packet>, val hidden: Boolean) : Def(), External
-        data class JoinManyDef(val role: Exp.Var) : Def(), External
-    }
-
     data class Block(val stmts: List<Stmt>): Stmt()
     data class Assign(val target: Exp.Var , val exp: Exp): Stmt()
     data class Reveal(val target: Exp.Var, val where: Exp): Stmt(), External
     data class If(val cond: Exp, val ifTrue: Block, val ifFalse: Block): Stmt()
     data class ForYield(val from: Exp.Var, val packet: Packet, val block: Block): Stmt()
     data class Transfer(val amount: Exp, val from: Exp.Var, val to: Exp.Var): Stmt()
+
+    data class VarDef(val dec: VarDec, val init: Exp) : Stmt()
+
+    data class JoinManyDef(val role: Exp.Var) : Stmt(), External
+    data class JoinDef(val packets: List<Packet>, val hidden: Boolean) : Stmt(), External
+    data class YieldDef(val packets: List<Packet>, val hidden: Boolean) : Stmt(), External
 }
 
 data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()

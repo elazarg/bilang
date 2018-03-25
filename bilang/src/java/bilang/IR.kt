@@ -40,8 +40,8 @@ fun varOf(v: Exp.Var) = IR.Var(v.name.hashCode())
 
 fun stmtToIR(stmt: Stmt): Sequence<IR> {
     return when (stmt) {
-        is Stmt.Def.VarDef -> expToIR(stmt.init, varOf(stmt.dec.name))
-        is Stmt.Def.YieldDef -> {
+        is Stmt.VarDef -> expToIR(stmt.init, varOf(stmt.dec.name))
+        is Stmt.YieldDef -> {
             // for each packet
             // require actual packet match formal packet for the appropriate sender
             val sender = Fresh.vvar()
@@ -54,9 +54,9 @@ fun stmtToIR(stmt: Stmt): Sequence<IR> {
             }
             TODO()
         }
-        is Stmt.Def.JoinDef ->
+        is Stmt.JoinDef ->
             TODO("Same as yield, but assign the sender instead of checking")
-        is Stmt.Def.JoinManyDef -> TODO()
+        is Stmt.JoinManyDef -> TODO()
         is Stmt.Block -> buildSequence {
             for (s in stmt.stmts)
                 yieldAll(stmtToIR(s))

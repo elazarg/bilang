@@ -70,8 +70,8 @@ object XXX {
     private val server = Sast.Role("Server")
 
     private fun stmtToScribble(stmt: Stmt, roles: Set<Sast.Role>, hides: Map<Stmt.Reveal, Packet>): List<Sast.Action> = when (stmt) {
-        is Stmt.Def.JoinDef -> listOf(Sast.Action.Connect(makeRole(stmt.packets[0].role)))
-        is Stmt.Def.YieldDef -> {
+        is Stmt.JoinDef -> listOf(Sast.Action.Connect(makeRole(stmt.packets[0].role)))
+        is Stmt.YieldDef -> {
             val packets = stmt.packets
             val rec = if (packets.size > 1 || stmt.hidden) {
                 packets.map { p ->
@@ -112,7 +112,7 @@ object XXX {
     private fun findRoles(block: Stmt.Block): Set<Sast.Role> {
         val res : MutableSet<Sast.Role> = mutableSetOf()
         for (stmt in block.stmts) when (stmt) {
-            is Stmt.Def.JoinDef -> res += stmt.packets.map{ makeRole(it.role) }
+            is Stmt.JoinDef -> res += stmt.packets.map{ makeRole(it.role) }
             is Stmt.ForYield -> res += findRoles(stmt.block)
             is Stmt.If -> res += findRoles(stmt.ifTrue) + findRoles(stmt.ifFalse)
             else -> {}
@@ -126,7 +126,7 @@ object XXX {
         // FIX: ad-hoc - does not respect scope, flow, etc.
         val hides: MutableMap<Stmt.Reveal, Packet> = mutableMapOf()
         for (stmt in block.stmts) when (stmt) {
-            is Stmt.Def.YieldDef ->
+            is Stmt.YieldDef ->
                 if (stmt.hidden)
                     for (v in stmt.packets)
                         for (p in v.params)
