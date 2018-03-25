@@ -22,4 +22,4 @@ exists c, forall c1, forall c2,
     \/ !(c1 == c2) /\ W_ODD1 = -10  /\ W_EVEN1 == 10)
  -> W_ODD >= W_ODD1
 
-*
+*/
