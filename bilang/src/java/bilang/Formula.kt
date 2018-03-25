@@ -1,90 +1,87 @@
 package bilang
 
-sealed class Formula {
-
-    data class Q(val exists: Boolean, val v: Exp.Var, val f: Formula) : Formula()
-
-    data class And(val left: Formula, val right: Formula) : Formula()
-    data class Or(val left: Formula, val right: Formula) : Formula()
-    data class Not(val f: Formula) : Formula()
-
-    data class Atom(val exp: Exp) : Formula()
-
-    data class BVar(val s: String) : Formula()
-    object TRUE : Formula()
-    object FALSE : Formula()
-
-    companion object {
-        fun makeFormula(role: String, block: List<Stmt>, _next: Formula = TRUE): Formula {
-            var next: Formula = _next
-            for (stmt in block.reversed()) next = when (stmt) {
-                is Stmt.Def.VarDef ->
-                    And(next, eq(stmt.init, stmt.dec.name))
-                is Stmt.Def.YieldDef -> {
-                    val packet = stmt.packets[0]
-                    Q(packet.role.name == role, packet.params[0].name, next)
-                }
-                is Stmt.Def.JoinDef -> makeFormula(role, listOf(Stmt.Def.YieldDef(stmt.packets, stmt.hidden)), next)
-                is Stmt.Def.JoinManyDef -> throw RuntimeException()
-                is Stmt.Block -> makeFormula(role, stmt.stmts, next)
-                is Stmt.Assign -> throw RuntimeException()
-                is Stmt.Reveal -> next
-                is Stmt.If -> {
-                    val cond = makeBoolFormula(stmt.cond)
-                    Or(
-                            And(cond, makeFormula(role, stmt.ifTrue.stmts, next)),
-                            And(Not(cond), makeFormula(role, stmt.ifFalse.stmts, next))
-                    )
-                }
-                is Stmt.ForYield -> throw RuntimeException()
-                is Stmt.Transfer -> {
-                    val w1 = Exp.Var("W1")
-                    val w2 = Exp.Var("W2")
-                    val minus = Exp.UnOp("-", stmt.amount)
-                    And(
-                            if (stmt.from == Exp.Var(role)) eq(minus, w1)     else eq(stmt.amount, w2),
-                            if (stmt.to == Exp.Var(role)) eq(stmt.amount, w1) else eq(minus, w2)
-                    )
-                }
-
-            }
-            return next
+fun makeFormula(block: List<Stmt>, _next: Exp = Exp.Var("true")): Exp {
+    var next: Exp = _next
+    for (stmt in block.reversed()) next = when (stmt) {
+        is Stmt.Def.VarDef -> Exp.Q.Let(stmt.dec, stmt.init)
+        is Stmt.Def.YieldDef -> {
+            var n = next
+            for (p in stmt.packets.reversed())
+                n = Exp.Q.Y(p, n, true)
+            for (p in stmt.packets.reversed())
+                n = makeFormula(listOf(Stmt.Reveal(p.params[0].name, p.where)), n)
+            n
         }
-
-        fun makeBoolFormula(exp: Exp): Formula = when (exp) {
-            is Exp.Call -> TODO()
-            is Exp.UnOp -> {
-                require(exp.op == "!")
-                Not(makeBoolFormula(exp))
-            }
-            is Exp.BinOp -> {
-                val left = makeBoolFormula(exp.left)
-                val right = makeBoolFormula(exp.right)
-                when (exp.op) {
-                    "||" -> Or(left, right)
-                    "&&" -> And(left, right)
-                    else -> throw RuntimeException()
-                }
-            }
-            is Exp.Var -> {
-                when (exp.name) {
-                    "true" -> TRUE
-                    "false" -> FALSE
-                    else -> BVar(exp.name)
-                }
-            }
-            is Exp.Member -> TODO()
-            is Exp.Cond -> {
-                val cond = makeBoolFormula(exp.cond)
-                Or(
-                        And(cond, makeBoolFormula(exp.ifTrue)),
-                        And(Not(cond), makeBoolFormula(exp.ifFalse))
-                )
-            }
-            else -> throw RuntimeException()
+        is Stmt.Def.JoinDef ->  {
+            var n = next
+            for (p in stmt.packets.reversed())
+                n = Exp.Q.Y(p, makeFormula(listOf(Stmt.Def.YieldDef(stmt.packets, stmt.hidden)), next))
+            n
         }
+        is Stmt.Def.JoinManyDef -> throw RuntimeException()
+        is Stmt.Block -> makeFormula(stmt.stmts, next)
+        is Stmt.Assign -> throw RuntimeException()
+        is Stmt.Reveal -> next
+        is Stmt.If -> Exp.Cond(stmt.cond,
+                makeFormula(stmt.ifTrue.stmts, next),
+                makeFormula(stmt.ifFalse.stmts, next)
+        )
+        is Stmt.ForYield -> throw RuntimeException()
+        is Stmt.Transfer -> Exp.Q.Transfers((next as Exp.Q.Transfers).ts + stmt) //FIX
+    }
+    return next
+}
 
-        fun eq(left: Exp, right: Exp.Var) = Atom(Exp.BinOp("==", left, right))
+fun inline(block: List<Stmt>, _env: Map<Exp.Var, Exp> = mapOf()): Pair<List<Stmt.External>, List<Stmt.Transfer>> {
+    val env = _env.toMutableMap()
+    val external: MutableList<Stmt.External> = mutableListOf()
+    val transfers: MutableList<Stmt.Transfer> = mutableListOf()
+    for (stmt in block) {
+        when (stmt) {
+            is Stmt.Def.VarDef -> env[stmt.dec.name] = inline(stmt.init, env)
+            is Stmt.Assign -> env[stmt.target] = inline(stmt.exp, env)
+            is Stmt.Def.YieldDef -> external.add(stmt.copy(packets=stmt.packets.map { inline(it, env) }))
+            is Stmt.Def.JoinDef -> external.add(stmt.copy(packets=stmt.packets.map { inline(it, env) }))
+            is Stmt.Def.JoinManyDef -> external.add(stmt)
+            is Stmt.Reveal -> external.add(stmt.copy(where=inline(stmt.where, env)))
+            is Stmt.Block -> {
+                val (e, t) = inline(stmt.stmts, env)
+                external.addAll(e)
+                transfers.addAll(t)
+            }
+            is Stmt.If -> {
+                // FIX: does not handle assignments
+                val cond = inline(stmt.cond, env)
+                val (et, _tt) = inline(stmt.ifTrue.stmts, env)
+                val (ef, _tf) = inline(stmt.ifFalse.stmts, env)
+                if (et.isNotEmpty() || ef.isNotEmpty()) throw RuntimeException()
+                val tt = _tt.map {it.copy(amount=Exp.Cond(cond, it.amount, Exp.Num(0)))}
+                val tf = _tf.map {it.copy(amount=Exp.Cond(cond, Exp.Num(0), it.amount))}
+                transfers.addAll(tt)
+                transfers.addAll(tf)
+            }
+            is Stmt.ForYield -> throw RuntimeException()
+            is Stmt.Transfer -> transfers.add(stmt.copy(amount=inline(stmt.amount, env)))
+        }
+    }
+    return Pair(external, transfers)
+}
 
+fun inline(p: Packet, env: Map<Exp.Var, Exp>) = Packet(p.role, p.params, inline(p.where, env))
+
+fun inline(exp: Exp, env: Map<Exp.Var, Exp>): Exp {
+    fun inline(e: Exp) = inline(e, env)
+    return when (exp) {
+        is Exp.Call -> exp.copy(args=exp.args.map {inline(it)})
+        is Exp.UnOp -> exp.copy(operand=inline(exp.operand))
+        is Exp.BinOp -> exp.copy(left=inline(exp.left), right=inline(exp.right))
+        is Exp.Var -> env.getOrDefault(exp, exp)
+        is Exp.Member -> exp
+        is Exp.Cond -> exp.copy(cond=inline(exp.cond), ifTrue=inline(exp.ifTrue), ifFalse=inline(exp.ifFalse))
+        Exp.UNDEFINED, is Exp.Num, is Exp.Address -> exp
+        is Exp.Q.Y -> TODO()
+        is Exp.Q.Let -> TODO()
+        is Exp.Q.Transfers -> TODO()
     }
 }
+

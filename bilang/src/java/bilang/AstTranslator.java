@@ -178,7 +178,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Stmt.Transfer visitTransferStmt(TransferStmtContext ctx) {
-        return new Stmt.Transfer(exp(ctx.amount), exp(ctx.from), exp(ctx.to));
+        return new Stmt.Transfer(exp(ctx.amount), var(ctx.from), var(ctx.to));
     }
 
     private <T1, T2> List<T2> list(List<T1> iterable, Function<T1, T2> f) {

@@ -40,7 +40,7 @@ stmt
        ('else' '{' ifFalse=block '}')?               # IfStmt
     | 'for' 'yield' packet
       'from' from=ID '{' block '}'           # ForYieldStmt
-    | 'transfer' amount=exp 'from' from=exp 'to' to=exp ';' # TransferStmt
+    | 'transfer' amount=exp 'from' from=ID 'to' to=ID ';' # TransferStmt
     ;
 
 packet : (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;

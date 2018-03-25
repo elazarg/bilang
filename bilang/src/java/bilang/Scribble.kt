@@ -14,7 +14,6 @@ sealed class Sast {
         data class Continue(val label: String): Action()
     }
 
-    data class Var(val name: String)
     data class Type(val name: String)
     data class Role(val name: String)
     data class VarDec(val name: String, val type: Type)

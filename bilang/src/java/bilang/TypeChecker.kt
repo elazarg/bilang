@@ -4,6 +4,9 @@ import bilang.TypeExp.*
 
 data class IncompatibleTypeError(val s: String) : Exception()
 
+
+internal class StaticError(val line: Int, reason: String) : RuntimeException(reason)
+
 class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, TypeExp>) {
     val env = _env.toMutableMap()
 
@@ -111,6 +114,8 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
                 join(type(exp.ifTrue), type(exp.ifFalse))
             }
             Exp.UNDEFINED -> UNIT
+
+            is Exp.Q -> throw RuntimeException()
         }
     }
 
