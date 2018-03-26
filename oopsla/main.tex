@@ -52,7 +52,29 @@
                         %% http://ctan.org/pkg/booktabs
 \usepackage{subcaption} %% For complex figures with subfigures/subcaptions
                         %% http://ctan.org/pkg/subcaption
+\usepackage{listings}
+\usepackage{color}
 
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=c,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4
+}
 
 \begin{document}
 
@@ -161,14 +183,20 @@ Text of abstract \ldots.
 Text of paper \ldots
 
 
-\subsection{Execution Model}
-The execution model consists of a single stateful server, infinite number of clients, and a message-passing channel between them.
-The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly.
+\subsection{Execution Model and Assumptions}
+The execution model consists of a single stateful server, infinite number of clients, and a message-passing channel between them. The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly. We assume fair miners, meaning that transaction requests will be performed within a reasonable window of time (much lower than some predefined timeout). Note that this last assumption cannot be assumed in general in Ethereum, since the price of gas might be too low so no miner will have any incentive to perform the transaction; we do not try to solve this problem in this paper.
+
+We assume that clients are alert and waiting, and respond within predefined window of time.
+
 
 \subsection{Running Example}
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
 
+\lstinputlisting[language=C]{../bilang/examples/MontyHall.bi}
+
 \subsubsection{Blind Auction: Simultaneous n-Player Game}
+
+\lstinputlisting[language=C]{../bilang/examples/SecondMaxAuction.bi}
 
 \section{The Language}
 
@@ -183,14 +211,12 @@ When the \texttt{yield} command executes, the system pauses, but now only the re
 
 A \texttt{reveal} command waits for the variable to be bound for the revealed value; the sender should send the random salt together with the value.
 
-The \texttt{transfer} command is a shorthand for adding value to one role and substracting it from another role.
+The \texttt{transfer} command is a shorthand for adding value to one role and substracting it from another role. No actual transaction is performed during the game, except the initial investment upon \texttt{join} and the final withdrawal. This way players are not affected by external transactions. 
 
 \subsubsection{n-player Role: Aggregation}
 
 For n-players games, such as auctions and votes, we add two other commands: a \texttt{join many} definition, and a parallel \texttt{for yield} loop. The \texttt{join many} command waits for a predefined period of time for everyone to register as part of a \textit{role set}. Then, when a \texttt{for yield} loop executes then, for a period of time, each party of the role set gets a chance to send a message (e.g. a vote or a bid offer) for which a block of code is executed. Note that in order to avoid races, the block of code together with the initialized values should be a commutative monoid, such as finding the maximum value or collecting a set of independent values. However, in some cases races might have some advantages --- for example when we want to encourage playing quick, making timing a draw-breaker; it requires trusting the miners, for some extent, but is reasonable otherwise.
 
-
-\subsubsection{Combining Roles}
 
 \subsection{Semantics}
 
@@ -230,6 +256,8 @@ As an example we demonstrate Nash equilibria of the MontyHall game (with slightl
 \subsubsection{Multplayer Game}
 
 \subsubsection{N-player Game}
+In order to analyze n-player games, we
+
 
 \subsubsection{Absence of Communication Mismatches}
 We use simple session types to do sanity check on the server code, and to verify the conformance of clients to the protocol. The program is translated to scribble code in a straightforward manner: \texttt{join}s are translated to \texttt{connect} actions between the server and the role, \texttt{yield} are translated to \texttt{send} with some arbitrary label, and then broadcast action to all the other roles, unless the \texttt{yield} was also \texttt{hidden}. In our language we allow no choice for the protocol, and no recursion, so these important options are left for future work; the scribble system is already equipped to handle these extensions.
