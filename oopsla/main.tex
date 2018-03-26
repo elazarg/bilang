@@ -165,8 +165,6 @@ Text of paper \ldots
 The execution model consists of a single stateful server, infinite number of clients, and a message-passing channel between them.
 The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly.
 
-
-
 \subsection{Running Example}
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
 
@@ -177,8 +175,20 @@ The server executes a single game described in our language. A client can send m
 \subsection{Syntax}
 
 \subsubsection{Multi-player Game}
+The syntax of a simple multiplayer game is like a simple program without loops, with the addition of three commands: a \texttt{join} command, a \texttt{yield} command, and a \texttt{reveal} command.
+
+When the \texttt{join} command is executed, the machine pause and waits for some unregistered player to send message. The first player to send a message that matches the format of packets and the \texttt{where} clause, binds its address to the role, and becomes the owner of this role (note that joins involve race by definition).
+
+When the \texttt{yield} command executes, the system pauses, but now only the registered players for each of the parallel roles can play, and only their packets are bound. If the timeout passes without appropriate packet received, the variables are given the value \texttt{undefined}. Packets can be declared as \texttt{hidden}, in which case only an appropriate commitment will be sent (salted with random value and the sender's address, to avoid brute force and replay attacks; these are implementation details).
+
+A \texttt{reveal} command waits for the variable to be bound for the revealed value; the sender should send the random salt together with the value.
+
+The \texttt{transfer} command is a shorthand for adding value to one role and substracting it from another role.
 
 \subsubsection{n-player Role: Aggregation}
+
+For n-players games, such as auctions and votes, we add two other commands: a \texttt{join many} definition, and a parallel \texttt{for yield} loop. The \texttt{join many} command waits for a predefined period of time for everyone to register as part of a \textit{role set}. Then, when a \texttt{for yield} loop executes then, for a period of time, each party of the role set gets a chance to send a message (e.g. a vote or a bid offer) for which a block of code is executed. Note that in order to avoid races, the block of code together with the initialized values should be a commutative monoid, such as finding the maximum value or collecting a set of independent values. However, in some cases races might have some advantages --- for example when we want to encourage playing quick, making timing a draw-breaker; it requires trusting the miners, for some extent, but is reasonable otherwise.
+
 
 \subsubsection{Combining Roles}
 
@@ -186,7 +196,7 @@ The server executes a single game described in our language. A client can send m
 
 \subsubsection{Quitting, Deadlines and the Global Clock}
 Over the blockchain, we cannot avoid the possibility that any party can stop playing at any time. Additionally, players might not `live up to their promises' by failing to reveal commitments, or revealing commitments that do not hold to the contract.
-Therefore, very similar to velner et al., we assume a global clock. Each step takes a single tick. If a player does not play when its turn comes, anyone can play for her, and the value of its choice is a special \texttt{None} value (thus all external choices are nullable types). The intention is that None is a sign of player deviating from the rules of the game, and such deviation should be punished. Static analysis (see below) can warn about failure to punish players for None values.
+Therefore, very similar to Velner et al., we assume a global clock. Each step takes a single tick. If a player does not play when its turn comes, anyone can play for her, and the value of its choice is a special \texttt{None} value (thus all external choices are nullable types). The intention is that None is a sign of player deviating from the rules of the game, and such deviation should be punished. Static analysis (see below) can warn about failure to punish players for None values.
 
 \subsection{Implementation}
 \subsubsection{Translation to Solidity}
@@ -194,13 +204,13 @@ Therefore, very similar to velner et al., we assume a global clock. Each step ta
 
 \section{Analysis}
 
-\subsection{Hide-Reveal as Resource}
+\subsection{Hide-Reveal as Resource/Initialization}
 A hidden variable can be seen as a resource: it is `allocated' when sent, `released' when revealed, and in the meantime cannot be copied. Unfortunately, a very useful pattern of resource usage -- a \texttt{using} or \texttt{with} construct -- is inapropriate since the variable is not used between the time it is committed to the time it is released, but only later; additionally, variables revealed in the meantime \textit{are} used later, so tying it to a scope is not useful at all. In a sense, the situation has more in common to an uninitialized variable, except that \textit{moving} the variables' value does make sense, and immediate initialization is not useful (it is just like a using public variable).
 
 \subsection{No Rule-breaking (Well Separation)}
 The \texttt{where} clauses enables an important safety analysis: we would like to know that the opposing player cannot force us to break the rules. This question, like others, can be asked both for a well-behaved opponent and for a malicious one. For a malicious player, we want to know whether $\exists \overline{x} \forall \overline{y}: P(\overline{x})\wedge \neg Q(\overline{y})$, where $P$ and $Q$ are the formulae representing the \texttt{where} clauses of the opponent and ourselves, respectively.
 
-For a well-behaved opponent, the analysis will use a DQBF formula similar to the one described above.
+For a well-behaved opponent, the analysis uses a DQBF formula similar to the one described above.
 
 \subsection{Finding Dominant Strategy}
 A dominant strategy for a player is a sequence of choices such that no matter what the opponent does, the payoff cannot be any better. Formally, given a payoff function for a player 
@@ -208,18 +218,23 @@ $F : \mathbb{N}^n \times \mathbb{N}^k \rightarrow \mathbb{N}$
 over the game, we can look for a dominant strategy by solving
 $\exists \overline{x} \forall \overline{x'} \overline{y}: F(\overline{x}, \overline{y})\geq F(\overline{x'}, \overline{y})$.
 
+Only trivial games have dominant strategies, but the analysis can point to dominant strategies for playing \texttt{undefined}, which indicate bugs. It can also show the absence of dominant strategy, which is a good sanity check.
+
+\subsection{Equilibria}
+The game is translated to an extensive form, with information sets reflecting the use of \emph{private} and \emph{publish}. 
+This format can be analyzed to find Nash equilibria, taking into account the possibility of players quitting in the middle of the game. We use the `Gambit' tool to perform this analysis.
+
+As an example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that None values are not part of this specific equilibrium - which is a good sign.
+
+
 \subsubsection{Multplayer Game}
 
 \subsubsection{N-player Game}
 
 \subsubsection{Absence of Communication Mismatches}
-We use simple session types to do sanity check on the server code, and to verify the conformance of clients to the protocol
+We use simple session types to do sanity check on the server code, and to verify the conformance of clients to the protocol. The program is translated to scribble code in a straightforward manner: \texttt{join}s are translated to \texttt{connect} actions between the server and the role, \texttt{yield} are translated to \texttt{send} with some arbitrary label, and then broadcast action to all the other roles, unless the \texttt{yield} was also \texttt{hidden}. In our language we allow no choice for the protocol, and no recursion, so these important options are left for future work; the scribble system is already equipped to handle these extensions.
 
-\subsection{Equilibria}
-The game is translated to an extensive form, with information sets reflecting the use of \emph{private} and \emph{publish}. 
-This format can be analyzed to find Nash equilibria, taking into account the possibility of players quitting in the middle of the game.
-
-
+The scribble protocol can then be used to verify the implementation of clients, in which case it is guaranteed (under our timing and fairness assumptions) that clients have no communication mismatches.
 
 \subsection{DQBF}
 The language for full-information 2-player finite seuquential games is QBF: for example the formula $\exists x \forall y: x > y$ refers to the game where the player chooses $x$ and shows it, then the opponent chooses $y$, and the first player wins iff $x > y$. Obviously the second player has a winning strategy, e.g. always choose $y=x$.
