@@ -1,6 +1,6 @@
 grammar BiLang;
 
-program : typeDec* block EOF ;
+program : typeDec* stmt+ EOF ;
 
 typeDec : 'type' name=ID '=' typeExp ;
 typeExp
@@ -9,37 +9,36 @@ typeExp
     | name=ID                             # TypeId
     ;
 
-block : stmt+ ;
-
 exp
-    : '(' exp ')'                          # ParenExp
+    : '(' exp ')'                             # ParenExp
     | callee=ID '(' (args+=exp (',' args+=exp)*)?  ')' # CallExp
-    | op=('-' | '!') exp                   # UnOpExp
-    | left=exp op=('*' | '/') right=exp    # BinOpMultExp
-    | left=exp op=('+' | '-') right=exp    # BinOpAddExp
+    | op=('-' | '!') exp                      # UnOpExp
+    | left=exp op=('*' | '/') right=exp       # BinOpMultExp
+    | left=exp op=('+' | '-') right=exp       # BinOpAddExp
     | left=exp op=('<' | '<=' | '>=' | '>') right=exp    # BinOpCompExp
-    | left=exp op=('==' | '!=') right=exp  # BinOpEqExp
-    | left=exp op=('&&' | '||') right=exp  # BinOpBoolExp
-    | role=ID '.' field=ID                 # MemberExp
+    | left=exp op=('==' | '!=') right=exp     # BinOpEqExp
+    | left=exp op=('&&' | '||') right=exp     # BinOpBoolExp
+    | role=ID '.' field=ID                    # MemberExp
     | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
-    | name=ID                              # IdExp
-    | INT                                  # NumLiteralExp
-    | ADDRESS                              # AddressLiteralExp
-    | 'undefined'                          # UndefExp
+    | name=ID                                 # IdExp
+    | INT                                     # NumLiteralExp
+    | ADDRESS                                 # AddressLiteralExp
+    | 'undefined'                             # UndefExp
     ;
 
 stmt
-    : 'var' dec=varDec ('=' init=exp)? ';'   # VarDef
-    | 'yield' hidden='hidden'? packet+ ';'   # YieldDef
-    | 'join' packet+ ';'                     # JoinDef
-    | 'join' 'many' role=ID ';'              # JoinManyDef
+    : 'var' dec=varDec ('=' init=exp)? ';'    # VarDef
+    | 'yield' hidden='hidden'? packet+ ';'    # YieldDef
+    | 'join' packet+ ';'                      # JoinDef
+    | 'join' 'many' role=ID ';'               # JoinManyDef
 
-    | target=ID ':=' exp ';'             # AssignStmt
-    | 'reveal' target=ID where=whereClause';'             # RevealStmt
-    | 'if' '(' exp ')' '{' ifTrue=block '}'
-       ('else' '{' ifFalse=block '}')?               # IfStmt
+    | '{' stmt+ '}'                           # BlockStmt
+    | target=ID ':=' exp ';'                  # AssignStmt
+    | 'reveal' target=ID where=whereClause';' # RevealStmt
+    | 'if' '(' exp ')' ifTrue=stmt
+       ('else' ifFalse=stmt )?        # IfStmt
     | 'for' 'yield' packet
-      'from' from=ID '{' block '}'           # ForYieldStmt
+      'from' from=ID stmt            # ForYieldStmt
     | 'transfer' amount=exp 'from' from=ID 'to' to=ID ';' # TransferStmt
     ;
 

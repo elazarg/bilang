@@ -12,15 +12,5 @@ if (car != undefined && switch != undefined) {
     transfer 20 from Host to Winner;
     transfer 20 from Guest to Winner;
 }
-if (car == undefined) {
-    transfer Host.value from Host to Guest;
-}
-if (d == undefined) {
-    transfer Guest.value from Guest to Host;
-}
-if (goat == undefined) {
-    transfer Host.value from Host to Guest;
-}
-if (switch == undefined) {
-    transfer Guest.value from Guest to Host;
-}
+if (car == undefined) transfer Host.value from Host to Guest;
+if (switch == undefined) transfer Guest.value from Guest to Host;

@@ -22,9 +22,9 @@ object CFG {
             when (last) {
                 is Stmt.Block -> prev = toCfg(last.stmts, prev)
                 is Stmt.If -> prev = listOf(Node(lastId, last,
-                        toCfg(last.ifTrue.stmts, prev) + toCfg(last.ifFalse.stmts, prev)
+                        toCfg(listOf(last.ifTrue), prev) + toCfg(listOf(last.ifFalse), prev)
                 ))
-                is Stmt.ForYield -> prev += listOf(Node(lastId, last, toCfg(last.block.stmts, prev)))
+                is Stmt.ForYield -> prev += listOf(Node(lastId, last, toCfg(listOf(last), prev)))
                 else -> prev = listOf(Node(lastId, last, prev))
             }
         }

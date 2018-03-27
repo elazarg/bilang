@@ -16,3 +16,6 @@ if (c2 == undefined || c3 == undefined) {
         Winner := (s1 == sum) ? Alice : ((s1 == sum-1) ? Bob : Issuer);
     }
 }
+transfer 10 from Alice to Winner;
+transfer 10 from Bob to Winner;
+transfer 10 from Issuer to Winner;

@@ -26,7 +26,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         }
     }
 
-    private fun typeCheck(block: Stmt.Block) {
+    private fun typeCheck(stmt: Stmt) {
         fun check(expected: TypeExp, exp: Exp) = checkOp(expected, type(exp))
 
         fun checkPackets(packets: List<Packet>): Map<Packet, Map<Exp.Var, TypeExp>> {
@@ -36,7 +36,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             return newEnv
         }
 
-        for (stmt in block.stmts) when (stmt) {
+        when (stmt) {
             is Stmt.VarDef -> {
                 check(stmt.dec.type, stmt.init)
                 env[stmt.dec.name] = stmt.dec.type
@@ -65,7 +65,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             }
             is Stmt.ForYield -> {
                 checkPackets(listOf(stmt.packet))
-                typeCheck(stmt.block)
+                typeCheck(stmt.stmt)
                 check(ROLESET, stmt.from)
                 env[stmt.packet.role] = ROLE
             }

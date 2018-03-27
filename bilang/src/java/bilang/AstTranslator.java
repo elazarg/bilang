@@ -1,7 +1,7 @@
 package bilang;
 
-import bilang.generated.BiLangBaseVisitor;
-import bilang.generated.BiLangParser.*;
+import generated.BiLangBaseVisitor;
+import generated.BiLangParser.*;
 import org.antlr.v4.runtime.Token;
 import org.jetbrains.annotations.NotNull;
 
@@ -14,11 +14,13 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Program visitProgram(ProgramContext ctx) {
-        return new Program(list(ctx.typeDec(), this::visitTypeDec), this.visitBlock(ctx.block()));
+        return new Program(list(ctx.typeDec(), this::visitTypeDec), this.visitStmtList(ctx.stmt()));
     }
 
     private Stmt makeStmt(StmtContext ctx) {
-        return (Stmt)ctx.accept(this);
+        Stmt res = (Stmt)ctx.accept(this);
+        if (res == null) throw new AssertionError(ctx.getText());
+        return res;
     }
 
     @Override
@@ -44,9 +46,13 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return new TypeExp.Range(num(ctx.start), num(ctx.end));
     }
 
+    private Stmt.Block visitStmtList(List<? extends StmtContext> stmts) {
+        return new Stmt.Block(list(stmts, this::makeStmt));
+    }
+
     @Override
-    public Stmt.Block visitBlock(BlockContext ctx) {
-        return new Stmt.Block(list(ctx.stmt(), this::makeStmt));
+    public Stmt.Block visitBlockStmt(BlockStmtContext ctx) {
+        return this.visitStmtList(ctx.stmt());
     }
 
     private Exp exp(ExpContext ctx) {
@@ -162,8 +168,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     @Override
     public Stmt.If visitIfStmt(IfStmtContext ctx) {
         return new Stmt.If(exp(ctx.exp()),
-                this.visitBlock(ctx.ifTrue),
-                ctx.ifFalse == null ? new Stmt.Block(List.of()) : this.visitBlock(ctx.ifFalse)
+                makeStmt(ctx.ifTrue),
+                ctx.ifFalse == null ? new Stmt.Block(List.of()) : makeStmt(ctx.ifFalse)
         );
     }
 
@@ -172,7 +178,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return new Stmt.ForYield(
                 new Exp.Var(ctx.from.getText()),
                 this.visitPacket(ctx.packet()),
-                this.visitBlock(ctx.block())
+                makeStmt(ctx.stmt())
         );
     }
 

@@ -47,8 +47,8 @@ sealed class Stmt : Ast() {
     data class Block(val stmts: List<Stmt>): Stmt()
     data class Assign(val target: Exp.Var , val exp: Exp): Stmt()
     data class Reveal(val target: Exp.Var, val where: Exp): Stmt(), External
-    data class If(val cond: Exp, val ifTrue: Block, val ifFalse: Block): Stmt()
-    data class ForYield(val from: Exp.Var, val packet: Packet, val block: Block): Stmt()
+    data class If(val cond: Exp, val ifTrue: Stmt, val ifFalse: Stmt): Stmt()
+    data class ForYield(val from: Exp.Var, val packet: Packet, val stmt: Stmt): Stmt()
     data class Transfer(val amount: Exp, val from: Exp, val to: Exp): Stmt()
 
     data class VarDef(val dec: VarDec, val init: Exp) : Stmt()

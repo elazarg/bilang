@@ -109,12 +109,13 @@ object XXX {
         }
     }
 
-    private fun findRoles(block: Stmt.Block): Set<Sast.Role> {
+    private fun findRoles(stmt: Stmt): Set<Sast.Role> {
         val res : MutableSet<Sast.Role> = mutableSetOf()
-        for (stmt in block.stmts) when (stmt) {
+        when (stmt) {
             is Stmt.JoinDef -> res += stmt.packets.map{ makeRole(it.role) }
-            is Stmt.ForYield -> res += findRoles(stmt.block)
+            is Stmt.ForYield -> res += findRoles(stmt.stmt)
             is Stmt.If -> res += findRoles(stmt.ifTrue) + findRoles(stmt.ifFalse)
+            is Stmt.Block -> res += stmt.stmts.flatMap{findRoles(it)}
             else -> {}
         }
         return res.toSet()
@@ -122,10 +123,10 @@ object XXX {
 
     private fun makeRole(role: Exp.Var) = Sast.Role(role.name)
 
-    private fun matchRevealToHide(block: Stmt.Block, yields: MutableMap<String, Packet> = mutableMapOf()) : Map<Stmt.Reveal, Packet> {
+    private fun matchRevealToHide(stmt: Stmt, yields: MutableMap<String, Packet> = mutableMapOf()) : Map<Stmt.Reveal, Packet> {
         // FIX: ad-hoc - does not respect scope, flow, etc.
         val hides: MutableMap<Stmt.Reveal, Packet> = mutableMapOf()
-        for (stmt in block.stmts) when (stmt) {
+        when (stmt) {
             is Stmt.YieldDef ->
                 if (stmt.hidden)
                     for (v in stmt.packets)
@@ -137,6 +138,7 @@ object XXX {
                 hides.putAll(matchRevealToHide(stmt.ifTrue, yields))
                 hides.putAll(matchRevealToHide(stmt.ifFalse, yields))
             }
+            is Stmt.Block -> stmt.stmts.forEach { hides.putAll(matchRevealToHide(it, yields)) }
             else -> { }
         }
         return hides.toMap()

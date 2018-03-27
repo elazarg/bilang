@@ -1,12 +1,17 @@
 join Odd;
 join Even;
 yield Odd(c1: bool) Even(c2: bool);
-if (c1 != c2) {
+if (c1 != undefined && c2 != undefined) {
+    if (c1 != c2) {
+        transfer 10 from Even to Odd;
+    } else {
+        transfer 10 from Odd to Even;
+    }
+} else if (c2 == undefined) {
     transfer 10 from Even to Odd;
 } else {
     transfer 10 from Odd to Even;
 }
-
 /*
 
 phi_Odd =

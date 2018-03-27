@@ -52,8 +52,8 @@ private fun inline(block: List<Stmt>, _env: Map<Var, Exp> = mapOf()): Pair<List<
             is If -> {
                 // FIX: does not handle assignments correctly
                 val cond = inline(stmt.cond, env)
-                val (et, _tt) = inline(stmt.ifTrue.stmts, env)
-                val (ef, _tf) = inline(stmt.ifFalse.stmts, env)
+                val (et, _tt) = inline(listOf(stmt.ifTrue), env)
+                val (ef, _tf) = inline(listOf(stmt.ifFalse), env)
                 if (et.isNotEmpty() || ef.isNotEmpty()) throw RuntimeException()
                 val tt = _tt.map {it.copy(amount=Cond(cond, it.amount, Num(0)))}
                 val tf = _tf.map {it.copy(amount=Cond(cond, Num(0), it.amount))}

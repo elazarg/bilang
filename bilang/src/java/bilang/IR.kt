@@ -87,7 +87,7 @@ fun stmtToIR(stmt: Stmt): Sequence<IR> {
             buildSequence {
                 yield(startLabel)
                 yieldAll(acceptPacket(stmt.packet))
-                yieldAll(stmtToIR(stmt.block))
+                yieldAll(stmtToIR(stmt.stmt))
                 yield(IR.Jump(startLabel.n, varOf(Exp.Var("true"))))
                 yield(endLabel)
             }
