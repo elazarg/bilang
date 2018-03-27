@@ -52,8 +52,11 @@
                         %% http://ctan.org/pkg/booktabs
 \usepackage{subcaption} %% For complex figures with subfigures/subcaptions
                         %% http://ctan.org/pkg/subcaption
+
+% Elazar
 \usepackage{listings}
 \usepackage{color}
+\usepackage{syntax}
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
@@ -139,7 +142,7 @@
 %% Note: \begin{abstract}...\end{abstract} environment must come
 %% before \maketitle command
 \begin{abstract}
-Text of abstract \ldots.
+We present a language suitable for writing blockchain-based games, and a set of analyses that deliver meaningful game-theoretic information for actual potential executions of the game. We demonstrate simultaneous two-players and n-players games, in addition to more general patterns of partial information games. The analysis takes into account pecularities of blockchain systems such as asynchroneity, lack of privacy, lack of real identity, and the fact that players can always leave the game completely.
 \end{abstract}
 
 
@@ -167,7 +170,7 @@ Text of abstract \ldots.
 
 %% Keywords
 %% comma separated list
-\keywords{keyword1, keyword2, keyword3}  %% \keywords are mandatory in final camera-ready submission
+\keywords{blockchain, games, partial information}  %% \keywords are mandatory in final camera-ready submission
 
 
 %% \maketitle
@@ -191,16 +194,32 @@ We assume that clients are alert and waiting, and respond within predefined wind
 
 \subsection{Running Example}
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
+$\\$
 
 \lstinputlisting[language=C]{../bilang/examples/MontyHall.bi}
 
 \subsubsection{Blind Auction: Simultaneous n-Player Game}
+$\\$
 
 \lstinputlisting[language=C]{../bilang/examples/SecondMaxAuction.bi}
 
 \section{The Language}
 
 \subsection{Syntax}
+\setlength{\grammarparsep}{20pt plus 1pt minus 1pt} % increase separation between rules
+\setlength{\grammarindent}{12em} % increase separation between LHS/RHS 
+
+\begin{grammar}
+
+<statement> ::= ...
+            \alt `yield' [`hidden'] <packet>+ `;'
+            \alt `reveal' <id> `where' exp `;'
+            \alt `join' <packet>+ `;'
+            \alt `join many' <id> `;'
+            \alt `for yield' <packet> `from' <id> `{' <statement>+ `}'
+
+<packet> ::= <id> `(' (<id> `:' <type> `,')* `)' `where' exp
+\end{grammar}
 
 \subsubsection{Multi-player Game}
 The syntax of a simple multiplayer game is like a simple program without loops, with the addition of three commands: a \texttt{join} command, a \texttt{yield} command, and a \texttt{reveal} command.
@@ -213,10 +232,11 @@ A \texttt{reveal} command waits for the variable to be bound for the revealed va
 
 The \texttt{transfer} command is a shorthand for adding value to one role and substracting it from another role. No actual transaction is performed during the game, except the initial investment upon \texttt{join} and the final withdrawal. This way players are not affected by external transactions. 
 
-\subsubsection{n-player Role: Aggregation}
+\subsubsection{N-player Role: Aggregation}
 
 For n-players games, such as auctions and votes, we add two other commands: a \texttt{join many} definition, and a parallel \texttt{for yield} loop. The \texttt{join many} command waits for a predefined period of time for everyone to register as part of a \textit{role set}. Then, when a \texttt{for yield} loop executes then, for a period of time, each party of the role set gets a chance to send a message (e.g. a vote or a bid offer) for which a block of code is executed. Note that in order to avoid races, the block of code together with the initialized values should be a commutative monoid, such as finding the maximum value or collecting a set of independent values. However, in some cases races might have some advantages --- for example when we want to encourage playing quick, making timing a draw-breaker; it requires trusting the miners, for some extent, but is reasonable otherwise.
 
+The body of the \texttt{for yield} loop must consist of atomic commands only. 
 
 \subsection{Semantics}
 
@@ -226,9 +246,14 @@ Therefore, very similar to Velner et al., we assume a global clock. Each step ta
 
 \subsection{Implementation}
 \subsubsection{Translation to Solidity}
+The translation to solidity (which only supports objects with methods, and no coroutines) is similar to the standard way of translating coroutines to classes (e.g. in C$\sharp$). 
 
+Hidden yields and reveals are translated to a simple commitment scheme: at the point of yield, the client sends a hash of the value, her identity token, and random salt. At the reveal, the client sends the value and the hash, and these are checked.
+
+No ether is sent during the interaction; the only transfers happen when players join, and when the game is done. Players withdraw their money from a capsule, guaranteeing that no other player or contract can interfere with this action.
 
 \section{Analysis}
+The language is amenable to the standard safety analysis, such as avoiding division by zero. In this paper we focus on different kind of analyses --- finding equilibria.
 
 \subsection{Hide-Reveal as Resource/Initialization}
 A hidden variable can be seen as a resource: it is `allocated' when sent, `released' when revealed, and in the meantime cannot be copied. Unfortunately, a very useful pattern of resource usage -- a \texttt{using} or \texttt{with} construct -- is inapropriate since the variable is not used between the time it is committed to the time it is released, but only later; additionally, variables revealed in the meantime \textit{are} used later, so tying it to a scope is not useful at all. In a sense, the situation has more in common to an uninitialized variable, except that \textit{moving} the variables' value does make sense, and immediate initialization is not useful (it is just like a using public variable).
@@ -246,12 +271,15 @@ $\exists \overline{x} \forall \overline{x'} \overline{y}: F(\overline{x}, \overl
 
 Only trivial games have dominant strategies, but the analysis can point to dominant strategies for playing \texttt{undefined}, which indicate bugs. It can also show the absence of dominant strategy, which is a good sanity check.
 
-\subsection{Equilibria}
+\subsection{Equilibria Analysis}
 The game is translated to an extensive form, with information sets reflecting the use of \emph{private} and \emph{publish}. 
 This format can be analyzed to find Nash equilibria, taking into account the possibility of players quitting in the middle of the game. We use the `Gambit' tool to perform this analysis.
 
-As an example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that None values are not part of this specific equilibrium - which is a good sign.
+When translating to extensive form, it is important to take into account one important fact, namely that it is impossible to perform a completely independent and parallel action. Commitment schemes force the opposing players to choose a value independently, but do not force the player to actually reveal it; players can always drop off the game. The first player that sends the packet that reveals her decision is on a disadvantage, since the opponent can choose whether to reaveal too, or leave the game. This fact is exacerbated when we take into account the possibility of pseudonims, and even more so when we consider games with unbounded number of players, in which case one agent can commit to any number of values, and reveal only subset to his choice.
 
+We address this problem in the way we translate the game to external form. Each move consists of to levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysi we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one player is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
+
+As an example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that None values are not part of this specific equilibrium - which is a good sign.
 
 \subsubsection{Multplayer Game}
 
@@ -263,6 +291,8 @@ In order to analyze n-player games, we
 We use simple session types to do sanity check on the server code, and to verify the conformance of clients to the protocol. The program is translated to scribble code in a straightforward manner: \texttt{join}s are translated to \texttt{connect} actions between the server and the role, \texttt{yield} are translated to \texttt{send} with some arbitrary label, and then broadcast action to all the other roles, unless the \texttt{yield} was also \texttt{hidden}. In our language we allow no choice for the protocol, and no recursion, so these important options are left for future work; the scribble system is already equipped to handle these extensions.
 
 The scribble protocol can then be used to verify the implementation of clients, in which case it is guaranteed (under our timing and fairness assumptions) that clients have no communication mismatches.
+
+Scribble does not support unbounded number of roles yet, although the theory of session types has been extended to handle it. We can still produce a projection (local protocol) from a \textit{for yield} loop, since from the point of view of each client it is nothing but a simple send operation (clients are not intended to receive previous messages sent to the for loop). When the loop ends, the server broadcast the value of the variables updated inside the loop. So each local client will have a simple send-receive pair.
 
 \subsection{DQBF}
 The language for full-information 2-player finite seuquential games is QBF: for example the formula $\exists x \forall y: x > y$ refers to the game where the player chooses $x$ and shows it, then the opponent chooses $y$, and the first player wins iff $x > y$. Obviously the second player has a winning strategy, e.g. always choose $y=x$.
