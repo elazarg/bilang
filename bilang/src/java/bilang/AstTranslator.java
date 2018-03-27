@@ -115,7 +115,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Exp.Address visitAddressLiteralExp(AddressLiteralExpContext ctx) {
-        return new Exp.Address(Integer.parseInt(ctx.ADDRESS().getText(), 16));
+        return new Exp.Address(Integer.parseInt(ctx.ADDRESS().getText().substring(2), 16));
     }
 
     @Override

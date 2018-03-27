@@ -6,11 +6,11 @@ import org.antlr.v4.runtime.*
 
 import bilang.generated.*
 
-fun parse(inputFilename: String): BiLangParser.ProgramContext =
-        BiLangParser(CommonTokenStream(BiLangLexer(CharStreams.fromPath(Paths.get(inputFilename))))).program()
+fun parse(inputFilename: String): Program =
+        AstTranslator().visitProgram(BiLangParser(CommonTokenStream(BiLangLexer(CharStreams.fromPath(Paths.get(inputFilename))))).program())
 
 fun main(args: Array<String>) {
-    val program = AstTranslator().visitProgram(parse("examples/MontyHall.bi"))
+    val program = parse("examples/ThreeWayLottery.bi")
     val p = inline(inlineWhere(program))
     println(prettyPrint(p))
 }
