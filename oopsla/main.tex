@@ -58,27 +58,6 @@
 \usepackage{color}
 \usepackage{syntax}
 
-\definecolor{dkgreen}{rgb}{0,0.6,0}
-\definecolor{gray}{rgb}{0.5,0.5,0.5}
-\definecolor{mauve}{rgb}{0.58,0,0.82}
-
-\lstset{frame=tb,
-  language=c,
-  aboveskip=3mm,
-  belowskip=3mm,
-  showstringspaces=false,
-  columns=flexible,
-  basicstyle={\small\ttfamily},
-  numbers=none,
-  numberstyle=\tiny\color{gray},
-  keywordstyle=\color{blue},
-  commentstyle=\color{dkgreen},
-  stringstyle=\color{mauve},
-  breaklines=true,
-  breakatwhitespace=true,
-  tabsize=4
-}
-
 \begin{document}
 
 %% Title information
@@ -142,7 +121,7 @@
 %% Note: \begin{abstract}...\end{abstract} environment must come
 %% before \maketitle command
 \begin{abstract}
-We present a language suitable for writing blockchain-based games, and a set of analyses that deliver meaningful game-theoretic information for actual potential executions of the game. We demonstrate simultaneous two-players and n-players games, in addition to more general patterns of partial information games. The analysis takes into account pecularities of blockchain systems such as asynchroneity, lack of privacy, lack of real identity, and the fact that players can always leave the game completely.
+We present a language suitable for writing blockchain-based games, and a set of analyses that deliver meaningful game-theoretic information for actual potential executions of the game. We demonstrate simultaneous two-players and n-players games, in addition to more general patterns of partial information games. The analysis takes into account pecularities of blockchain systems such as asynchroneity, lack of privacy, lack of real identity, and the fact that players can always leave the game completely. Despite these theoretical advantages, the language is simple and easy to read and understand.
 \end{abstract}
 
 
@@ -183,8 +162,11 @@ We present a language suitable for writing blockchain-based games, and a set of 
 \section{Introduction}
 
 \subsection{Motivation}
-Text of paper \ldots
+Writing correct blockchain applications (or smart contracts) is a delicate art. The need to consider incentives while programming in an asynchroneous message-passing style and the issues of privacy, coupling with the abstraction leakage of common blockchain languages such as solidity, makes it a nontrivial task. Additionally, current languages neglect the need to make sure that client programs use the blockchain program correctly.
 
+An important previous work was done by Velner et al., which demonstrate how added support for (observationally) simultaneous method calls can make the development and analysis of smart contracts simpler; they also describe an abstract-interpretation approach to find the worst case expected payoff.
+
+In this paper we suggest a programming language and techniques that are amenable to analysis on several levels, by making explicit the expected information dependency and sequence of messages, and by using existing tools that perform game-thoretical analysis and guaranteeing absence of communication mismatches with clients. This is different from Velner et al. in that we allow more refined control over information dependencies, and that we do other analyses --- in particular we enumerate Nash equilibria and decide the existence of dominant strategy. It is also possible to express games with unbounded number of players, while still guaranteeing bounded execution time pre transaction, and lack of communication mismatch between server and clients.
 
 \subsection{Execution Model and Assumptions}
 The execution model consists of a single stateful server, infinite number of clients, and a message-passing channel between them. The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly. We assume fair miners, meaning that transaction requests will be performed within a reasonable window of time (much lower than some predefined timeout). Note that this last assumption cannot be assumed in general in Ethereum, since the price of gas might be too low so no miner will have any incentive to perform the transaction; we do not try to solve this problem in this paper.
@@ -196,12 +178,12 @@ We assume that clients are alert and waiting, and respond within predefined wind
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
 $\\$
 
-\lstinputlisting[language=C]{../bilang/examples/MontyHall.bi}
+\lstinputlisting{../bilang/examples/MontyHall.bi}
 
 \subsubsection{Blind Auction: Simultaneous n-Player Game}
 $\\$
 
-\lstinputlisting[language=C]{../bilang/examples/SecondMaxAuction.bi}
+\lstinputlisting{../bilang/examples/SecondMaxAuction.bi}
 
 \section{The Language}
 
@@ -211,15 +193,31 @@ $\\$
 
 \begin{grammar}
 
-<statement> ::= ...
-            \alt `yield' [`hidden'] <packet>+ `;'
-            \alt `reveal' <id> `where' exp `;'
-            \alt `join' <packet>+ `;'
-            \alt `join many' <id> `;'
-            \alt `for yield' <packet> `from' <id> `{' <statement>+ `}'
+<ext_statement> ::= ...
+                \alt yield [hidden] <packet>+ ;
+                \alt reveal <var> where <exp> ;
+                \alt join <packet>+ ;
+                \alt join many <var> ;
+                \alt for yield <packet> from <var> do <statement>+
 
-<packet> ::= <id> `(' (<id> `:' <type> `,')* `)' `where' exp
+<packet> ::= <var> (<var> : <type>, ... ) where <exp>
 \end{grammar}
+
+\subsection{Semantics}
+
+\begin{align*}
+  \Sigma =& (Var \rightarrow Val) \times (Id \times Var \rightarrow Val) \times 2^Id \\
+  exec :& Stmt \times \Sigma \times \Sigma \\
+  \\
+  fetch((R, \overline{v}, \varphi), \sigma, \sigma') \wedge R \notin N \wedge \overline{v} - dom(\sigma) = \emptyset \over{
+  For(P, R, S, \sigma, N) \rightsquigarrow exec(S, \sigma', N\cup R)                                                 }\\
+  \\
+  \varphi(\sigma'_R, \sigma')                                \over{
+  fetch((R, dom(\sigma'-\sigma), \varphi), \sigma, \sigma')   } \\
+  \\
+  x \in Id - range(\sigma)                                    \over{
+  join(R, \sigma) \rightsquigarrow \sigma[R\mapsto x]         }
+\end{align*}
 
 \subsubsection{Multi-player Game}
 The syntax of a simple multiplayer game is like a simple program without loops, with the addition of three commands: a \texttt{join} command, a \texttt{yield} command, and a \texttt{reveal} command.
@@ -237,26 +235,28 @@ The \texttt{transfer} command is a shorthand for adding value to one role and su
 For n-players games, such as auctions and votes, we add two other commands: a \texttt{join many} definition, and a parallel \texttt{for yield} loop. The \texttt{join many} command waits for a predefined period of time for everyone to register as part of a \textit{role set}. Then, when a \texttt{for yield} loop executes then, for a period of time, each party of the role set gets a chance to send a message (e.g. a vote or a bid offer) for which a block of code is executed. Note that in order to avoid races, the block of code together with the initialized values should be a commutative monoid, such as finding the maximum value or collecting a set of independent values. However, in some cases races might have some advantages --- for example when we want to encourage playing quick, making timing a draw-breaker; it requires trusting the miners, for some extent, but is reasonable otherwise.
 
 The body of the \texttt{for yield} loop must consist of atomic commands only. 
-
-\subsection{Semantics}
+% ... though nested for loops may enable important "join" operations, e.g. matching buyers and sellers
 
 \subsubsection{Quitting, Deadlines and the Global Clock}
 Over the blockchain, we cannot avoid the possibility that any party can stop playing at any time. Additionally, players might not `live up to their promises' by failing to reveal commitments, or revealing commitments that do not hold to the contract.
-Therefore, very similar to Velner et al., we assume a global clock. Each step takes a single tick. If a player does not play when its turn comes, anyone can play for her, and the value of its choice is a special \texttt{None} value (thus all external choices are nullable types). The intention is that None is a sign of player deviating from the rules of the game, and such deviation should be punished. Static analysis (see below) can warn about failure to punish players for None values.
+Therefore, very similar to Velner et al., we assume a global clock. Each step takes a single tick. If a player does not play when its turn comes, anyone can play for her, and the value of its choice is a special \texttt{undefined} value (thus all external choices are nullable types). The intention is that \texttt{undefined} is a sign of player deviating from the rules of the game, and such deviation should be punished. Static analysis (see below) can warn about failure to punish players for \texttt{undefined} values.
+
+\subsubsection{Cost function}
+Each transaction over the blockchain must be accompanied with transaction fee. These fees must be taken into account when analyzing the incentives of parties (for example, if playing and quitting yield the same payoff, player would rather quit, since this requires no action on her side and thus no more fees - unless pre-deposited). Additionally, transaction might become too costly so no fee will enable its execution (in order to avoid denial of service); this is why we do not allow \texttt{while} loops.
 
 \subsection{Implementation}
 \subsubsection{Translation to Solidity}
-The translation to solidity (which only supports objects with methods, and no coroutines) is similar to the standard way of translating coroutines to classes (e.g. in C$\sharp$). 
+The translation to solidity (which only supports objects with methods, and no coroutines) is similar to the standard way of translating coroutines to classes (e.g. in $C\sharp$). 
 
 Hidden yields and reveals are translated to a simple commitment scheme: at the point of yield, the client sends a hash of the value, her identity token, and random salt. At the reveal, the client sends the value and the hash, and these are checked.
 
 No ether is sent during the interaction; the only transfers happen when players join, and when the game is done. Players withdraw their money from a capsule, guaranteeing that no other player or contract can interfere with this action.
 
-\section{Analysis}
-The language is amenable to the standard safety analysis, such as avoiding division by zero. In this paper we focus on different kind of analyses --- finding equilibria.
+\section{Intermediate Form}
+To simplify analysis, we use intermediate form. An expression $\varphi$ of this form consists of a simple expression whose value is a mapping from names to numbers, or uses modalities of the form $Y^r_v\varphi$, $H^r_v\varphi$, $R_v\varphi$, $J_r\varphi$. These modalities correspond to \texttt{yield}, \texttt{yield hidden}, and \texttt{join} (we leave out \texttt{join many} and \texttt{for yield}). Parallel \texttt{yield} packets are translated to series of $Y$ and $R$. For example, \texttt{yield hidden A(x: int) B(y: int); transfer 10 from A to B;} is translated to $H^A_x, H^B_y, R^A_x, R^B_y, (A=-10; B=10)$, where the internal ordering between hides or reveals is not important.
 
-\subsection{Hide-Reveal as Resource/Initialization}
-A hidden variable can be seen as a resource: it is `allocated' when sent, `released' when revealed, and in the meantime cannot be copied. Unfortunately, a very useful pattern of resource usage -- a \texttt{using} or \texttt{with} construct -- is inapropriate since the variable is not used between the time it is committed to the time it is released, but only later; additionally, variables revealed in the meantime \textit{are} used later, so tying it to a scope is not useful at all. In a sense, the situation has more in common to an uninitialized variable, except that \textit{moving} the variables' value does make sense, and immediate initialization is not useful (it is just like a using public variable).
+\section{Analysis}
+The language is amenable to the standard safety analysis, such as avoiding division by zero. In this paper we focus on different kind of analyses --- finding equilibria and dominant strategies, and some other sanity checks that are game-related. We also perform other analyses relating to handling of commitments and money.
 
 \subsection{No Rule-breaking (Well Separation)}
 The \texttt{where} clauses enables an important safety analysis: we would like to know that the opposing player cannot force us to break the rules. This question, like others, can be asked both for a well-behaved opponent and for a malicious one. For a malicious player, we want to know whether $\exists \overline{x} \forall \overline{y}: P(\overline{x})\wedge \neg Q(\overline{y})$, where $P$ and $Q$ are the formulae representing the \texttt{where} clauses of the opponent and ourselves, respectively.
@@ -277,14 +277,13 @@ This format can be analyzed to find Nash equilibria, taking into account the pos
 
 When translating to extensive form, it is important to take into account one important fact, namely that it is impossible to perform a completely independent and parallel action. Commitment schemes force the opposing players to choose a value independently, but do not force the player to actually reveal it; players can always drop off the game. The first player that sends the packet that reveals her decision is on a disadvantage, since the opponent can choose whether to reaveal too, or leave the game. This fact is exacerbated when we take into account the possibility of pseudonims, and even more so when we consider games with unbounded number of players, in which case one agent can commit to any number of values, and reveal only subset to his choice.
 
-We address this problem in the way we translate the game to external form. Each move consists of to levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysi we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one player is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
+We address this problem in the way we translate the game to external form. Each move consists of to levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysis we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one player is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
 
-As an example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that None values are not part of this specific equilibrium - which is a good sign.
+As an example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that \texttt{undefined} values are not part of this specific equilibrium - which is a good sign.
 
 \subsubsection{Multplayer Game}
 
 \subsubsection{N-player Game}
-In order to analyze n-player games, we
 
 
 \subsubsection{Absence of Communication Mismatches}
@@ -293,6 +292,16 @@ We use simple session types to do sanity check on the server code, and to verify
 The scribble protocol can then be used to verify the implementation of clients, in which case it is guaranteed (under our timing and fairness assumptions) that clients have no communication mismatches.
 
 Scribble does not support unbounded number of roles yet, although the theory of session types has been extended to handle it. We can still produce a projection (local protocol) from a \textit{for yield} loop, since from the point of view of each client it is nothing but a simple send operation (clients are not intended to receive previous messages sent to the for loop). When the loop ends, the server broadcast the value of the variables updated inside the loop. So each local client will have a simple send-receive pair.
+
+\subsection{Resource Analysis}
+\subsubsection{Hidden Values}
+A hidden variable can be seen as a resource: it is `allocated' when sent, `released' when revealed, and in the meantime cannot be copied. Unfortunately, a very useful pattern of resource usage -- a \texttt{using} or \texttt{with} construct -- is inapropriate since the variable is not used between the time it is committed to the time it is released, but only later; additionally, variables revealed in the meantime \textit{are} used later, so tying it to a scope is not useful at all. In a sense, the situation has more in common to an uninitialized variable, except that \textit{moving} the variables' value does make sense, and immediate initialization is not useful (it is just like a using public variable).
+
+\subsubsection{Money}
+
+\subsubsection{Connections}
+
+Handling of connections (roles) is similar to standard resource handling in common imperative programming languages. Specifically, we tie connections to lexically scoped local variables, so when a role variable goes out of scope, the player tied to that role receives an appropriate notification.
 
 \subsection{DQBF}
 The language for full-information 2-player finite seuquential games is QBF: for example the formula $\exists x \forall y: x > y$ refers to the game where the player chooses $x$ and shows it, then the opponent chooses $y$, and the first player wins iff $x > y$. Obviously the second player has a winning strategy, e.g. always choose $y=x$.
