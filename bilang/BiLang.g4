@@ -36,9 +36,9 @@ stmt
     | target=ID ':=' exp ';'                  # AssignStmt
     | 'reveal' target=ID where=whereClause';' # RevealStmt
     | 'if' '(' exp ')' ifTrue=stmt
-       ('else' ifFalse=stmt )?        # IfStmt
+       ('else' ifFalse=stmt )?                # IfStmt
     | 'for' 'yield' packet
-      'from' from=ID stmt            # ForYieldStmt
+      'from' from=ID stmt                     # ForYieldStmt
     | 'transfer' amount=exp 'from' from=ID 'to' to=ID ';' # TransferStmt
     ;
 
