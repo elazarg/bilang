@@ -57,7 +57,30 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{syntax}
-
+\usepackage{stmaryrd}  % semantic brackets
+\lstset{
+  language=C,
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  morekeywords={*,...},            % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  tabsize=2,	                     % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
 \begin{document}
 
 %% Title information
@@ -166,7 +189,7 @@ Writing correct blockchain applications (or smart contracts) is a delicate art. 
 
 An important previous work was done by Velner et al., which demonstrate how added support for (observationally) simultaneous method calls can make the development and analysis of smart contracts simpler; they also describe an abstract-interpretation approach to find the worst case expected payoff.
 
-In this paper we suggest a programming language and techniques that are amenable to analysis on several levels, by making explicit the expected information dependency and sequence of messages, and by using existing tools that perform game-thoretical analysis and guaranteeing absence of communication mismatches with clients. This is different from Velner et al. in that we allow more refined control over information dependencies, and that we do other analyses --- in particular we enumerate Nash equilibria and decide the existence of dominant strategy. It is also possible to express games with unbounded number of players, while still guaranteeing bounded execution time pre transaction, and lack of communication mismatch between server and clients.
+In this paper we suggest a programming language and techniques that are amenable to analysis on several levels, by making explicit the expected information dependency and sequence of messages, and by using existing tools that perform game-theoretical analysis and guaranteeing absence of communication mismatches with clients. This is different from Velner et al. in that we allow more refined control over information dependencies, and that we do other analyses --- in particular we enumerate Nash equilibria and decide the existence of dominant strategy. It is also possible to express games with unbounded number of players, while still guaranteeing bounded execution time pre transaction, and lack of communication mismatch between server and clients.
 
 \subsection{Execution Model and Assumptions}
 The execution model consists of a single stateful server, infinite number of clients, and a message-passing channel between them. The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly. We assume fair miners, meaning that transaction requests will be performed within a reasonable window of time (much lower than some predefined timeout). Note that this last assumption cannot be assumed in general in Ethereum, since the price of gas might be too low so no miner will have any incentive to perform the transaction; we do not try to solve this problem in this paper.
@@ -184,7 +207,8 @@ $\\$
 $\\$
 
 \lstinputlisting{../bilang/examples/SecondMaxAuction.bi}
-
+\vfill
+\pagebreak
 \section{The Language}
 
 \subsection{Syntax}
@@ -204,20 +228,103 @@ $\\$
 \end{grammar}
 
 \subsection{Semantics}
-
+%  f: Id \rightarrow Var* \rightarrow Val \wedge \forall \overline{v}, \varphi(\sigma, f(\overline{v})) \over{
+%  For(P, n, S, \sigma, N); S \rightsquigarrow fold k f \lambda v.exec(S, \sigma' \cup f)                       }\\
 \begin{align*}
-  \Sigma =& (Var \rightarrow Val) \times (Id \times Var \rightarrow Val) \times 2^Id \\
+  \Sigma =& (Var \rightarrow Val) \times (Id \times Var \rightarrow Val) \\
   exec :& Stmt \times \Sigma \times \Sigma \\
+  n :& Id \\
   \\
-  fetch((R, \overline{v}, \varphi), \sigma, \sigma') \wedge R \notin N \wedge \overline{v} - dom(\sigma) = \emptyset \over{
-  For(P, R, S, \sigma, N) \rightsquigarrow exec(S, \sigma', N\cup R)                                                 }\\
+  fetch((n, \overline{v}, \varphi), \sigma, \sigma') \wedge n \notin N \wedge \overline{v} - dom(\sigma_n) = \emptyset \over{
+  For(P, n, S, \sigma, N) \rightsquigarrow exec(S, \sigma', N\cup n)                                                   }\\
   \\
-  \varphi(\sigma'_R, \sigma')                                \over{
-  fetch((R, dom(\sigma'-\sigma), \varphi), \sigma, \sigma')   } \\
+  \varphi(\sigma'_n, \sigma') \wedge \sigma'(R) = n           \over{
+  fetch((n, dom(\sigma'-\sigma), \varphi), \sigma, \sigma')   } \\
   \\
   x \in Id - range(\sigma)                                    \over{
-  join(R, \sigma) \rightsquigarrow \sigma[R\mapsto x]         }
+  join(n, \sigma) \rightsquigarrow \sigma[n\mapsto x]         }
 \end{align*}
+
+\subsubsection{Lowering}
+Use a simpler syntax:
+
+\begin{grammar}
+
+  <statement> ::= ...
+                  \alt broadcast;
+                  \alt receive <var> (<var> : <type>, ... );
+                  \alt goto <label>;
+                  \alt assume <exp>;
+                  \alt <label>: <statement>+;
+
+\end{grammar}
+
+\begin{align*}
+  n\in Id \wedge \overline{v} \in \overline{t} \over{
+  \llbracket \texttt{receive }R(\overline{v}: \overline{t}) \rrbracket (g, h) \rightsquigarrow (g[R \mapsto n], h(n)[\overline{v} \mapsto \overline{k}]) }\\
+  \\
+  broadcast \over{
+  <update\_observable> } \\
+\end{align*}
+
+
+The statement \texttt{join R; S} is translated to
+\begin{lstlisting}
+  broadcast;
+  receive R();
+  S;
+\end{lstlisting}
+
+The statement \texttt{join many R; S} is translated to
+\begin{lstlisting}
+  broadcast;
+  var R := {};
+L:
+  receive R1();
+  if (R == timeout) goto OUT;
+  R := R + { R1 };
+  goto L;
+OUT:
+  S;
+\end{lstlisting}
+
+The statement 
+\begin{lstlisting}
+  yield (x1: tx1, ... xn: txn) where <exp1> from G1 
+      | (y1: ty1, ... yn: tyn) where <exp2> from G2
+      | ... ;
+  <S>
+\end{lstlisting}
+
+is translated to
+\begin{lstlisting}
+  broadcast state;
+  receive R1(x1: tx1, ... xn: txn);
+  assume <exp> && R1 = G1;
+  delete R1;
+  receive R2(y1: ty1, ... xn: tyn);
+  assume <exp> && R2 = G2;
+  delete R2;
+  ...
+  S;
+\end{lstlisting}
+
+The statement \texttt{for yield R(x1: t1, ... xn: tn) where <exp> from G { <S1> } <S2> } is translated to
+\begin{lstlisting}
+broadcast state;
+var Q := G;  # copy contents
+L:
+  receive R(x1: t1, ... xn: tn) 
+  if (R == timeout) goto OUT;  # only possible after timeout
+  assume R in Q;
+  assume <exp>;
+  S1;
+  Q := Q - { R };
+  goto L;
+OUT:
+  S1
+\end{lstlisting}
+
 
 \subsubsection{Multi-player Game}
 The syntax of a simple multiplayer game is like a simple program without loops, with the addition of three commands: a \texttt{join} command, a \texttt{yield} command, and a \texttt{reveal} command.
@@ -228,7 +335,7 @@ When the \texttt{yield} command executes, the system pauses, but now only the re
 
 A \texttt{reveal} command waits for the variable to be bound for the revealed value; the sender should send the random salt together with the value.
 
-The \texttt{transfer} command is a shorthand for adding value to one role and substracting it from another role. No actual transaction is performed during the game, except the initial investment upon \texttt{join} and the final withdrawal. This way players are not affected by external transactions. 
+The \texttt{transfer} command is a shorthand for adding value to one role and subtracting it from another role. No actual transaction is performed during the game, except the initial investment upon \texttt{join} and the final withdrawal. This way players are not affected by external transactions. 
 
 \subsubsection{N-player Role: Aggregation}
 
@@ -275,7 +382,7 @@ Only trivial games have dominant strategies, but the analysis can point to domin
 The game is translated to an extensive form, with information sets reflecting the use of \emph{private} and \emph{publish}. 
 This format can be analyzed to find Nash equilibria, taking into account the possibility of players quitting in the middle of the game. We use the `Gambit' tool to perform this analysis.
 
-When translating to extensive form, it is important to take into account one important fact, namely that it is impossible to perform a completely independent and parallel action. Commitment schemes force the opposing players to choose a value independently, but do not force the player to actually reveal it; players can always drop off the game. The first player that sends the packet that reveals her decision is on a disadvantage, since the opponent can choose whether to reaveal too, or leave the game. This fact is exacerbated when we take into account the possibility of pseudonims, and even more so when we consider games with unbounded number of players, in which case one agent can commit to any number of values, and reveal only subset to his choice.
+When translating to extensive form, it is important to take into account one important fact, namely that it is impossible to perform a completely independent and parallel action. Commitment schemes force the opposing players to choose a value independently, but do not force the player to actually reveal it; players can always drop off the game. The first player that sends the packet that reveals her decision is on a disadvantage, since the opponent can choose whether to reveal too, or leave the game. This fact is exacerbated when we take into account the possibility of pseudonyms, and even more so when we consider games with unbounded number of players, in which case one agent can commit to any number of values, and reveal only subset to his choice.
 
 We address this problem in the way we translate the game to external form. Each move consists of to levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysis we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one player is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
 
@@ -304,9 +411,9 @@ A hidden variable can be seen as a resource: it is `allocated' when sent, `relea
 Handling of connections (roles) is similar to standard resource handling in common imperative programming languages. Specifically, we tie connections to lexically scoped local variables, so when a role variable goes out of scope, the player tied to that role receives an appropriate notification.
 
 \subsection{DQBF}
-The language for full-information 2-player finite seuquential games is QBF: for example the formula $\exists x \forall y: x > y$ refers to the game where the player chooses $x$ and shows it, then the opponent chooses $y$, and the first player wins iff $x > y$. Obviously the second player has a winning strategy, e.g. always choose $y=x$.
+The language for full-information 2-player finite sequential games is QBF: for example the formula $\exists x \forall y: x > y$ refers to the game where the player chooses $x$ and shows it, then the opponent chooses $y$, and the first player wins iff $x > y$. Obviously the second player has a winning strategy, e.g. always choose $y=x$.
 
-In QBF, there is a order of quanitifiers define uniquely the information on which they depend; i.e. information dependncy is a chain. In order to model partial information, we need to be able to specify a DAG of dependencies. DQBF consists of formulae of the form $\forall x_1, x_2, \ldots x_n \exists y_1 \{\overline{z_1}\}, y_2 \{\overline{z_2}\}, \ldots y_k \{\overline{z_k}\}: P(\overline{x}, \overline{y})$ where each $z_i$ is a list of variables on which $y_i$ depends. For example, the game $\exists x \forall y\{\}: x > y$ is the symmetric game in which both players make their choices independently; in this game the second player has no winning strategy.
+In QBF, there is a order of quantifiers define uniquely the information on which they depend; i.e. information dependency is a chain. In order to model partial information, we need to be able to specify a DAG of dependencies. DQBF consists of formulae of the form $\forall x_1, x_2, \ldots x_n \exists y_1 \{\overline{z_1}\}, y_2 \{\overline{z_2}\}, \ldots y_k \{\overline{z_k}\}: P(\overline{x}, \overline{y})$ where each $z_i$ is a list of variables on which $y_i$ depends. For example, the game $\exists x \forall y\{\}: x > y$ is the symmetric game in which both players make their choices independently; in this game the second player has no winning strategy.
 
 In our case, it doesn't make sense to represent every dependency pattern, since many patterns do not make sense in our setting: we can only hide value (from everyone else) or reveal values (to everyone). In particular, the information flow graph must be transitive.
 
