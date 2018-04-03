@@ -54,6 +54,7 @@
                         %% http://ctan.org/pkg/subcaption
 
 % Elazar
+\usepackage{amsmath}
 \usepackage{listings}
 \usepackage{color}
 \usepackage{syntax}
@@ -228,6 +229,17 @@ $\\$
 \end{grammar}
 
 \subsection{Semantics}
+Fix $g: Var \rightarrow Val$, then assuming each packet has a single variable:
+$\overline{Q} \subset Id \times Var \times Type \times Exp $,
+let $P = \{ (g(r), (v, t, c))| (r, v, t, c) \in \overline{Q} \}$
+\[ 
+  Y(\overline{P}, h, h') \leftrightarrow  
+  \begin{cases}
+    \overline{P}(a) = (v, t, c)   & \exists k, k : t \wedge h'(a) = h(a)[v \mapsto k] \wedge \mathbb{E}(c, h[a \mapsto h'(a)], g) = \texttt{true} \\
+    a \notin dom(\overline{P}) & h'(a) = h(a)
+  \end{cases}
+\]
+
 %  f: Id \rightarrow Var* \rightarrow Val \wedge \forall \overline{v}, \varphi(\sigma, f(\overline{v})) \over{
 %  For(P, n, S, \sigma, N); S \rightsquigarrow fold k f \lambda v.exec(S, \sigma' \cup f)                       }\\
 \begin{align*}
