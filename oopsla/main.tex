@@ -234,14 +234,20 @@ Fix $g: Var \rightarrow Val$ global state.
 Assuming each packet has a single variable, denote the packets of a \texttt{yield} command by $\overline{Q} \subset Id \times Var \times Type \times Exp $.
 Let $\overline{P} = \{ (g(r), (v, t, c))| (r, v, t, c) \in \overline{Q} \}$. Note that $\overline{P}$ is a partial function.
 \begin{align*}
-  Join(\overline{R}, g, h, g \cup d, h')   & \leftrightarrow d \in \overline{R} \rightarrow Id \wedge Yield(\overline{P}, g \cup d, h, h') \\
-  JoinMany(v, g, g[v\mapsto \overline{a}]) & \leftrightarrow \overline{a} \subseteq Id \\
-  Yield(\overline{P}, g, h, h') & \leftrightarrow  
-    \begin{cases}
-      \overline{P}(a) = (v, t, c) & \exists k, k : t \wedge h'(a) = h(a)[v \mapsto k] \\
-      & \wedge \mathbb{E}(c, h[a \mapsto h'(a)], g) = \texttt{true} \\
-      a \notin dom(\overline{P})  & h'(a) = h(a)
-    \end{cases}
+  Join(\overline{R}, g, h, g \cup d, h')
+          & \leftrightarrow d \in \overline{R} \rightarrow Id \wedge Yield(\overline{P}, g \cup d, h, h') \\
+  JoinMany(v, g, g[v\mapsto \overline{a}]) 
+          & \leftrightarrow \overline{a} \subseteq Id \\
+  For((r, p, s, \overline{S}), (g, h), (g', h')) 
+          & \leftrightarrow \exists (g'', h'') . Join(\{r\}, g, h, g'', h'') \wedge g''(r) \in g(s) \\
+          & \wedge \exists h''' . Yield(\{(g(r), p)\}, g'', h'', h''') \wedge exec(\overline{S}, g'', h''', g', h')  \\
+  Yield(\overline{P}, g, h, h') 
+          & \leftrightarrow  
+            \begin{cases}
+              \overline{P}(a) = (v, t, c) & \exists k, k : t \wedge h'(a) = h(a)[v \mapsto k] \\
+              & \wedge \mathbb{E}(c, h[a \mapsto h'(a)], g) = \texttt{true} \\
+              a \notin dom(\overline{P})  & h'(a) = h(a)
+            \end{cases}
 \end{align*}
     
 %  f: Id \rightarrow Var* \rightarrow Val \wedge \forall \overline{v}, \varphi(\sigma, f(\overline{v})) \over{
