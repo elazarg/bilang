@@ -241,39 +241,38 @@ $\\$
   p = (v, t, c) &\colon Var \times Type \times Exp = Packet \\
   \overline{P} &\colon Id \to Packet \\
 \end{align*}
-We assume each packet has a single variable. We use $\overline{P}(r)$ to denote $\overline{P}(g(r))$ when the global context $g$ is unambiguous, or use explicit subscript $\overline{P}_g$.
+We assume each packet has a single variable. We use $\overline{P}(r)$ to denote $\overline{P}(g(r))$ when the global context $g$ is unambiguous.
 \begin{align*}
   &\inference[Yield]{
-    \overline{P}(a) = (v, t, c) \rightarrow \exists k, k : t \land h'(a) = h(a)[v \mapsto k] \land \mathbb{E}(c, h[a \mapsto h'(a)], g) = \texttt{true} \\
-    a \notin dom(\overline{P}) \rightarrow h'(a) = h(a)
+    \forall (a, (v, t, c)) \in \overline{P} . \exists k \colon t . h'(a) = h(a)[v \mapsto k] \land \mathbb{E}(c, h[a \mapsto h'(a)], g) = \texttt{true} \\
+    \forall a \notin dom(\overline{P}) . h'(a) = h(a)
   }{
-    Yield(\overline{P}, (g, h), (g, h'))
+    \llbracket \texttt{yield }\overline{P} \rrbracket (g, h) \Downarrow (g, h')
   }\\ \\
   &\inference[Join]{
     d \in \overline{R} \to Id \land g' = g \cup d\\
-    \land Yield(\overline{P}_g, (g', h), (g', h'))
+    \land Yield(\overline{P}, (g', h), (g', h'))
   }{
-    Join(\overline{P}_g, (g, h), (g', h'))
+    \llbracket \texttt{join }\overline{P} \rrbracket (g, h) \Downarrow (g', h')
   }\;\;\;\;\;
   \inference[JoinMany]{
     \overline{a} \subseteq Id
   }{
-    JoinMany(v, (g, h), (g[v \mapsto \overline{a}], h))
+    \llbracket \texttt{join many }v \rrbracket (g, h) \Downarrow (g[v \mapsto \overline{a}], h)
   }\\ \\
   &\inference[ForStep]{
-    \exists (g_0, h_0) . Join(\{r\}, g, h, g_0, h_0) \land g_0(r) = a \\
-    \exists h_1 . Yield(\{(g(r), p)\}, (g_0, h_0), (g_0, h_1)) \land exec(\overline{S}, (g_0, h_1), (g', h'))
+    \llbracket \texttt{yield }\{(r, p)\}\texttt{; } \overline{S} \rrbracket (g[r \mapsto a], h) \Downarrow (g', h')
   }{
-    ForStep((r, p, a, \overline{S}), (g, h), (g', h'))
+    ForStep((r, p, a, \overline{S}), (g, h), (g'[r \mapsto \texttt{undefined}], h'))
   }\\ \\
   &\inference[For]{
     \exists a_1 \neq ... \neq a_n \in g(s) . \exists (g_1, h_1), ..., (g_n, h_n) . \forall 1 \leq i < n . \\
-    ForStep( (r, p, a_1, \overline{S}), (g_i, h_i), (g_{i+1}, h_{i+1}) )
+    ForStep( (r, p, a_i, \overline{S}), (g_i, h_i), (g_{i+1}, h_{i+1}) )
   }{
-    For((r, p, s, \overline{S}), (g, h), (g_n, h_n))
-  }
+    \llbracket \texttt{for yield }(r, p)\texttt{ from }s\texttt{ do } \overline{S} \rrbracket (g, h) \Downarrow (g_n, h_n)
+  } \\
 \end{align*}
-
+We translate \texttt{reveal }$v$\texttt{: T;} to \texttt{yield R(v: T, s: int) where hide(R, v, s) == R.v;}.
 \vfill
 \pagebreak
 
