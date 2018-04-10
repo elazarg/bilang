@@ -222,10 +222,10 @@ $\\$
 \begin{grammar}
 
 <ext_statement> ::= ...
-                \alt yield [hidden] <packet>+ ;
-                \alt reveal <var> where <exp> ;
-                \alt join <packet>+ ;
-                \alt join many <var> ;
+                \alt yield [hidden] <packet>+
+                \alt reveal <var> where <exp>
+                \alt join <packet>+
+                \alt join many <var>
                 \alt for yield <packet> from <var> do <statement>+
 
 <packet> ::= <var> (<var> : <type>, ... ) where <exp>
@@ -239,21 +239,21 @@ $\\$
   r &\colon Var \text{ of type Role} \\
   s &\colon Var \text{ of type RoleSet} \\
   p = (v, t, c) &\colon Var \times Type \times Exp = Packet \\
-  \overline{P} &\colon Id \to Packet \\
+  p &\colon Id \to Packet \\
 \end{align*}
-We assume each packet has a single variable. We use $\overline{P}(r)$ to denote $\overline{P}(g(r))$ when the global context $g$ is unambiguous.
+We assume each packet has a single variable. We use $p(r)$ to denote $p(g(r))$ when the global context $g$ is unambiguous.
 \begin{align*}
   &\inference[Yield]{
-    \forall (a, (v, t, c)) \in \overline{P} . \exists k \in \langle t \rangle . h'(a) = h(a)[v \mapsto k] \land \langle c, (g, h[a \mapsto h'(a)]) \rangle \Downarrow \texttt{true} \\
-    \forall a \notin dom(\overline{P}) . h'(a) = h(a)
+    \forall (a, (v, t, c)) \in p . \exists k \in \langle t \rangle . h'(a) = h(a)[v \mapsto k] \land \langle c, (g, h[a \mapsto h'(a)]) \rangle \Downarrow \texttt{true} \\
+    \forall a \notin dom(p) . h'(a) = h(a)
   }{
-    \langle \texttt{yield $\overline{P}$}, (g, h) \rangle \Downarrow (g, h')
+    \langle \texttt{yield $p$}, (g, h) \rangle \Downarrow (g, h')
   }\\ \\
   &\inference[Join]{
-    d \in \overline{R} \to Id \land g' = g \cup d\\
-    \langle \texttt{yield $\overline{P}$}, (g', h) \rangle \Downarrow (g', h')
+    d \in dom(p) \to Id \land g' = g \cup d\\
+    \langle \texttt{yield $p$}, (g', h) \rangle \Downarrow (g', h')
   }{
-    \langle \texttt{join $\overline{P}$}, (g, h) \rangle \Downarrow (g', h')
+    \langle \texttt{join $p$}, (g, h) \rangle \Downarrow (g', h')
   }\;\;\;\;\;
   \inference[JoinMany]{
     \overline{a} \subseteq Id
@@ -267,7 +267,58 @@ We assume each packet has a single variable. We use $\overline{P}(r)$ to denote 
     \langle \texttt{for yield $(r, p)$ from $s$ do $\overline{S}$}, (g, h) \rangle \Downarrow (g_n, h_n)
   } \\
 \end{align*}
-We translate \texttt{reveal $v$: T;} to \texttt{yield R(v: T, s: int) where hide(R, v, s) == R.v;}.
+We translate \texttt{reveal $v$: T} to \texttt{yield R(v: T, s: int) where hide(R, v, s) == R.v}.
+
+\vfill
+\pagebreak
+
+\subsection{Explicit Semantics}
+\begin{align*}
+  g &\colon Var \to Val \\
+  \psi &\colon Var \to Id \\
+  h &\colon Id \times Var \to Val \\
+  \rho &\colon Id \to Val \\
+\end{align*}
+\begin{align*}
+  \overline{S} &\colon Stmt^\ast \\
+  r &\colon Var \text{ of type Role} \\
+  s &\colon Var \text{ of type RoleSet} \\
+  (v, t, c) &\colon Var \times Type \times Exp = Packet \\
+  p &\colon Var \to Packet \\
+\end{align*}
+
+Translations:
+\begin{align*}
+  \texttt{yield $r$($v$: $t$) where $c$} & \rightsquigarrow \texttt{join $f$($v$: $t$) where $c$ \&\& $f$ == $r$}\\
+  \text{ where $f$ is a fresh variable}. \\
+  \texttt{reveal $v$: T}                 & \rightsquigarrow \texttt{yield $r$(f: T, s: int) where hide(r, v, s) == r.v; v := f}.
+\end{align*}
+\newcommand{\step}[3]{\langle \texttt{#1}, #2 \rangle \Downarrow_{\psi, \rho} #3}
+\begin{align*}
+  &\inference[Join]{
+    g' = g[r \mapsto \psi(r)] \land h' = h[a \mapsto h(a)[v \mapsto \rho(\psi(r))]] \\
+    \rho \colon \langle t \rangle \land \langle c, (g', h') \rangle \Downarrow \texttt{true}
+  }{
+    \step{join $r$($v$: $t$) where $c$}{(g, h)}{(g', h')}
+  }\\ \\
+  &\inference[YieldTimeout]{
+    \texttt{timeout}
+  }{
+    \step{yield $r$($v$: $t$) where $c$}{(g, h)}{(g, h[v \mapsto \texttt{undefined}])}
+  }\\ \\
+  &\inference[JoinMany]{
+    \overline{a} \subseteq Id
+  }{
+    \step{join many $v$}{(g, h)}{(g[v \mapsto \overline{a}], h)}
+  }\\ \\
+  &\inference[For]{
+    \exists a_1 \neq ... \neq a_n \in g(s) . \exists (g_1, h_1), ..., (g_n, h_n) . \forall 1 \leq i < n . \\
+    \step{$r$:=$a_i$; yield $r$($p$); $\overline{S}$; $r$:=undefined}{(g_i, h_i)}{(g_{i+1}, h_{i+1})}
+  }{
+    \step{for yield $(r, p)$ from $s$ do $\overline{S}$}{(g, h)}{(g_n, h_n)}
+  }\\
+\end{align*}
+
 
 \vfill
 \pagebreak
