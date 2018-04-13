@@ -104,6 +104,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             }
             is Exp.Num -> INT
             is Exp.Address -> ADDRESS
+            is Exp.Bool -> BOOL
             is Exp.Var -> env.getValue(exp)
             is Exp.Member -> {
                 checkOp(ROLE, type(exp.target))

@@ -130,6 +130,11 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
+    public Exp.Bool visitBoolLiteralExp(BoolLiteralExpContext ctx) {
+        return new Exp.Bool(Boolean.parseBoolean(ctx.BOOL().getSymbol().getText()));
+    }
+
+    @Override
     public Stmt.VarDef visitVarDef(VarDefContext ctx) {
         return new Stmt.VarDef(this.visitVarDec(ctx.dec), exp(ctx.init));
     }

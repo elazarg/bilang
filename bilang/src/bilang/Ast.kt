@@ -7,6 +7,7 @@ data class Program(val typedecls: List<TypeDec>, val block: Stmt.Block) : Ast()
 data class TypeDec(val name: String, val definition: TypeExp) : Ast()
 
 sealed class TypeExp : Ast() {
+    // TODO: add Hidden as constructor
     object INT: TypeExp(), IntClass
     object BOOL: TypeExp()
     object ROLE: TypeExp()
@@ -28,16 +29,25 @@ sealed class Exp : Ast() {
     data class Member(val target: Var, val field: String) : Exp()
     data class Cond(val cond: Exp, val ifTrue: Exp, val ifFalse: Exp) : Exp()
 
-    interface Const
+    interface Step
+    interface Const : Step
     object UNDEFINED : Exp(), Const
     data class Num(val n: Int) : Exp(), Const
+    data class Bool(val truth: Boolean) : Exp(), Const
     data class Address(val n: Int) : Exp(), Const
+
 
     // Not in concrete syntax:
     sealed class Q : Exp() {
-        data class Y(val p: Packet, val exp: Exp, val hidden: Boolean = false) : Q()
+        data class Y(val action: GameAction, val p: Packet, val exp: Exp, val hidden: Boolean = false) : Q(), Step
+        data class Reveal(val v: Var, val exp: Exp) : Q(), Step
+
         data class Let(val dec: VarDec, val value: Exp) : Q()
-        data class Transfers(val ts: List<Stmt.Transfer>) : Q()
+        // Var is not evaluated, since the analysis does not handle addresses but roles.
+        // giving different payoff for different addresses of the same roles is a TODO
+        data class Payoff(val ts: Map<Var, Exp>) : Q()
+        // Payoff is considered constant only when all the Exp are Num.
+        data class PayoffConst(val ts: Map<Var, Num>) : Q(), Const
     }
 }
 
@@ -60,3 +70,4 @@ sealed class Stmt : Ast() {
 
 data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()
 data class Packet(val role: Exp.Var, val params: List<VarDec>, val where: Exp) : Ast()
+enum class GameAction { JOIN, YIELD }

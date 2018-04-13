@@ -10,7 +10,7 @@ fun makeFormula(block: List<External>, _next: Exp = TRUE): Exp {
         is YieldDef -> {
             var n = next
             for (p in stmt.packets.reversed())
-                n = Q.Y(p, n, true)
+                n = Q.Y(GameAction.YIELD, p, n, true)
             for (p in stmt.packets.reversed())
                 n = makeFormula(listOf(Reveal(p.params[0].name, p.where)), n)
             n
@@ -18,7 +18,7 @@ fun makeFormula(block: List<External>, _next: Exp = TRUE): Exp {
         is JoinDef ->  {
             var n = next
             for (p in stmt.packets.reversed())
-                n = Q.Y(p, makeFormula(listOf(YieldDef(stmt.packets, stmt.hidden)), next))
+                n = Q.Y(GameAction.YIELD, p, makeFormula(listOf(YieldDef(stmt.packets, stmt.hidden)), next))
             n
         }
         is JoinManyDef -> throw RuntimeException()
@@ -83,10 +83,12 @@ private fun inline(exp: Exp, env: Map<Var, Exp>): Exp {
             if (cond == TRUE) ifTrue
             else exp.copy(cond=cond, ifTrue= ifTrue, ifFalse=inline(exp.ifFalse))
         }
-        UNDEFINED, is Num, is Address -> exp
+        UNDEFINED, is Num, is Address, is Exp.Bool -> exp
         is Q.Y -> TODO()
+        is Q.Reveal -> TODO()
         is Q.Let -> TODO()
-        is Q.Transfers -> exp.copy(ts=exp.ts.map{it.copy(amount=inline(it.amount, env))})
+        is Q.Payoff -> TODO() // exp.copy(ts=exp.ts.map{it.copy(amount=inline(it.amount, env))})
+        is Q.PayoffConst -> TODO()
     }
 }
 
@@ -125,10 +127,13 @@ fun pretty(exp: Exp): String = when (exp) {
     is Cond -> "(${pretty(exp.cond)} ? ${pretty(exp.ifTrue)} : ${pretty(exp.ifFalse)})"
     UNDEFINED -> "undefined"
     is Num -> "${exp.n}"
+    is Bool -> "${exp.truth}"
     is Address -> "${exp.n}"
     is Q.Y -> TODO()
+    is Q.Reveal -> TODO()
     is Q.Let -> TODO()
-    is Q.Transfers -> TODO()
+    is Q.Payoff -> TODO()
+    is Q.PayoffConst -> TODO()
 }
 
 fun pretty(texp: TypeExp): String = when (texp) {
