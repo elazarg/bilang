@@ -15,3 +15,15 @@ fun main(args: Array<String>) {
             Pair("c", listOf(7, 8, 9))
     ).product())
 }
+
+object UniqueHash {
+    private var n = 0
+    private val m = mutableMapOf<Any, Int>()
+    fun of(k: Any) : Int {
+        if (!m.containsKey(k)) {
+            n += 1
+            m[k] = n
+        }
+        return m.getValue(k)
+    }
+}

@@ -83,7 +83,7 @@ private fun inline(exp: Exp, env: Map<Var, Exp>): Exp {
             if (cond == TRUE) ifTrue
             else exp.copy(cond=cond, ifTrue= ifTrue, ifFalse=inline(exp.ifFalse))
         }
-        UNDEFINED, is Num, is Address, is Exp.Bool -> exp
+        UNDEFINED, is Num, is Address, is Exp.Bool, is Exp.Hidden -> exp
         is Q.Y -> TODO()
         is Q.Reveal -> TODO()
         is Q.Let -> TODO()
@@ -134,6 +134,7 @@ fun pretty(exp: Exp): String = when (exp) {
     is Q.Let -> TODO()
     is Q.Payoff -> TODO()
     is Q.PayoffConst -> TODO()
+    is Exp.Hidden -> TODO()
 }
 
 fun pretty(texp: TypeExp): String = when (texp) {

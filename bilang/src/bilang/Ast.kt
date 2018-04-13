@@ -35,12 +35,13 @@ sealed class Exp : Ast() {
     data class Num(val n: Int) : Exp(), Const
     data class Bool(val truth: Boolean) : Exp(), Const
     data class Address(val n: Int) : Exp(), Const
+    data class Hidden(val value: Const) : Exp(), Const
 
 
     // Not in concrete syntax:
     sealed class Q : Exp() {
         data class Y(val action: GameAction, val p: Packet, val exp: Exp, val hidden: Boolean = false) : Q(), Step
-        data class Reveal(val v: Var, val exp: Exp) : Q(), Step
+        data class Reveal(val v: Member, val exp: Exp) : Q(), Step  // TODO: where
 
         data class Let(val dec: VarDec, val value: Exp) : Q()
         // Var is not evaluated, since the analysis does not handle addresses but roles.
