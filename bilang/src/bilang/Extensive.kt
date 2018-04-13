@@ -2,7 +2,7 @@ package bilang
 import bilang.Exp.*
 
 sealed class Tree {
-    data class Node(val owner: String, val infset: Int, val children: Map<Map<Var, Const>, Tree>) : Tree()
+    data class Node(val owner: String, val infoset: Int, val children: Map<Map<Var, Const>, Tree>) : Tree()
     data class Leaf(val payoff: Map<Var, Num>) : Tree()
 }
 
@@ -10,20 +10,22 @@ fun fromExp(exp: Exp, g: Map<Var, Const>, h: Map<Address, Map<Var, Const>>,
             values: (TypeExp) -> List<Const>) : Tree =
     when {
         exp is Q.Y && exp.action == GameAction.YIELD -> {
-            assert(exp.action == GameAction.YIELD)
-            val children = vals(values, exp.p.params).filter {
-                newEnv -> eval(exp.p.where, g, updateHeap(h, exp, g, newEnv)) == Bool(true)
-            }.map {
-                newEnv -> Pair(newEnv, fromExp(exp.exp, g, updateHeap(h, exp, g, newEnv), values))
-            }.toMap()
-            Tree.Node(owner=exp.p.role.name, infset=1, children=children)
+            Tree.Node(owner=exp.p.role.name, infoset=1, children=buildChildren(exp, g, h, values))
         }
         exp is Q.Y && exp.action == GameAction.JOIN -> {
             fromExp(exp.exp, g + Pair(exp.p.role, Address(maxInt(g.values) + 1)), h, values)
         }
-        exp is Exp.Q.Reveal -> throw AssertionError()
+        exp is Exp.Q.Reveal -> TODO()
         else -> Tree.Leaf( (eval(exp, g, h) as Q.PayoffConst).ts )
     }
+
+private fun buildChildren(exp: Q.Y, g: Map<Var, Const>, h: Map<Address, Map<Var, Const>>,
+                          values: (TypeExp) -> List<Const>): Map<Map<Var, Const>, Tree> =
+    vals(values, exp.p.params).filter { newEnv ->
+        eval(exp.p.where, g, updateHeap(h, exp, g, newEnv)) == Bool(true)
+    }.map { newEnv ->
+        Pair(newEnv, fromExp(exp.exp, g, updateHeap(h, exp, g, newEnv), values))
+    }.toMap()
 
 private fun maxInt(values: Iterable<Const>) : Int =
         values.map { (it as? Address)?.n ?: 0 }.max() ?: 0
@@ -84,35 +86,76 @@ fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Address, Map<Var, Const>>) : Const
         is Exp.Q.PayoffConst -> exp
     }
 }
-// TODO: add "undefined" as value
+
 private fun enumerateValues(t: TypeExp): List<Const> = when(t) {
-    is TypeExp.Subset -> t.values.toList()
-    TypeExp.BOOL -> listOf(Bool(true), Bool(false))
+    is TypeExp.Subset -> t.values.toList() // + UNDEFINED
+    TypeExp.BOOL -> listOf(Bool(true), Bool(false)) // + UNDEFINED
+    is TypeExp.Hidden -> enumerateValues(t.type)
     else -> throw AssertionError()
 }
+
+class ExtensivePrinter() {
+    private var outcomeNumber: Int = 0
+    
+    fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
+        is Tree.Node -> {
+            val (values, children) = t.children.entries.map { it.toPair() }.unzip()
+            val nodeName = ""
+            val owner: Int = roleOrder.indexOf(t.owner) + 1
+            val infoset: Int = t.infoset + 1
+            val infosetName = ""
+            val actionNamesForInfoset: String = stringList(values.map { env -> env.values.map{valueToName(it)}.joinToString("&") })
+            val outcome = 0
+            val nameOfOutcome = ""
+            val payoffs = 0
+            listOf("p ${q(nodeName)} $owner $infoset ${q(infosetName)} $actionNamesForInfoset $payoffs") + children.flatMap { toEfg(it, roleOrder) }
+        }
+        is Tree.Leaf -> {
+            val name = ""
+            val outcome: Int = outcomeNumber // TODO: what is this exactly? must it be sequential?
+            // Seems like outcomes are "named payoffs" and should define the payoff uniquely
+            outcomeNumber += 1
+            val nameOfOutcome = ""
+            val payoffs = roleOrder.map { t.payoff.getValue(Var(it)).n }.joinToString(" ", "{ ", " }")
+            listOf("t ${q(name)} $outcome ${q(nameOfOutcome)} $payoffs")
+        }
+    }
+
+    private fun q(name: String) = '"' + name + '"'
+
+    private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") { q(it) }
+
+    private fun valueToName(v: Const): String = when (v) {
+        is Bool -> v.truth.toString()
+        is Num -> v.n.toString()
+        UNDEFINED -> "None"
+        else -> throw Exception(v.toString())
+    }
+}
+
 
 fun main(args: Array<String>) {
     val doors = TypeExp.Subset(setOf(Num(0), Num(1), Num(2)))
     val program =
-                Q.Y(GameAction.JOIN,  Packet(Var("host"),  listOf(), Bool(true)),
-            exp=Q.Y(GameAction.JOIN,  Packet(Var("guest"), listOf(), Bool(true)),
-            exp=Q.Y(GameAction.YIELD, Packet(Var("host"),  listOf(VarDec(Var("car"),  doors)), Bool(true)), hidden=true,
-            exp=Q.Y(GameAction.YIELD, Packet(Var("guest"), listOf(VarDec(Var("door"), doors)), Bool(true)),
-            exp=Q.Y(GameAction.YIELD, Packet(Var("host"),  listOf(VarDec(Var("goat"), doors)),
+            Q.Y(GameAction.JOIN,  Packet(Var("host"),  listOf(), Bool(true)),
+        exp=Q.Y(GameAction.JOIN,  Packet(Var("guest"), listOf(), Bool(true)),
+        exp=Q.Y(GameAction.YIELD, Packet(Var("host"),  listOf(VarDec(Var("car"),  doors)), Bool(true)), hidden=true,
+        exp=Q.Y(GameAction.YIELD, Packet(Var("guest"), listOf(VarDec(Var("door"), doors)), Bool(true)),
+        exp=Q.Y(GameAction.YIELD, Packet(Var("host"),  listOf(VarDec(Var("goat"), doors)),
                     UnOp("!", BinOp("==", Member(Var("host"), "goat"), Member(Var("guest"), "door")) )),
-            exp=Q.Y(GameAction.YIELD, Packet(Var("guest"),  listOf(VarDec(Var("switch"), TypeExp.BOOL)), Bool(true)),
-            //exp=Q.Reveal(Var("car"),
-            exp=Q.Payoff(mapOf(
-                    Pair(Var("host"), Num(0)),
-                    Pair(Var("guest"), Cond(
-                            UnOp("!", BinOp("==",
-                                    BinOp("==", Member(Var("host"), "car"), Member(Var("guest"), "door")),
-                                    Member(Var("guest"), "switch")
-                            )), Num(10), Num(-10)
-                    )
-            )))
+        exp=Q.Y(GameAction.YIELD, Packet(Var("guest"),  listOf(VarDec(Var("switch"), TypeExp.BOOL)), Bool(true)),
+        //exp=Q.Reveal(Var("car"),
+        exp=Q.Payoff(mapOf(
+                Pair(Var("host"), Num(0)),
+                Pair(Var("guest"), Cond(
+                        UnOp("!", BinOp("==",
+                                BinOp("==", Member(Var("host"), "car"), Member(Var("guest"), "door")),
+                                Member(Var("guest"), "switch")
+                        )), Num(10), Num(-10)
+                ))
+            ))
     ))))))//)
     val res = fromExp(program, g=mapOf(), h=mapOf(Address(1) to mapOf(), Address(2) to mapOf()), values = { enumerateValues(it) })
     println(res)
+    println(ExtensivePrinter().toEfg(res, listOf("host", "guest")).joinToString("\n"))
 }
-

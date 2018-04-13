@@ -7,13 +7,13 @@ data class Program(val typedecls: List<TypeDec>, val block: Stmt.Block) : Ast()
 data class TypeDec(val name: String, val definition: TypeExp) : Ast()
 
 sealed class TypeExp : Ast() {
-    // TODO: add Hidden as constructor
     object INT: TypeExp(), IntClass
     object BOOL: TypeExp()
     object ROLE: TypeExp()
     object ROLESET: TypeExp()
     object ADDRESS: TypeExp()
     object UNIT: TypeExp()
+    data class Hidden(val type: TypeExp): TypeExp()
     data class TypeId(val name: String): TypeExp()
     interface IntClass
     data class Subset(val values: Set<Exp.Num>): TypeExp(), IntClass

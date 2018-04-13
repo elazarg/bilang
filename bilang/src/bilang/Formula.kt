@@ -144,6 +144,7 @@ fun pretty(texp: TypeExp): String = when (texp) {
     TypeExp.ADDRESS -> "address"
     TypeExp.UNIT -> "unit"
     is TypeExp.TypeId -> texp.name
+    is TypeExp.Hidden -> "hidden[${pretty(texp.type)}]"
     is TypeExp.Subset -> "{${texp.values.joinToString(", ") { pretty(it)}}}"
     is TypeExp.Range -> "{${pretty(texp.min)}, ${pretty(texp.max)}}"
 }

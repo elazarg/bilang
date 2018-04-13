@@ -20,6 +20,7 @@ exp
     | left=exp op=('&&' | '||') right=exp     # BinOpBoolExp
     | role=ID '.' field=ID                    # MemberExp
     | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
+    | BOOL                                    # BoolLiteralExp
     | name=ID                                 # IdExp
     | INT                                     # NumLiteralExp
     | ADDRESS                                 # AddressLiteralExp
@@ -50,6 +51,7 @@ varDec : name=ID ':' type=ID;
 
 // LEXER
 ID: [a-zA-Z_][a-zA-Z_0-9]*;
+BOOL: 'true'|'false';
 INT: ([1-9][0-9]* | [0]) ;
 ADDRESS: '0x'([1-9a-fA-F][0-9a-fA-F]* | [0]) ;
 STRING: '"' ( ~('"'|'\\') )* '"' ;
