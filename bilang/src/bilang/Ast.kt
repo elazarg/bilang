@@ -4,22 +4,6 @@ sealed class Ast
 
 data class Program(val typedecls: List<TypeDec>, val block: Stmt.Block) : Ast()
 
-data class TypeDec(val name: String, val definition: TypeExp) : Ast()
-
-sealed class TypeExp : Ast() {
-    object INT: TypeExp(), IntClass
-    object BOOL: TypeExp()
-    object ROLE: TypeExp()
-    object ROLESET: TypeExp()
-    object ADDRESS: TypeExp()
-    object UNIT: TypeExp()
-    data class Hidden(val type: TypeExp): TypeExp()
-    data class TypeId(val name: String): TypeExp()
-    interface IntClass
-    data class Subset(val values: Set<Exp.Num>): TypeExp(), IntClass
-    data class Range(val min: Exp.Num, val max: Exp.Num): TypeExp(), IntClass
-}
-
 sealed class Exp : Ast() {
     data class Call(val target: Var, val args: List<Exp>) : Exp()
     data class UnOp(val op: String, val operand: Exp) : Exp()
@@ -46,6 +30,12 @@ sealed class Exp : Ast() {
         data class Let(val dec: VarDec, val value: Exp) : Q()
         // Var is not evaluated, since the analysis does not handle addresses but roles.
         // giving different payoff for different addresses of the same roles is a TODO
+
+        // Idea: not a simple Var -> Exp mapping, but a `lambda (Var : RoleSet) . Exp` mapping
+        // (the trivial case where RoleSet is a singleton van have Var -> Exp as a syntactic sugar)
+        // This sounds like dependent types, but no complex type checking is involved.
+
+        // Note that `Exp` here is too much. It should be "SimpleExp".
         data class Payoff(val ts: Map<Var, Exp>) : Q()
         // Payoff is considered constant only when all the Exp are Num.
         data class PayoffConst(val ts: Map<Var, Num>) : Q(), Const
@@ -72,3 +62,19 @@ sealed class Stmt : Ast() {
 data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()
 data class Packet(val role: Exp.Var, val params: List<VarDec>, val where: Exp) : Ast()
 enum class GameAction { JOIN, YIELD }
+
+data class TypeDec(val name: String, val definition: TypeExp) : Ast()
+
+sealed class TypeExp : Ast() {
+    object INT: TypeExp(), IntClass
+    object BOOL: TypeExp()
+    object ROLE: TypeExp()
+    object ROLESET: TypeExp()
+    object ADDRESS: TypeExp()
+    object UNIT: TypeExp()
+    data class Hidden(val type: TypeExp): TypeExp()
+    data class TypeId(val name: String): TypeExp()
+    interface IntClass
+    data class Subset(val values: Set<Exp.Num>): TypeExp(), IntClass
+    data class Range(val min: Exp.Num, val max: Exp.Num): TypeExp(), IntClass
+}
