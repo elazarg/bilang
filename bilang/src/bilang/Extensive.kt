@@ -93,18 +93,18 @@ fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Const {
         is BinOp -> {
             val (left, right) = Pair(eval(exp.left), eval(exp.right))
             val res: Const = when {
+                exp.op == "==" -> Bool(left == right)
+                exp.op == "!=" -> Bool(left != right)
                 left is Num && right is Num -> when (exp.op) {
                     "+" -> Num(left.n + right.n)
                     "-" -> Num(left.n - right.n)
                     "*" -> Num(left.n * right.n)
                     "/" -> Num(left.n / right.n)
-                    "==" -> Bool(left.n == right.n)
                     else -> throw AssertionError()
                 }
                 left is Bool && right is Bool -> when (exp.op) {
                     "&&" -> Bool(left.truth && right.truth)
                     "||" -> Bool(left.truth || right.truth)
-                    "==" -> Bool(left.truth == right.truth)
                     else -> throw AssertionError()
                 }
                 else -> throw AssertionError("$left ${exp.op} $right")
@@ -132,15 +132,21 @@ fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Const {
 }
 
 private fun enumerateValues(t: TypeExp): List<Const> = when(t) {
-    is TypeExp.Subset -> t.values.toList() // + UNDEFINED
-    TypeExp.BOOL -> listOf(Bool(true), Bool(false)) // + UNDEFINED
-    is TypeExp.Hidden -> enumerateValues(t.type).map{Hidden(it)}
+    is TypeExp.Opt -> enumerateValues(t.type) + UNDEFINED
+    is TypeExp.Subset -> t.values.toList()
+    TypeExp.BOOL -> listOf(Bool(true), Bool(false))
+    is TypeExp.Hidden -> enumerateValues(t.type).map{ hide(it) }
     else -> throw AssertionError("cannot enumerate $t")
+}
+
+private fun hide(v: Const) : Const = when (v) {
+    UNDEFINED -> UNDEFINED
+    else -> Hidden(v)
 }
 
 class ExtensivePrinter {
     private var outcomeNumber: Int = 0
-    
+
     fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
         is Tree.Node -> {
             val (values, children) = t.children.entries.map { it.toPair() }.unzip()

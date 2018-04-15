@@ -65,4 +65,5 @@ sealed class TypeExp : Ast() {
     interface IntClass
     data class Subset(val values: Set<Exp.Num>): TypeExp(), IntClass
     data class Range(val min: Exp.Num, val max: Exp.Num): TypeExp(), IntClass
+    data class Opt(val type: TypeExp): TypeExp()
 }

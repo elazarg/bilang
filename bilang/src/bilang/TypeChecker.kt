@@ -90,7 +90,9 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
     private fun join(t1: TypeExp, t2: TypeExp): TypeExp = when {
         t1 === UNIT -> t2
         t2 === UNIT -> t1
-
+        t1 is Opt && t2 is Opt -> Opt(join(t1.type, t2.type))
+        t1 is Opt -> Opt(join(t1.type, t2))
+        t2 is Opt -> Opt(join(t1, t2.type))
         t1 == t2 -> t1
         t1 is TypeId -> {
             require(typeMap.containsKey(t1.name), { "$t1 not in type map" })
