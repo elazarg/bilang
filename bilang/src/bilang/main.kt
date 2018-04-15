@@ -11,7 +11,7 @@ fun parse(inputFilename: String): ExpProgram =
         AstTranslator().visitProgram(BiLangParser(CommonTokenStream(BiLangLexer(CharStreams.fromPath(Paths.get(inputFilename))))).program())
 
 fun main(args: Array<String>) {
-    val name = "MontyHall"
+    val name = "ThreeWayLottery"
     val program = parse("examples/$name.bi")
     println(program)
     val extensive = Extensive(name, program)

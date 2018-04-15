@@ -20,6 +20,7 @@ whereClause : ('where' cond=exp)? ;
 
 exp
     : '(' exp ')'                             # ParenExp
+    | role=ID '.' field=ID                    # MemberExp
     | callee=ID '(' (args+=exp (',' args+=exp)*)?  ')' # CallExp
     | op=('-' | '!') exp                      # UnOpExp
     | left=exp op=('*' | '/') right=exp       # BinOpMultExp
@@ -27,8 +28,7 @@ exp
     | left=exp op=('<' | '<=' | '>=' | '>') right=exp    # BinOpCompExp
     | left=exp op=('==' | '!=') right=exp     # BinOpEqExp
     | left=exp op=('&&' | '||') right=exp     # BinOpBoolExp
-    | role=ID '.' field=ID                    # MemberExp
-    | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
+    | <assoc=right> cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
     | '{' items+=item+ '}'                    # PayoffExp
     | ('true'|'false')                        # BoolLiteralExp
     | name=ID                                 # IdExp
