@@ -4,6 +4,9 @@ sealed class Ast
 
 data class Program(val typedecls: List<TypeDec>, val block: Stmt.Block) : Ast()
 
+data class ExpProgram(val name: String, val desc: String, val typedecls: List<TypeDec>, val game: Exp.Ext) : Ast()
+
+
 sealed class Exp : Ast() {
     data class Call(val target: Var, val args: List<Exp>) : Exp()
     data class UnOp(val op: String, val operand: Exp) : Exp()
@@ -22,11 +25,13 @@ sealed class Exp : Ast() {
     data class Hidden(val value: Const) : Exp(), Const
 
 
-    sealed class Ext : Exp() {
-        data class Yield(val p: Packet, val exp: Exp, val hidden: Boolean = false) : Ext(), Step
-        data class Join(val p: Packet, val exp: Exp, val hidden: Boolean = false) : Ext(), Step
-        data class Reveal(val v: Member, val exp: Exp) : Ext(), Step  // TODO: where
-        data class Parallel<out T : Ext>(val qs: List<T>) : Ext()
+    sealed class Ext : Exp(), Step {
+        data class Yield(val p: Packet, val exp: Exp, val hidden: Boolean = false) : Ext()
+        data class Join(val p: Packet, val exp: Exp, val hidden: Boolean = false) : Ext()
+        data class Reveal(val v: Member, val exp: Exp) : Ext() // TODO: where
+        data class Parallel<out T : Ext>(val qs: List<T>) : Ext() {
+            constructor(vararg qs: T) : this(qs.toList())
+        }
     }
 
     // Not in concrete syntax:
@@ -42,6 +47,7 @@ sealed class Exp : Ast() {
         // Note that `Exp` here is too much. It should be "SimpleExp".
         data class Payoff(val ts: Map<Var, Exp>) : Q()
         // Payoff is considered constant only when all the Exp are Num.
+        // `Num` should be replaced by a tuple of monetary values, parameterized
         data class PayoffConst(val ts: Map<Var, Num>) : Q(), Const
     }
 }
@@ -64,7 +70,7 @@ sealed class Stmt : Ast() {
 }
 
 data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()
-data class Packet(val role: Exp.Var, val params: List<VarDec>, val where: Exp) : Ast()
+data class Packet(val role: Exp.Var, val params: List<VarDec> = listOf(), val where: Exp = Exp.Bool(true)) : Ast()
 enum class GameAction { JOIN, YIELD }
 
 data class TypeDec(val name: String, val definition: TypeExp) : Ast()
