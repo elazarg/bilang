@@ -7,7 +7,7 @@ data class ExpProgram(val name: String, val desc: String, val typedecls: List<Ty
 interface Step
 
 sealed class Ext : Ast() {
-    data class Bind(val k: List<Query>, val exp: Ext) : Ext(), Step
+    data class Bind(val qs: List<Query>, val exp: Ext) : Ext(), Step
     data class BindSingle(val q: Query, val exp: Ext) : Ext(), Step
     data class Value(val exp: Exp) : Ext()
 }

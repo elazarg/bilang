@@ -73,10 +73,10 @@ object XXX {
         is Ext.BindSingle -> when (game.q.kind) {
             Kind.JOIN -> listOf(Sast.Action.Connect(makeRole(game.packets[0].role)))
         }
-        is Ext.Bind -> when (game.k.kind) {
+        is Ext.Bind -> when (game.qs.kind) {
             Kind.JOIN -> listOf(Sast.Action.Connect(makeRole(game.packets[0].role)))
             Kind.YIELD -> {
-                val packets = game.k
+                val packets = game.qs
                 val rec = if (packets.size > 1 || game.hidden) {
                     packets.map { p ->
                         Sast.Action.Send("Hidden", decls(p), makeRole(p.role), setOf(server))

@@ -29,11 +29,11 @@ fun fromExp(exp: Ext, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Tree 
         }
     }
     is Ext.Bind -> {
-        val e = if (exp.k.size == 1) {
-            Ext.BindSingle(exp.k.first(), exp.exp)
+        val e = if (exp.qs.size == 1) {
+            Ext.BindSingle(exp.qs.first(), exp.exp)
         } else {
-            val reveals = exp.k.fold(exp.exp) { acc, q -> Ext.BindSingle(q.copy(kind=Kind.REVEAL), acc) }
-            val hides = exp.k.fold(reveals) { acc, q -> Ext.BindSingle(hide(q), acc) }
+            val reveals = exp.qs.fold(exp.exp) { acc, q -> Ext.BindSingle(q.copy(kind=Kind.REVEAL), acc) }
+            val hides = exp.qs.fold(reveals) { acc, q -> Ext.BindSingle(hide(q), acc) }
             hides
         }
         fromExp(e, g, h)
@@ -45,7 +45,7 @@ private fun hide(q: Query) =
     q.copy(params = q.params.map { it.copy(type = TypeExp.Hidden(it.type)) }, where = Bool(true))
 
 fun findPlayers(exp: Ext): List<String> = when (exp) {
-    is Ext.Bind -> exp.k.filter { it.kind == Kind.JOIN } .map { it.role.name } + findPlayers(exp.exp)
+    is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN } .map { it.role.name } + findPlayers(exp.exp)
     is Ext.BindSingle -> (if (exp.q.kind == Kind.JOIN) listOf(exp.q.role.name) else listOf()) + findPlayers(exp.exp)
     is Ext.Value -> listOf()
 }
@@ -135,7 +135,7 @@ private fun enumerateValues(t: TypeExp): List<Const> = when(t) {
     is TypeExp.Subset -> t.values.toList() // + UNDEFINED
     TypeExp.BOOL -> listOf(Bool(true), Bool(false)) // + UNDEFINED
     is TypeExp.Hidden -> enumerateValues(t.type).map{Hidden(it)}
-    else -> throw AssertionError()
+    else -> throw AssertionError("cannot enumerate $t")
 }
 
 class ExtensivePrinter {
@@ -237,6 +237,7 @@ private fun oddsEvens(): ExpProgram {
     ))
     return ExpProgram("OddsEvens", "Simultaneous Game", listOf(), exp)
 }
+
 
 
 fun main(args: Array<String>) {

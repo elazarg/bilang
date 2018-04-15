@@ -1,6 +1,7 @@
 package bilang;
 
 import generated.BiLangBaseVisitor;
+import generated.BiLangParser;
 import generated.BiLangParser.*;
 import org.antlr.v4.runtime.Token;
 import org.jetbrains.annotations.NotNull;
@@ -47,6 +48,16 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     private Ext ext(ExtContext ctx) {
         return (Ext)ctx.accept(this);
+    }
+
+    @Override
+    public Ext.Bind visitReceiveExt(ReceiveExtContext ctx) {
+        return new Ext.Bind(list(ctx.packet(), this::visitPacket), ext(ctx.ext()));
+    }
+
+    @Override
+    public Ext.Value visitExpExt(ExpExtContext ctx) {
+        return new Ext.Value(exp(ctx.exp()));
     }
 
     @Override
@@ -130,7 +141,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Q.Payoff visitTransfer(TransferContext ctx) {
+    public Exp.Q.Payoff visitPayoffExp(PayoffExpContext ctx) {
         Map<Exp.Var, Exp> m = ctx.items.stream().collect(toMap(e -> var(e.ID().getSymbol()), e -> exp(e.exp())));
         return new Exp.Q.Payoff(m);
     }
@@ -162,6 +173,15 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public VarDec visitVarDec(VarDecContext ctx) {
-        return new VarDec(var(ctx.name), new TypeExp.TypeId(ctx.type.getText()));
+        return new VarDec(var(ctx.name), type(ctx));
+    }
+
+    @NotNull
+    private TypeExp type(VarDecContext ctx) {
+        switch (ctx.type.getText()) {
+            case "bool": return TypeExp.BOOL.INSTANCE;
+            case "int": return TypeExp.INT.INSTANCE;
+        }
+        return new TypeExp.TypeId(ctx.type.getText());
     }
 }

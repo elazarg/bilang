@@ -9,6 +9,15 @@ typeExp
     | name=ID                             # TypeId
     ;
 
+ext : 'receive' hidden='hidden'? packet+ ext  # ReceiveExt
+    | 'let' 'fold' varDec '=' packet 'from' from=ID exp 'in' ext      # FoldExt
+    | 'return' exp # ExpExt
+    ;
+
+packet : kind=('join'|'yield'|'reveal'|'many') (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
+
+whereClause : ('where' cond=exp)? ;
+
 exp
     : '(' exp ')'                             # ParenExp
     | callee=ID '(' (args+=exp (',' args+=exp)*)?  ')' # CallExp
@@ -20,6 +29,7 @@ exp
     | left=exp op=('&&' | '||') right=exp     # BinOpBoolExp
     | role=ID '.' field=ID                    # MemberExp
     | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
+    | '{' items+=item+ '}'                    # PayoffExp
     | BOOL                                    # BoolLiteralExp
     | name=ID                                 # IdExp
     | INT                                     # NumLiteralExp
@@ -28,16 +38,7 @@ exp
     | 'let' dec=varDec '=' init=exp 'in' ext';'    # VarDef
     ;
 
-ext : 'receive' hidden='hidden'? packet+ '->' ext ';'  # YieldDef
-    | 'let' 'fold' varDec '=' packet 'from' from=ID exp 'in' ext      # Fold
-    | '{' items+=item+ '}'                             # Transfer
-    ;
-
 item : (ID '->' exp ';'?) ;
-
-packet : kind=('join'|'yield'|'reveal'|'many') (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
-
-whereClause : ('where' cond=exp)? ;
 
 varDec : name=ID ':' type=ID;
 
