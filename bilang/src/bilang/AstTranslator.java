@@ -1,7 +1,6 @@
 package bilang;
 
 import generated.BiLangBaseVisitor;
-import generated.BiLangParser;
 import generated.BiLangParser.*;
 import org.antlr.v4.runtime.Token;
 import org.jetbrains.annotations.NotNull;
@@ -16,12 +15,11 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public ExpProgram visitProgram(ProgramContext ctx) {
-        return new ExpProgram("", "", list(ctx.typeDec(), this::visitTypeDec), ext(ctx.ext()));
+        return new ExpProgram("", map(ctx.typeDec()), ext(ctx.ext()));
     }
 
-    @Override
-    public TypeDec visitTypeDec(TypeDecContext ctx) {
-        return new TypeDec(ctx.name.getText(), makeType(ctx));
+    private Map<String, TypeExp> map(List<TypeDecContext> ctxs) {
+        return ctxs.stream().collect(toMap(ctx -> ctx.name.getText(), this::makeType));
     }
 
     private TypeExp makeType(TypeDecContext ctx) {
@@ -52,7 +50,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Ext.Bind visitReceiveExt(ReceiveExtContext ctx) {
-        return new Ext.Bind(list(ctx.packet(), this::visitPacket), ext(ctx.ext()));
+        return new Ext.Bind(list(ctx.query(), this::visitQuery), ext(ctx.ext()));
     }
 
     @Override
@@ -71,8 +69,17 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Var visitIdExp(IdExpContext ctx) {
-        return new Exp.Var(ctx.name.getText());
+    public Exp visitIdExp(IdExpContext ctx) {
+        String name = ctx.name.getText();
+        switch (name) {
+            case "true": case "false": assert false;
+        }
+        return new Exp.Var(name);
+    }
+
+    @Override
+    public Exp.Bool visitBoolLiteralExp(BoolLiteralExpContext ctx) {
+        return new Exp.Bool(Boolean.parseBoolean(ctx.getText()));
     }
 
     @Override
@@ -88,6 +95,11 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     @Override
     public Exp.Cond visitIfExp(IfExpContext ctx) {
         return new Exp.Cond(exp(ctx.cond), exp(ctx.ifTrue), exp(ctx.ifFalse));
+    }
+
+    @Override
+    public Exp.Let visitLetExp(LetExpContext ctx) {
+        return new Exp.Let(visitVarDec(ctx.dec), exp(ctx.init), exp(ctx.body));
     }
 
     @Override
@@ -130,10 +142,6 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return num(ctx.INT().getSymbol());
     }
 
-    @Override
-    public Exp.Bool visitBoolLiteralExp(BoolLiteralExpContext ctx) {
-        return new Exp.Bool(Boolean.parseBoolean(ctx.BOOL().getSymbol().getText()));
-    }
 
     @NotNull
     private Exp.Var var(Token target) {
@@ -141,9 +149,9 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Q.Payoff visitPayoffExp(PayoffExpContext ctx) {
+    public Exp.Payoff visitPayoffExp(PayoffExpContext ctx) {
         Map<Exp.Var, Exp> m = ctx.items.stream().collect(toMap(e -> var(e.ID().getSymbol()), e -> exp(e.exp())));
-        return new Exp.Q.Payoff(m);
+        return new Exp.Payoff(m);
     }
 
     private <T1, T2> List<T2> list(List<T1> iterable, Function<T1, T2> f) {
@@ -152,11 +160,11 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Exp visitWhereClause(WhereClauseContext ctx) {
-        return ctx.cond != null ? exp(ctx.cond) : new Exp.Var("true");
+        return ctx.cond != null ? exp(ctx.cond) : new Exp.Bool(true);
     }
 
     @Override
-    public Query visitPacket(PacketContext ctx) {
+    public Query visitQuery(QueryContext ctx) {
         return new Query(toKind(ctx.kind), var(ctx.role), list(ctx.decls, this::visitVarDec), this.visitWhereClause(ctx.whereClause()));
     }
 
@@ -173,7 +181,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public VarDec visitVarDec(VarDecContext ctx) {
-        return new VarDec(var(ctx.name), type(ctx));
+        TypeExp type = type(ctx);
+        return new VarDec(var(ctx.name), (ctx.hidden != null) ? new TypeExp.Hidden(type) : type);
     }
 
     @NotNull

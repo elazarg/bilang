@@ -9,12 +9,12 @@ typeExp
     | name=ID                             # TypeId
     ;
 
-ext : 'receive' hidden='hidden'? packet+ ext  # ReceiveExt
-    | 'let' 'fold' varDec '=' packet 'from' from=ID exp 'in' ext      # FoldExt
+ext : 'receive' query+ ext  # ReceiveExt
+    | 'let' 'fold' varDec '=' query 'from' from=ID exp 'in' ext      # FoldExt
     | 'return' exp # ExpExt
     ;
 
-packet : kind=('join'|'yield'|'reveal'|'many') (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
+query : kind=('join'|'yield'|'reveal'|'many') (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
 
 whereClause : ('where' cond=exp)? ;
 
@@ -30,21 +30,20 @@ exp
     | role=ID '.' field=ID                    # MemberExp
     | cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
     | '{' items+=item+ '}'                    # PayoffExp
-    | BOOL                                    # BoolLiteralExp
+    | ('true'|'false')                        # BoolLiteralExp
     | name=ID                                 # IdExp
     | INT                                     # NumLiteralExp
     | ADDRESS                                 # AddressLiteralExp
     | 'undefined'                             # UndefExp
-    | 'let' dec=varDec '=' init=exp 'in' ext';'    # VarDef
+    | 'let' dec=varDec '=' init=exp 'in' body=exp  # LetExp
     ;
 
 item : (ID '->' exp ';'?) ;
 
-varDec : name=ID ':' type=ID;
+varDec : name=ID ':' hidden='hidden'? type=ID;
 
 // LEXER
 ID: [a-zA-Z_][a-zA-Z_0-9]*;
-BOOL: 'true'|'false';
 INT: ([1-9][0-9]* | [0]) ;
 ADDRESS: '0x'([1-9a-fA-F][0-9a-fA-F]* | [0]) ;
 STRING: '"' ( ~('"'|'\\') )* '"' ;

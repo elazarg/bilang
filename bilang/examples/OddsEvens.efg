@@ -1,0 +1,16 @@
+EFG 2 R "OddsEvens" { "Odd" "Even" }
+""
+
+p "" 2 1 "" { "Hidden(true)" "Hidden(false)" "None" } 0
+p "" 1 2 "" { "Hidden(true)" "Hidden(false)" "None" } 0
+t "" 0 "" { -10 10 }
+t "" 1 "" { 10 -10 }
+t "" 2 "" { -100 -100 }
+p "" 1 2 "" { "Hidden(true)" "Hidden(false)" "None" } 0
+t "" 3 "" { 10 -10 }
+t "" 4 "" { -10 10 }
+t "" 5 "" { -100 -100 }
+p "" 1 3 "" { "Hidden(true)" "Hidden(false)" "None" } 0
+t "" 6 "" { 10 -100 }
+t "" 7 "" { 10 -100 }
+t "" 8 "" { -100 -100 }

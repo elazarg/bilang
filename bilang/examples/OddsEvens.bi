@@ -1,17 +1,12 @@
-join Odd;
-join Even;
-yield Odd(c1: bool) Even(c2: bool);
-if (c1 != undefined && c2 != undefined) {
-    if (c1 != c2) {
-        transfer 10 from Even to Odd;
-    } else {
-        transfer 10 from Odd to Even;
-    }
-} else if (c2 == undefined) {
-    transfer 10 from Even to Odd;
-} else {
-    transfer 10 from Odd to Even;
-}
+receive join Odd()
+        join Even()
+receive yield  Odd(c: bool)
+        yield Even(c: bool)
+return (Even.c != undefined && Odd.c != undefined) ?
+    ((Even.c == Odd.c) ? { Even -> 10; Odd -> -10 } : { Even -> -10; Odd -> 10 })
+: ((Even.c == undefined && Odd.c != undefined) ? { Even -> -100; Odd -> 10 }
+: { Even -> -100; Odd -> -100 })
+
 /*
 
 phi_Odd =

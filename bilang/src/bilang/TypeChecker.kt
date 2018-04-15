@@ -72,7 +72,8 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         }
         Exp.UNDEFINED -> UNIT
 
-        is Exp.Q -> throw RuntimeException()
+        is Exp.Let -> TODO()
+        is Exp.Payoff -> TODO()
     }
 
     private fun checkOp(expected: TypeExp, args: Collection<TypeExp>) = checkOp(expected, *args.toTypedArray())
