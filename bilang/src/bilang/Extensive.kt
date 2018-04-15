@@ -17,26 +17,38 @@ class Extensive(private val name: String, private val desc: String, private val 
 
 }
 
-fun fromExp(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Tree =
-    when (exp) {
-        is Ext.Yield -> Tree.Node(owner=exp.p.role.name, children=buildChildren(exp, g, h), h=h)
-        is Ext.Join -> fromExp(exp.exp, g + Pair(exp.p.role, Address(maxAddress(g.values) + 1)), h)
-        is Ext.Reveal -> fromExp(exp.exp, g, revealHidden(h, exp.v.target, exp.v.field))
-        is Ext.Parallel<*> -> TODO()
-        else -> Tree.Leaf( (eval(exp, g, h) as Q.PayoffConst).ts )
+fun fromExp(exp: Ext, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Tree = when (exp) {
+    is Ext.BindSingle -> {
+        val p = exp.q
+        when (exp.q.kind) {
+            Kind.JOIN -> fromExp(exp.exp, g + Pair(p.role, Address(maxAddress(g.values) + 1)), h)
+            Kind.YIELD -> Tree.Node(owner = p.role.name, children = buildChildren(exp, g, h), h = h)
+            Kind.REVEAL -> fromExp(exp.exp, g, revealHidden(h, p))
+            Kind.MANY -> TODO()
+        }
     }
-
-fun findPlayers(exp: Exp): List<String> = when (exp) {
-    is Ext.Yield  -> findPlayers(exp.exp) + exp.p.role.name
-    is Ext.Join   -> findPlayers(exp.exp) + exp.p.role.name
-    is Ext.Reveal -> findPlayers(exp.exp)
-    is Ext.Parallel<*> -> TODO()
-    else -> listOf()
+    is Ext.Bind -> {
+        val reveals = exp.k.fold(exp.exp) { acc, q ->
+            Ext.BindSingle(q, acc)
+        }
+        val hides = exp.k.fold(reveals) { acc, q ->
+            Ext.BindSingle(q.copy(params = q.params.map { it.copy(type=TypeExp.Hidden(it.type)) }), acc)
+        }
+        fromExp(hides, g, h)
+    }
+    is Ext.Value -> Tree.Leaf( (eval(exp.exp, g, h) as Q.PayoffConst).ts )
 }
 
-private fun revealHidden(h: Map<Pair<Var, Var>, Const>, role: Var, field: String) =
+fun findPlayers(exp: Ext): List<String> = when (exp) {
+    is Ext.Bind -> exp.k.filter { it.kind == Kind.JOIN } .map { it.role.name } + findPlayers(exp.exp)
+    is Ext.BindSingle -> (if (exp.q.kind == Kind.JOIN)  listOf(exp.q.role.name) else listOf()) + findPlayers(exp.exp)
+    is Ext.Value -> listOf()
+}
+
+private fun revealHidden(h: Map<Pair<Var, Var>, Const>, q: Query) =
     h.mapValues { (rv, k) ->
-        if (k is Hidden && rv.first == role && rv.second.name == field) k.value else k
+        if (k is Hidden && rv.first == q.role
+                && q.params.map{it.name.name}.contains(rv.second.name)) k.value else k
     }
 
 private fun eraseHidden(h: Map<Pair<Var, Var>, Const>, role: Var) =
@@ -44,15 +56,15 @@ private fun eraseHidden(h: Map<Pair<Var, Var>, Const>, role: Var) =
         if (k is Hidden && rv.first != role) Hidden(UNDEFINED) else k
     }
 
-private fun updateHeap(h: Map<Pair<Var, Var>, Const>, exp: Ext.Yield, g: Map<Var, Const>, newEnv: Map<Var, Const>) : Map<Pair<Var, Var>, Const> {
+private fun updateHeap(h: Map<Pair<Var, Var>, Const>, exp: Ext.BindSingle, g: Map<Var, Const>, newEnv: Map<Var, Const>) : Map<Pair<Var, Var>, Const> {
     val mh = h.toMutableMap()
-    mh.putAll(newEnv.map{ (v, k) -> Pair(Pair(exp.p.role, v), k)})
+    mh.putAll(newEnv.map{ (v, k) -> Pair(Pair(exp.q.role, v), k)})
     return mh.toMap()
 }
 
-private fun buildChildren(exp: Ext.Yield, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>): Map<Map<Var, Const>, Tree> =
-    vals(exp.p.params).filter { newEnv ->
-        eval(exp.p.where, g, updateHeap(h, exp, g, newEnv)) == Bool(true)
+private fun buildChildren(exp: Ext.BindSingle, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>): Map<Map<Var, Const>, Tree> =
+    vals(exp.q.params).filter { newEnv ->
+        eval(exp.q.where, g, updateHeap(h, exp, g, newEnv)) == Bool(true)
     }.map { newEnv ->
         Pair(newEnv, fromExp(exp.exp, g, updateHeap(h, exp, g, newEnv)))
     }.toMap()
@@ -67,7 +79,6 @@ fun vals(params: List<VarDec>) : List<Map<Var, Const>> =
 fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Const {
     fun eval(exp: Exp) = eval(exp, g, h)
     return when (exp) {
-        is Ext -> throw AssertionError()
         is Call -> TODO()
         is UnOp -> when (exp.op) {
             "-" -> Num(-(eval(exp.operand) as Num).n)
@@ -165,15 +176,15 @@ private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") 
 
 private fun montyHall(): Extensive {
     val doors = TypeExp.Subset(setOf(Num(0), Num(1), Num(2)))
-    val exp = Ext.Join(Packet(Var("host")),
-        exp = Ext.Join(Packet(Var("guest")),
-        exp = Ext.Yield(Packet(Var("host"), listOf(VarDec(Var("car"), TypeExp.Hidden(doors)))), hidden = true,
-        exp = Ext.Yield(Packet(Var("guest"), listOf(VarDec(Var("door"), doors))),
-        exp = Ext.Yield(Packet(Var("host"), listOf(VarDec(Var("goat"), doors)),
-                 UnOp("!", BinOp("==", Member(Var("host"), "goat"), Member(Var("guest"), "door")))),
-        exp = Ext.Yield(Packet(Var("guest"), listOf(VarDec(Var("switch"), TypeExp.BOOL))),
-        exp = Ext.Reveal(Member(Var("host"), "car"),
-        exp = Q.Payoff(mapOf(
+    val exp = join("host",
+        exp = join("guest",
+        exp = yield("host", VarDec(Var("car"), TypeExp.Hidden(doors)), hidden = true,
+        exp = yield("guest", VarDec(Var("door"), doors),
+        exp = yield("host", VarDec(Var("goat"), doors),
+                 UnOp("!", BinOp("==", Member(Var("host"), "goat"), Member(Var("guest"), "door"))),
+        exp = yield("guest", VarDec(Var("switch"), TypeExp.BOOL),
+        exp = reveal("host", VarDec(Var("car"), doors),
+        exp = Ext.Value(Q.Payoff(mapOf(
                 Pair(Var("host"), Num(0)),
                 Pair(Var("guest"), Cond(
                         UnOp("!", BinOp("==",
@@ -182,15 +193,26 @@ private fun montyHall(): Extensive {
                         )), Num(10), Num(-10)
                 ))
         ))
-        )))))))
+        ))))))))
     return Extensive(ExpProgram("MontyHall", "Monty Hall Game", listOf(), exp))
 }
+
+fun join(role: String, exp: Ext) =
+        Ext.Bind(listOf(Query(Kind.JOIN, Var(role))), exp)
+
+fun yield(role: String, v: VarDec, where: Exp = Bool(true), exp: Ext, hidden: Boolean = false) : Ext {
+    val vh = if (hidden) v.copy(type=TypeExp.Hidden(v.type)) else v
+    return Ext.Bind(listOf(Query(Kind.YIELD, Var(role), listOf(vh), where)), exp)
+}
+
+fun reveal(role: String, v: VarDec, exp: Ext) =
+        Ext.Bind(listOf(Query(Kind.REVEAL, Var(role), listOf(v))), exp)
 /*
 private fun OddsEvens(): Extensive {
-    val exp = Ext.Parallel(Ext.Join(Packet(Var("Odd")), Ext.Join(Packet(Var("Even")),
+    val exp = Ext.Parallel(Ext.Join(Query(Var("Odd")), Ext.Join(Query(Var("Even")),
         exp = Ext.Parallel(
-                  Ext.Yield(Packet(Var("Odd"),  listOf(VarDec(Var("c"), TypeExp.BOOL)))),
-                  Ext.Yield(Packet(Var("Even"), listOf(VarDec(Var("c"), TypeExp.BOOL)))))
+                  Ext.Yield(Query(Var("Odd"),  listOf(VarDec(Var("c"), TypeExp.BOOL)))),
+                  Ext.Yield(Query(Var("Even"), listOf(VarDec(Var("c"), TypeExp.BOOL)))))
     )))
     return Extensive(ExpProgram("MontyHall", "Monty Hall Game", listOf(), exp))
 }

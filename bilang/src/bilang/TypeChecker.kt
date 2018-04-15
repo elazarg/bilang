@@ -12,7 +12,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
 
     private val ROLE = TypeId("role")
     companion object {
-        fun typeCheck(program: Program) {
+        fun typeCheck(program: ExpProgram) {
             Checker(
                     mapOf(
                         Pair(Exp.Var("true"), BOOL),
@@ -22,104 +22,57 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
                         Pair("role", TypeExp.ROLE),
                         Pair("int", INT)
                     )
-            ).typeCheck(program.block)
+            ).type(program.game)
+        }
+    }
+    private fun type(ext: Ext) {
+        when (ext) {
+            is Ext.Bind -> TODO()
+            is Ext.BindSingle -> TODO()
+            is Ext.Value -> type(ext.exp)
         }
     }
 
-    private fun typeCheck(stmt: Stmt) {
-        fun check(expected: TypeExp, exp: Exp) = checkOp(expected, type(exp))
-
-        fun checkPackets(packets: List<Packet>): Map<Packet, Map<Exp.Var, TypeExp>> {
-            val newEnv = packets.map { p -> Pair(p, p.params.map { d -> Pair(d.name, d.type) }.toMap()) }.toMap()
-            for (p in packets)
-                checkOp(BOOL, Checker(env + newEnv.getValue(p), typeMap).type(p.where))
-            return newEnv
+    private fun type(exp: Exp): TypeExp = when (exp) {
+        is Exp.Call -> when (exp.target.name) {
+            "abs" -> { checkOp(INT, exp.args.map { type(it) }); INT }
+            else -> throw IllegalArgumentException(exp.target.name)
         }
-
-        when (stmt) {
-            is Stmt.VarDef -> {
-                check(stmt.dec.type, stmt.init)
-                env[stmt.dec.name] = stmt.dec.type
-            }
-            is Stmt.YieldDef -> {
-                for (p in stmt.packets) check(ROLE, p.role)
-                val newEnv = checkPackets(stmt.packets)
-                for (k in newEnv.values)
-                    env.plusAssign(k)
-            }
-            is Stmt.JoinDef -> {
-                val newEnv = checkPackets(stmt.packets)
-                for (k in newEnv.values)
-                    env.plusAssign(k)
-                for (p in stmt.packets)
-                    env[p.role] = ROLE
-            }
-            is Stmt.JoinManyDef -> env[stmt.role] = ROLESET
-            is Stmt.Block -> Checker(env, typeMap).typeCheck(stmt)
-            is Stmt.Assign -> check(env.getValue(stmt.target), stmt.exp)
-            is Stmt.Reveal -> { } //TODO: Type check reveal
-            is Stmt.If -> {
-                check(BOOL, stmt.cond)
-                Checker(env, typeMap).typeCheck(stmt.ifTrue)
-                Checker(env, typeMap).typeCheck(stmt.ifFalse)
-            }
-            is Stmt.ForYield -> {
-                checkPackets(listOf(stmt.packet))
-                typeCheck(stmt.stmt)
-                check(ROLESET, stmt.from)
-                env[stmt.packet.role] = ROLE
-            }
-            is Stmt.Transfer -> {
-                check(INT, stmt.amount)
-                check(ROLE, stmt.from)
-                check(ROLE, stmt.to)
-            }
+        is Exp.UnOp -> when (exp.op) {
+            "-" -> { checkOp(INT,  type(exp.operand)); INT  }
+            "!" -> { checkOp(BOOL, type(exp.operand)); BOOL }
+            else -> throw IllegalArgumentException(exp.op)
         }
-    }
-
-    private fun type(exp: Exp): TypeExp {
-        return when (exp) {
-            is Exp.Call -> when (exp.target.name) {
-                "abs" -> { checkOp(INT, exp.args.map { type(it) }); INT }
-                else -> throw IllegalArgumentException(exp.target.name)
-            }
-            is Exp.UnOp -> when (exp.op) {
-                "-" -> { checkOp(INT,  type(exp.operand)); INT  }
-                "!" -> { checkOp(BOOL, type(exp.operand)); BOOL }
+        is Exp.BinOp -> {
+            val left = type(exp.left)
+            val right = type(exp.right)
+            when (exp.op) {
+                "+", "-", "*", "/"   -> { checkOp(INT,  left, right); INT  }
+                ">", ">=", "<", "<=" -> { checkOp(INT,  left, right); BOOL }
+                "||", "&&" ->           { checkOp(BOOL, left, right); BOOL }
+                "==", "!=" -> {
+                    require(compatible(left, right) || compatible(right, left), { "$left <> $right"})
+                    BOOL
+                }
                 else -> throw IllegalArgumentException(exp.op)
             }
-            is Exp.BinOp -> {
-                val left = type(exp.left)
-                val right = type(exp.right)
-                when (exp.op) {
-                    "+", "-", "*", "/"   -> { checkOp(INT,  left, right); INT  }
-                    ">", ">=", "<", "<=" -> { checkOp(INT,  left, right); BOOL }
-                    "||", "&&" ->           { checkOp(BOOL, left, right); BOOL }
-                    "==", "!=" -> {
-                        require(compatible(left, right) || compatible(right, left), { "$left <> $right"})
-                        BOOL
-                    }
-                    else -> throw IllegalArgumentException(exp.op)
-                }
-            }
-            is Exp.Num -> INT
-            is Exp.Address -> ADDRESS
-            is Exp.Bool -> BOOL
-            is Exp.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
-            is Exp.Var -> env.getValue(exp)
-            is Exp.Member -> {
-                checkOp(ROLE, type(exp.target))
-                INT // FIX
-            }
-            is Exp.Cond -> {
-                checkOp(BOOL, type(exp.cond))
-                join(type(exp.ifTrue), type(exp.ifFalse))
-            }
-            Exp.UNDEFINED -> UNIT
-
-            is Exp.Q -> throw RuntimeException()
-            is Exp.Ext -> TODO()
         }
+        is Exp.Num -> INT
+        is Exp.Address -> ADDRESS
+        is Exp.Bool -> BOOL
+        is Exp.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
+        is Exp.Var -> env.getValue(exp)
+        is Exp.Member -> {
+            checkOp(ROLE, type(exp.target))
+            INT // FIX
+        }
+        is Exp.Cond -> {
+            checkOp(BOOL, type(exp.cond))
+            join(type(exp.ifTrue), type(exp.ifFalse))
+        }
+        Exp.UNDEFINED -> UNIT
+
+        is Exp.Q -> throw RuntimeException()
     }
 
     private fun checkOp(expected: TypeExp, args: Collection<TypeExp>) = checkOp(expected, *args.toTypedArray())

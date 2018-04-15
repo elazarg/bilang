@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.Token;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import static java.util.stream.Collectors.*;
@@ -13,14 +14,8 @@ import static java.util.stream.Collectors.*;
 class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
-    public Program visitProgram(ProgramContext ctx) {
-        return new Program(list(ctx.typeDec(), this::visitTypeDec), this.visitStmtList(ctx.stmt()));
-    }
-
-    private Stmt makeStmt(StmtContext ctx) {
-        Stmt res = (Stmt)ctx.accept(this);
-        if (res == null) throw new AssertionError(ctx.getText());
-        return res;
+    public ExpProgram visitProgram(ProgramContext ctx) {
+        return new ExpProgram("", "", list(ctx.typeDec(), this::visitTypeDec), ext(ctx.ext()));
     }
 
     @Override
@@ -46,17 +41,12 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return new TypeExp.Range(num(ctx.start), num(ctx.end));
     }
 
-    private Stmt.Block visitStmtList(List<? extends StmtContext> stmts) {
-        return new Stmt.Block(list(stmts, this::makeStmt));
-    }
-
-    @Override
-    public Stmt.Block visitBlockStmt(BlockStmtContext ctx) {
-        return this.visitStmtList(ctx.stmt());
-    }
-
     private Exp exp(ExpContext ctx) {
         return (Exp)ctx.accept(this);
+    }
+
+    private Ext ext(ExtContext ctx) {
+        return (Ext)ctx.accept(this);
     }
 
     @Override
@@ -134,62 +124,15 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return new Exp.Bool(Boolean.parseBoolean(ctx.BOOL().getSymbol().getText()));
     }
 
-    @Override
-    public Stmt.VarDef visitVarDef(VarDefContext ctx) {
-        return new Stmt.VarDef(this.visitVarDec(ctx.dec), exp(ctx.init));
-    }
-
-    @Override
-    public Stmt.YieldDef visitYieldDef(YieldDefContext ctx) {
-        return new Stmt.YieldDef(list(ctx.packet(), this::visitPacket), ctx.hidden != null);
-    }
-
-    @Override
-    public Stmt.JoinDef visitJoinDef(JoinDefContext ctx) {
-        return new Stmt.JoinDef(list(ctx.packet(), this::visitPacket), false);
-    }
-
-    @Override
-    public Stmt.JoinManyDef visitJoinManyDef(JoinManyDefContext ctx) {
-        return new Stmt.JoinManyDef(var(ctx.role));
-    }
-
-    @Override
-    public Stmt.Assign visitAssignStmt(AssignStmtContext ctx) {
-        Token target = ctx.target;
-        return new Stmt.Assign(var(target), exp(ctx.exp()));
-    }
-
     @NotNull
     private Exp.Var var(Token target) {
         return new Exp.Var(target.getText());
     }
 
     @Override
-    public Stmt.Reveal visitRevealStmt(RevealStmtContext ctx) {
-        return new Stmt.Reveal(var(ctx.target), this.visitWhereClause(ctx.where));
-    }
-
-    @Override
-    public Stmt.If visitIfStmt(IfStmtContext ctx) {
-        return new Stmt.If(exp(ctx.exp()),
-                makeStmt(ctx.ifTrue),
-                ctx.ifFalse == null ? new Stmt.Block(List.of()) : makeStmt(ctx.ifFalse)
-        );
-    }
-
-    @Override
-    public Stmt.ForYield visitForYieldStmt(ForYieldStmtContext ctx) {
-        return new Stmt.ForYield(
-                new Exp.Var(ctx.from.getText()),
-                this.visitPacket(ctx.packet()),
-                makeStmt(ctx.stmt())
-        );
-    }
-
-    @Override
-    public Stmt.Transfer visitTransferStmt(TransferStmtContext ctx) {
-        return new Stmt.Transfer(exp(ctx.amount), var(ctx.from), var(ctx.to));
+    public Exp.Q.Payoff visitTransfer(TransferContext ctx) {
+        Map<Exp.Var, Exp> m = ctx.items.stream().collect(toMap(e -> var(e.ID().getSymbol()), e -> exp(e.exp())));
+        return new Exp.Q.Payoff(m);
     }
 
     private <T1, T2> List<T2> list(List<T1> iterable, Function<T1, T2> f) {
@@ -202,8 +145,19 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Packet visitPacket(PacketContext ctx) {
-        return new Packet(var(ctx.role), list(ctx.decls, this::visitVarDec), this.visitWhereClause(ctx.whereClause()));
+    public Query visitPacket(PacketContext ctx) {
+        return new Query(toKind(ctx.kind), var(ctx.role), list(ctx.decls, this::visitVarDec), this.visitWhereClause(ctx.whereClause()));
+    }
+
+    @NotNull
+    private Kind toKind(Token kind) {
+        switch (kind.getText()) {
+            case "join" : return Kind.JOIN;
+            case "yield" : return Kind.YIELD;
+            case "reveal" : return Kind.REVEAL;
+            case "many" : return Kind.MANY;
+        }
+        throw new AssertionError();
     }
 
     @Override

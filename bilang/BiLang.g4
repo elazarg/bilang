@@ -1,6 +1,6 @@
 grammar BiLang;
 
-program : typeDec* stmt+ EOF ;
+program : typeDec* ext EOF ;
 
 typeDec : 'type' name=ID '=' typeExp ;
 typeExp
@@ -25,25 +25,17 @@ exp
     | INT                                     # NumLiteralExp
     | ADDRESS                                 # AddressLiteralExp
     | 'undefined'                             # UndefExp
+    | 'let' dec=varDec '=' init=exp 'in' ext';'    # VarDef
     ;
 
-stmt
-    : 'var' dec=varDec ('=' init=exp)? ';'    # VarDef
-    | 'yield' hidden='hidden'? packet+ ';'    # YieldDef
-    | 'join' packet+ ';'                      # JoinDef
-    | 'join' 'many' role=ID ';'               # JoinManyDef
-
-    | '{' stmt+ '}'                           # BlockStmt
-    | target=ID ':=' exp ';'                  # AssignStmt
-    | 'reveal' target=ID where=whereClause';' # RevealStmt
-    | 'if' '(' exp ')' ifTrue=stmt
-       ('else' ifFalse=stmt )?                # IfStmt
-    | 'for' 'yield' packet
-      'from' from=ID stmt                     # ForYieldStmt
-    | 'transfer' amount=exp 'from' from=ID 'to' to=ID ';' # TransferStmt
+ext : 'receive' hidden='hidden'? packet+ '->' ext ';'  # YieldDef
+    | 'let' 'fold' varDec '=' packet 'from' from=ID exp 'in' ext      # Fold
+    | '{' items+=item+ '}'                             # Transfer
     ;
 
-packet : (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
+item : (ID '->' exp ';'?) ;
+
+packet : kind=('join'|'yield'|'reveal'|'many') (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
 
 whereClause : ('where' cond=exp)? ;
 
