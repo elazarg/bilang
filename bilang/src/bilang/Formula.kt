@@ -10,7 +10,7 @@ fun makeFormula(block: List<External>, _next: Exp = TRUE): Exp {
         is YieldDef -> {
             var n = next
             for (p in stmt.packets.reversed())
-                n = Q.Y(GameAction.YIELD, p, n, true)
+                n = Ext.Yield(p, n, true)
             for (p in stmt.packets.reversed())
                 n = makeFormula(listOf(Reveal(p.params[0].name, p.where)), n)
             n
@@ -18,7 +18,7 @@ fun makeFormula(block: List<External>, _next: Exp = TRUE): Exp {
         is JoinDef ->  {
             var n = next
             for (p in stmt.packets.reversed())
-                n = Q.Y(GameAction.YIELD, p, makeFormula(listOf(YieldDef(stmt.packets, stmt.hidden)), next))
+                n = Ext.Yield(p, makeFormula(listOf(YieldDef(stmt.packets, stmt.hidden)), next))
             n
         }
         is JoinManyDef -> throw RuntimeException()
@@ -84,11 +84,8 @@ private fun inline(exp: Exp, env: Map<Var, Exp>): Exp {
             else exp.copy(cond=cond, ifTrue= ifTrue, ifFalse=inline(exp.ifFalse))
         }
         UNDEFINED, is Num, is Address, is Exp.Bool, is Exp.Hidden -> exp
-        is Q.Y -> TODO()
-        is Q.Reveal -> TODO()
-        is Q.Let -> TODO()
-        is Q.Payoff -> TODO() // exp.copy(ts=exp.ts.map{it.copy(amount=inline(it.amount, env))})
-        is Q.PayoffConst -> TODO()
+        is Q -> TODO()
+        is Ext -> TODO()
     }
 }
 
@@ -129,11 +126,8 @@ fun pretty(exp: Exp): String = when (exp) {
     is Num -> "${exp.n}"
     is Bool -> "${exp.truth}"
     is Address -> "${exp.n}"
-    is Q.Y -> TODO()
-    is Q.Reveal -> TODO()
-    is Q.Let -> TODO()
-    is Q.Payoff -> TODO()
-    is Q.PayoffConst -> TODO()
+    is Ext -> TODO()
+    is Q -> TODO()
     is Exp.Hidden -> TODO()
 }
 

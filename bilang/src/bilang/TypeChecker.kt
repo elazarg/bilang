@@ -118,6 +118,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             Exp.UNDEFINED -> UNIT
 
             is Exp.Q -> throw RuntimeException()
+            is Exp.Ext -> TODO()
         }
     }
 

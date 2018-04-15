@@ -9,24 +9,25 @@ sealed class Tree {
 
 fun fromExp(exp: Exp, g: Map<Var, Const>, h: Map<Var, Map<Var, Const>>,
             values: (TypeExp) -> List<Const>) : Tree =
-    when {
-        exp is Q.Y && exp.action == GameAction.YIELD -> {
-            val children = buildChildren(exp, g, h, values)
-            Tree.Node(owner=exp.p.role.name, children=children, h=h)
+        when (exp) {
+            is Ext.Yield -> {
+                val children = buildChildren(exp, g, h, values)
+                Tree.Node(owner=exp.p.role.name, children=children, h=h)
+            }
+            is Ext.Join -> {
+                fromExp(exp.exp, g + Pair(exp.p.role, Address(maxInt(g.values) + 1)), h, values)
+            }
+            is Ext.Reveal -> {
+                val revealed = h.map { (r, b) ->
+                    Pair(r, b.map { (v, k) -> Pair(v, if (r == exp.v.target && v.name == exp.v.field && k is Hidden) k.value else k) }.toMap())
+                }.toMap()
+                fromExp(exp.exp, g, revealed, values)
+            }
+            is Ext.Parallel<*> -> TODO()
+            else -> Tree.Leaf( (eval(exp, g, h) as Q.PayoffConst).ts )
         }
-        exp is Q.Y && exp.action == GameAction.JOIN -> {
-            fromExp(exp.exp, g + Pair(exp.p.role, Address(maxInt(g.values) + 1)), h, values)
-        }
-        exp is Exp.Q.Reveal -> {
-            val revealed = h.map { (r, b) ->
-                Pair(r, b.map { (v, k) -> Pair(v, if (r == exp.v.target && v.name == exp.v.field && k is Hidden) k.value else k) }.toMap())
-            }.toMap()
-            fromExp(exp.exp, g, revealed, values)
-        }
-        else -> Tree.Leaf( (eval(exp, g, h) as Q.PayoffConst).ts )
-    }
 
-private fun buildChildren(exp: Q.Y, g: Map<Var, Const>, h: Map<Var, Map<Var, Const>>,
+private fun buildChildren(exp: Ext.Yield, g: Map<Var, Const>, h: Map<Var, Map<Var, Const>>,
                           values: (TypeExp) -> List<Const>): Map<Map<Var, Const>, Tree> =
     vals(values, exp.p.params).filter { newEnv ->
         eval(exp.p.where, g, updateHeap(h, exp, g, newEnv)) == Bool(true)
@@ -37,7 +38,7 @@ private fun buildChildren(exp: Q.Y, g: Map<Var, Const>, h: Map<Var, Map<Var, Con
 private fun maxInt(values: Iterable<Const>) : Int =
         values.map { (it as? Address)?.n ?: 0 }.max() ?: 0
 
-private fun updateHeap(h: Map<Var, Map<Var, Const>>, exp: Q.Y, g: Map<Var, Const>, newEnv: Map<Var, Const>) =
+private fun updateHeap(h: Map<Var, Map<Var, Const>>, exp: Ext.Yield, g: Map<Var, Const>, newEnv: Map<Var, Const>) =
         h.map { m -> Pair(m.key, if (g.getValue(m.key) == eval(exp.p.role, g, h)) m.value + newEnv else m.value) }.toMap()
 
 fun vals(values: (TypeExp) -> List<Const>, params: List<VarDec>) : List<Map<Var, Const>> =
@@ -46,15 +47,14 @@ fun vals(values: (TypeExp) -> List<Const>, params: List<VarDec>) : List<Map<Var,
 fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Var, Map<Var, Const>>) : Const {
     fun eval(exp: Exp) = eval(exp, g, h)
     return when (exp) {
-        is Exp.Q.Y -> throw AssertionError()
-        is Exp.Q.Reveal -> throw AssertionError()
-        is Exp.Call -> TODO()
-        is Exp.UnOp -> when (exp.op) {
+        is Ext -> throw AssertionError()
+        is Call -> TODO()
+        is UnOp -> when (exp.op) {
             "-" -> Num(-(eval(exp.operand) as Num).n)
             "!" -> Bool(!(eval(exp.operand) as Bool).truth)
             else -> throw AssertionError()
         }
-        is Exp.BinOp -> {
+        is BinOp -> {
             val (left, right) = Pair(eval(exp.left), eval(exp.right))
             val res: Const = when {
                 left is Num && right is Num -> when (exp.op) {
@@ -75,9 +75,9 @@ fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Var, Map<Var, Const>>) : Const {
             }
             res
         }
-        is Exp.Var -> g.getValue(exp)
-        is Exp.Member -> h.getValue(exp.target).getValue(Var(exp.field))
-        is Exp.Cond -> {
+        is Var -> g.getValue(exp)
+        is Member -> h.getValue(exp.target).getValue(Var(exp.field))
+        is Cond -> {
             val cond = eval(exp.cond)
             when (cond) {
                 is Bool -> if (cond.truth) eval(exp.ifTrue) else eval(exp.ifFalse)
@@ -85,13 +85,13 @@ fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Var, Map<Var, Const>>) : Const {
             }
         }
         UNDEFINED -> UNDEFINED
-        is Exp.Address -> exp
-        is Exp.Num -> exp
-        is Exp.Bool -> exp
-        is Exp.Hidden -> exp
-        is Exp.Q.Let -> eval(exp.value, g + Pair(exp.dec.name, eval(exp.dec.name)), h)
-        is Exp.Q.Payoff -> Exp.Q.PayoffConst(exp.ts.map { (k, v) -> Pair(k, eval(v) as Num)} .toMap())
-        is Exp.Q.PayoffConst -> exp
+        is Address -> exp
+        is Num -> exp
+        is Bool -> exp
+        is Hidden -> exp
+        is Q.Let -> eval(exp.value, g + Pair(exp.dec.name, eval(exp.dec.name)), h)
+        is Q.Payoff -> Exp.Q.PayoffConst(exp.ts.map { (k, v) -> Pair(k, eval(v) as Num)} .toMap())
+        is Q.PayoffConst -> exp
     }
 }
 
@@ -153,14 +153,14 @@ private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") 
 
 fun main(args: Array<String>) {
     val doors = TypeExp.Subset(setOf(Num(0), Num(1), Num(2)))
-    val exp=Q.Y(GameAction.JOIN,  Packet(Var("host"),  listOf(), Bool(true)),
-        exp=Q.Y(GameAction.JOIN,  Packet(Var("guest"), listOf(), Bool(true)),
-        exp=Q.Y(GameAction.YIELD, Packet(Var("host"),  listOf(VarDec(Var("car"),  TypeExp.Hidden(doors))), Bool(true)), hidden=true,
-        exp=Q.Y(GameAction.YIELD, Packet(Var("guest"), listOf(VarDec(Var("door"), doors)), Bool(true)),
-        exp=Q.Y(GameAction.YIELD, Packet(Var("host"),  listOf(VarDec(Var("goat"), doors)),
+    val exp=Ext.Join(Packet(Var("host"),  listOf(), Bool(true)),
+        exp=Ext.Join(Packet(Var("guest"), listOf(), Bool(true)),
+        exp=Ext.Yield(Packet(Var("host"),  listOf(VarDec(Var("car"),  TypeExp.Hidden(doors))), Bool(true)), hidden=true,
+        exp=Ext.Yield(Packet(Var("guest"), listOf(VarDec(Var("door"), doors)), Bool(true)),
+        exp=Ext.Yield(Packet(Var("host"),  listOf(VarDec(Var("goat"), doors)),
                     UnOp("!", BinOp("==", Member(Var("host"), "goat"), Member(Var("guest"), "door")) )),
-        exp=Q.Y(GameAction.YIELD, Packet(Var("guest"),  listOf(VarDec(Var("switch"), TypeExp.BOOL)), Bool(true)),
-        exp=Q.Reveal(Member(Var("host"), "car"),
+        exp=Ext.Yield(Packet(Var("guest"),  listOf(VarDec(Var("switch"), TypeExp.BOOL)), Bool(true)),
+        exp=Ext.Reveal(Member(Var("host"), "car"),
         exp=Q.Payoff(mapOf(
                 Pair(Var("host"), Num(0)),
                 Pair(Var("guest"), Cond(

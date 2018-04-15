@@ -22,11 +22,15 @@ sealed class Exp : Ast() {
     data class Hidden(val value: Const) : Exp(), Const
 
 
+    sealed class Ext : Exp() {
+        data class Yield(val p: Packet, val exp: Exp, val hidden: Boolean = false) : Ext(), Step
+        data class Join(val p: Packet, val exp: Exp, val hidden: Boolean = false) : Ext(), Step
+        data class Reveal(val v: Member, val exp: Exp) : Ext(), Step  // TODO: where
+        data class Parallel<out T : Ext>(val qs: List<T>) : Ext()
+    }
+
     // Not in concrete syntax:
     sealed class Q : Exp() {
-        data class Y(val action: GameAction, val p: Packet, val exp: Exp, val hidden: Boolean = false) : Q(), Step
-        data class Reveal(val v: Member, val exp: Exp) : Q(), Step  // TODO: where
-
         data class Let(val dec: VarDec, val value: Exp) : Q()
         // Var is not evaluated, since the analysis does not handle addresses but roles.
         // giving different payoff for different addresses of the same roles is a TODO
