@@ -9,8 +9,8 @@ typeExp
     | name=ID                             # TypeId
     ;
 
-ext : 'receive' query+ ext  # ReceiveExt
-    | 'let' 'fold' varDec '=' query 'from' from=ID exp 'in' ext      # FoldExt
+ext : query+ ';' ext  # ReceiveExt
+    | 'let' 'fold' varDec '=' query 'from' from=ID exp ';' ext  # FoldExt
     | 'return' exp # ExpExt
     ;
 

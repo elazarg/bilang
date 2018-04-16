@@ -115,6 +115,10 @@ fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Const {
                     "-" -> Num(left.n - right.n)
                     "*" -> Num(left.n * right.n)
                     "/" -> Num(left.n / right.n)
+                    "<" -> Bool(left.n < right.n)
+                    "<=" -> Bool(left.n <= right.n)
+                    ">" -> Bool(left.n > right.n)
+                    ">=" -> Bool(left.n >= right.n)
                     else -> throw AssertionError()
                 }
                 left is Bool && right is Bool -> when (exp.op) {

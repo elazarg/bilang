@@ -1,11 +1,9 @@
-receive join Odd()
-        join Even()
-receive yield  Odd(c: bool)
-        yield Even(c: bool)
+join  Odd()         join Even();
+yield Odd(c: bool) yield Even(c: bool);
 return (Even.c != undefined && Odd.c != undefined) ?
-    ((Even.c == Odd.c) ? { Even -> 10; Odd -> -10 } : { Even -> -10; Odd -> 10 })
-: ((Even.c == undefined && Odd.c != undefined) ? { Even -> -100; Odd -> 10 }
-: { Even -> -100; Odd -> -100 })
+    let p: int = ((Even.c == Odd.c) ? 10 : -10) in { Even -> p; Odd -> -p }
+: (Even.c == undefined && Odd.c != undefined) ? { Even -> -100; Odd -> 10 }
+: { Even -> -100; Odd -> -100 }
 
 /*
 

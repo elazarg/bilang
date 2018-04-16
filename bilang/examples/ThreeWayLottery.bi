@@ -1,9 +1,9 @@
 type choice = {1, 2, 3}
 
-receive join Issuer()
-receive join Alice()
-receive join Bob()
-receive yield Issuer(c: choice) yield Alice(c: choice) yield Bob(c: choice)
+join Issuer();
+join Alice();
+join Bob();
+yield Issuer(c: choice) yield Alice(c: choice) yield Bob(c: choice);
 
 return (Alice.c  == undefined || Bob.c == undefined) ? { Alice -> -10; Bob -> -10; Issuer ->  20 }
      : (Issuer.c == undefined)                       ? { Alice ->  20; Bob -> -10; Issuer -> -10 }
