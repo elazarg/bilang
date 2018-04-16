@@ -34,7 +34,7 @@ exp
     | name=ID                                 # IdExp
     | INT                                     # NumLiteralExp
     | ADDRESS                                 # AddressLiteralExp
-    | 'undefined'                             # UndefExp
+    | 'null'                                  # UndefExp
     | 'let' dec=varDec '=' init=exp 'in' body=exp  # LetExp
     ;
 

@@ -61,19 +61,19 @@
 \usepackage{stmaryrd}  % semantic brackets
 \usepackage{semantic}
 \lstset{
-  language=C,
+  language=Haskell,
   backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
-  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
-  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  basicstyle=\ttfamily\scriptsize,        % the size of the fonts that are used for the code
+  breakatwhitespace=true,         % sets if automatic breaks should only happen at whitespace
   breaklines=true,                 % sets automatic line breaking
   captionpos=b,                    % sets the caption-position to bottom
-  deletekeywords={...},            % if you want to delete keywords from the given language
+  deletekeywords={sum},            % if you want to delete keywords from the given language
   escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
   extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
   frame=single,	                   % adds a frame around the code
   keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
-  keywordstyle=\color{blue},       % keyword style
-  morekeywords={*,...},            % if you want to add more keywords to the set
+  keywordstyle=\textbf,       % keyword style
+  morekeywords={join,yield,reveal,null,many,return,hidden,;},            % if you want to add more keywords to the set
   numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
   numbersep=5pt,                   % how far the line-numbers are from the code
   rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
@@ -81,7 +81,7 @@
   showstringspaces=false,          % underline spaces within strings only
   showtabs=false,                  % show tabs within strings adding particular underscores
   tabsize=2,	                     % sets default tabsize to 2 spaces
-  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+  caption=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
 }
 \begin{document}
 
@@ -203,12 +203,16 @@ We assume that clients are alert and waiting, and respond within predefined wind
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
 $\\$
 
+\lstinputlisting{../bilang/examples/OddsEvens.bi}
+
 \lstinputlisting{../bilang/examples/MontyHall.bi}
 
-\subsubsection{Blind Auction: Simultaneous n-Player Game}
+\lstinputlisting{../bilang/examples/ThreeWayLottery.bi}
+
+%\subsubsection{Blind Auction: Simultaneous n-Player Game}
 $\\$
 
-\lstinputlisting{../bilang/examples/SecondMaxAuction.bi}
+%\lstinputlisting{../bilang/examples/SecondMaxAuction.bi}
 
 \vfill
 \pagebreak
@@ -221,14 +225,12 @@ $\\$
 
 \begin{grammar}
 
-<ext_statement> ::= ...
-                \alt yield [hidden] <packet>+
-                \alt reveal <var> where <exp>
-                \alt join <packet>+
-                \alt join many <var>
-                \alt for yield <packet> from <var> do <statement>+
+<ext> ::= ...
+                \alt <query>+ ';' <ext>
+                \alt 'let' 'fold' <var> : <type> '=' <query> 'from' <var> <exp> ';' <ext>
+                \alt 'return' <exp>
 
-<packet> ::= <var> (<var> : <type>, ... ) where <exp>
+<query> ::= (join | yield | many) <var> (<var> : [hidden] <type>, ... ) where <exp>
 \end{grammar}
 
 \subsection{Semantics}
@@ -278,13 +280,15 @@ We translate \texttt{reveal $v$: T} to \texttt{yield R(v: T, s: int) where hide(
   \psi &\colon Var \to Id \\
   h &\colon Id \times Var \to Val \\
   \rho &\colon Id \to Val \\
+  p &\colon Id \to Var \to Val \\
 \end{align*}
 \begin{align*}
   \overline{S} &\colon Stmt^\ast \\
   r &\colon Var \text{ of type Role} \\
   s &\colon Var \text{ of type RoleSet} \\
-  (v, t, c) &\colon Var \times Type \times Exp = Packet \\
-  p &\colon Var \to Packet \\
+  b &\colon Var \to Var \times Type \times Exp \\
+  m &\colon M = Var \times Id \times Val \\
+  \zeta &\colon 2^M \to M
 \end{align*}
 
 Translations:
@@ -293,13 +297,23 @@ Translations:
   \text{ where $f$ is a fresh variable}. \\
   \texttt{reveal $v$: T}                 & \rightsquigarrow \texttt{yield $r$(f: T, s: int) where hide(r, v, s) == r.v; v := f}.
 \end{align*}
-\newcommand{\step}[3]{\langle \texttt{#1}, #2 \rangle \Downarrow_{\psi, \rho} #3}
+\newcommand{\step}[3]{#2 \xrightarrow{\texttt{#1}}_{\psi, \rho, \zeta} #3}
 \begin{align*}
-  &\inference[Join]{
-    g' = g[r \mapsto \psi(r)] \land h' = h[a \mapsto h(a)[v \mapsto \rho(\psi(r))]] \\
-    \rho \colon \langle t \rangle \land \langle c, (g', h') \rangle \Downarrow \texttt{true}
+  & (g, h) + (a, k) &= g[r \mapsto a], h(a)[v \mapsto k]\\
+  & g'(p)(l) &= p(l)_a  \\
+  & h'(p)(a)(v) &= p(l)_k \\
+\end{align*}
+\begin{align*}
+  &\inference[Receive]{
+    k \colon \langle t \rangle \land \langle c, (g, h) + (a, k)) \rangle \Downarrow \texttt{true}
   }{
-    \step{join $r$($v$: $t$) where $c$}{(g, h)}{(g', h')}
+    P(\texttt{$r$($v$: $t$) where $c$}, (g, h), (a, k))
+  }\\ \\ 
+  &\inference[Join]{
+    \forall r \in \overline p . P(p, (g, h), (g \cup g'(\rho(r)) \\
+    g' = g[r \mapsto a] \land h' = h[a \mapsto h(a)[v \mapsto \rho(\psi(r))]]
+  }{
+    \step {join $\overline p$} {g, h} {g', h'}
   }\\ \\
   &\inference[YieldTimeout]{
     \texttt{timeout}
@@ -313,7 +327,7 @@ Translations:
   }\\ \\
   &\inference[For]{
     \exists a_1 \neq ... \neq a_n \in g(s) . \exists (g_1, h_1), ..., (g_n, h_n) . \forall 1 \leq i < n . \\
-    \step{$r$:=$a_i$; yield $r$($p$); $\overline{S}$; $r$:=undefined}{(g_i, h_i)}{(g_{i+1}, h_{i+1})}
+    \step{ \{ var $r$:=$a_i$; yield $r$($p$); $\overline{S}$; \} }{(g_i, h_i)}{(g_{i+1}, h_{i+1})}
   }{
     \step{for yield $(r, p)$ from $s$ do $\overline{S}$}{(g, h)}{(g_n, h_n)}
   }\\
@@ -323,6 +337,52 @@ Translations:
 \vfill
 \pagebreak
 
+\subsection{DB Semantics}
+\begin{align*}
+  g &\colon Var \to Val \\
+  \psi &\colon Var \to Id \\
+  h &\colon Id \times Var \to Val \\
+  \rho &\colon Id \to Val \\
+  p &\colon Id \to Var \to Val \\
+\end{align*}
+\begin{align*}
+  \overline{S} &\colon Stmt^\ast \\
+  r &\colon Var \text{ of type Role} \\
+  s &\colon Var \text{ of type RoleSet} \\
+  b &\colon Var \to Var \times Type \times Exp \\
+  m &\colon M = Var \times Id \times Val \\
+  \zeta &\colon 2^M \to M
+\end{align*}
+
+\begin{align*}
+  &\inference[ReceiveMany]{
+    M = \texttt{select id, val from Msgs($r$) }\\
+    \texttt{where eval($c$, $(g[r \mapsto id], h[(id, v) \mapsto val])$) = true} \\
+    \texttt{$\pi$ id, value $\sigma$ label = 'host' $\land$ type = $t$ M}
+  }{
+    P(\texttt{$r$($v$: $t$) where $c$}, (g, h), \{ (r, M) \})
+  }\\ \\
+  &\inference[Join]{
+    P(p, (g, h), \{ (r, M) \}) \land size(M) \geq 1
+  }{
+    P(\texttt{join }p, (g, h), M\texttt{ LIMIT(1)})
+  }\\ \\
+  &\inference[Yield]{
+    P(\texttt{join }p, (g, h), \{ (r, M) \}) \\
+    \texttt{$\pi$ value $\sigma$ id = $g(r)$ M}
+  }{
+    P(\texttt{yield }p, (g, h), M\texttt{ where id=$g(r)$})
+  }\\ \\
+  &\inference[Yield]{
+    P(p_1, (g, h), (r_1, M_1)) \;\;\;\; P(p_2, (g, h), (r_2, M_2))
+  }{
+    P(p_1 \& p_2, (g, h), \{ (r_1, M_1), (r_2, M_2) \})
+  }
+\end{align*}
+
+
+\vfill
+\pagebreak
 \subsubsection{Lowering}
 Use a simpler syntax:
 
