@@ -12,43 +12,40 @@ class Extensive(private val name: String, private val desc: String, private val 
     constructor(name: String, prog: ExpProgram) :
             this(name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game))
 
-    fun toEfg(): String =
-            (listOf("EFG 2 R ${q(name)} ${stringList(players)}", q(desc), "")
-                    + ExtensivePrinter().toEfg(game, players)).joinToString("\n")
+    fun toEfg(): String = (
+        listOf("EFG 2 R ${q(name)} ${stringList(players)}", q(desc), "")
+                + ExtensivePrinter().toEfg(game, players)
+    ).joinToString("\n")
 
     override fun toString(): String = game.toString()
 
 }
 
-
 class TreeMaker(val types: Map<String, TypeExp>) {
     fun fromExp(exp: Ext, env: Env = Env()): Tree = when (exp) {
         is Ext.BindSingle -> {
-            singleToTree(exp.q, exp.exp, env)
+            fun subtree(e: Env) = fromExp(exp.exp, e)
+            when (exp.q.kind) {
+                Kind.JOIN -> subtree(env.addRole(exp.q.role))
+                Kind.YIELD -> {
+                    fun combineValues(f: (VarDec) -> List<Const>) = exp.q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
+
+                    val children = combineValues { listOf<Const>(UNDEFINED) }.let { undefs ->
+                        if (env.quitted(exp.q.role)) undefs
+                        else (combineValues { enumerateValues(it.type) }.filter {
+                            eval(exp.q.where, env.updateHeap(exp.q, it)) == Bool(true)
+                        } + undefs)
+                    }.map { Pair(it, subtree(env.updateHeap(exp.q, it))) }.toMap()
+                    Tree.Node(exp.q.role.name, env, children)
+                }
+                Kind.REVEAL -> subtree(env.revealHidden(exp.q))
+                Kind.MANY -> TODO()
+            }
         }
         is Ext.Bind -> { // Independence is considered at AST construction step
             fromExp(exp.qs.fold(exp.exp) { acc, q -> Ext.BindSingle(q, acc) }, env)
         }
         is Ext.Value -> Tree.Leaf((eval(exp.exp, env) as Payoff).ts as Map<Var, Num>)
-    }
-
-    private fun singleToTree(q: Query, exp: Ext, env: Env): Tree = when (q.kind) {
-        Kind.JOIN -> fromExp(exp, env.addRole(q.role))
-        Kind.YIELD -> {
-            val quit = env.quitted(q.role)
-            val values = if (quit) listOf() else q.params.map { d ->
-                Pair(d.name, enumerateValues(d.type))
-            }.toMap().product().filter { newEnv ->
-                eval(q.where, env.updateHeap(q, newEnv)) == Bool(true)
-            }
-            val undefs = q.params.map { d -> Pair(d.name, listOf(UNDEFINED)) }.toMap().product()
-            val children = (values + undefs).map { newEnv ->
-                Pair(newEnv, fromExp(exp, env.updateHeap(q, newEnv)))
-            }.toMap()
-            Tree.Node(owner = q.role.name, children = children, env = env)
-        }
-        Kind.REVEAL -> fromExp(exp, env.revealHidden(q))
-        Kind.MANY -> TODO()
     }
 
     private fun enumerateValues(t: TypeExp): List<Const> = when (t) {
@@ -62,7 +59,7 @@ class TreeMaker(val types: Map<String, TypeExp>) {
 
 fun findRoles(exp: Ext): List<String> = when (exp) {
     is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN }.map { it.role.name } + findRoles(exp.exp)
-    is Ext.BindSingle -> (if (exp.q.kind == Kind.JOIN) listOf(exp.q.role.name) else listOf()) + findRoles(exp.exp)
+    is Ext.BindSingle -> if (exp.q.kind != Kind.JOIN) listOf() else listOf(exp.q.role.name) + findRoles(exp.exp)
     is Ext.Value -> listOf()
 }
 
@@ -70,10 +67,6 @@ private fun hide(v: Const): Const = when (v) {
     UNDEFINED -> UNDEFINED
     else -> Hidden(v)
 }
-
-private fun maxAddress(vs: Iterable<Const>): Int =
-        vs.map { (it as? Address)?.n ?: 0 }.max() ?: 0
-
 
 fun eval(exp: Exp, env: Env): Const {
     fun eval(exp: Exp) = eval(exp, env)
@@ -139,11 +132,12 @@ class ExtensivePrinter {
             // TODO: remove last assignment
             val infoset: Int = UniqueHash.of(t.env.eraseHidden(t.owner)) // FIX: do we consider current choice???
             val infosetName = ""
-            val actionNamesForInfoset: String = stringList(values.map { v -> v.values.map { valueToName(it) }.joinToString("&") })
+            val actionNamesForInfoset: String = stringList(values.map { v -> v.values.joinToString("&") { valueToName(it) } })
             val outcome = 0
             val nameOfOutcome = ""
             val payoffs = 0
-            listOf("p ${q(nodeName)} $owner $infoset ${q(infosetName)} $actionNamesForInfoset $payoffs") + children.flatMap { toEfg(it, roleOrder) }
+            listOf("p ${q(nodeName)} $owner $infoset ${q(infosetName)} $actionNamesForInfoset $payoffs") +
+                    children.flatMap { toEfg(it, roleOrder) }
         }
         is Tree.Leaf -> {
             val name = ""
@@ -194,7 +188,9 @@ data class Env(private val g: Map<Var, Const>, private val h: Map<Pair<Var, Var>
         return copy(h=mh.toMap())
     }
 
-    fun addRole(role: Var) = this + Pair(role, Address(maxAddress(g.values) + 1))
+    fun addRole(role: Var) = this + Pair(role,
+            Address(1 + (g.values.map { (it as? Address)?.n ?: 0 }.max() ?: 0))
+    )
 
     fun getValue(v: Var) = g.getValue(v)
     fun getValue(role: String, field: String) = h.getValue(Pair(Var(role), Var(field)))
