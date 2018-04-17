@@ -50,24 +50,25 @@ data class Query(val kind: Kind, val role: Exp.Var, val params: List<VarDec> = l
 enum class Kind { JOIN, YIELD, REVEAL, MANY }
 
 sealed class TypeExp : Ast() {
-    object INT: TypeExp(), IntClass
-    object BOOL: TypeExp()
-    object ROLE: TypeExp()
-    object ROLESET: TypeExp()
-    object ADDRESS: TypeExp()
-    object UNIT: TypeExp()
-    data class Hidden(val type: TypeExp): TypeExp()
-    data class TypeId(val name: String): TypeExp()
+    object INT : TypeExp(), IntClass
+    object BOOL : TypeExp()
+    object ROLE : TypeExp()
+    object ROLESET : TypeExp()
+    object ADDRESS : TypeExp()
+    object UNIT : TypeExp()
+    data class Hidden(val type: TypeExp) : TypeExp()
+    data class TypeId(val name: String) : TypeExp()
     interface IntClass
-    data class Subset(val values: Set<Exp.Num>): TypeExp(), IntClass
-    data class Range(val min: Exp.Num, val max: Exp.Num): TypeExp(), IntClass
-    data class Opt(val type: TypeExp): TypeExp()
+    data class Subset(val values: Set<Exp.Num>) : TypeExp(), IntClass
+    data class Range(val min: Exp.Num, val max: Exp.Num) : TypeExp(), IntClass
+    data class Opt(val type: TypeExp) : TypeExp()
 }
+
 fun hide(type: TypeExp) = type as? TypeExp.Hidden ?: TypeExp.Hidden(type)
 
 fun independent(qs: List<Query>, exp: Ext): Ext.Bind {
     val reveal = Ext.Bind(qs.map { it.copy(kind = Kind.REVEAL, params = it.params.filterNot { it.type is TypeExp.Hidden }) }, exp)
     return Ext.Bind(qs.map { it.copy(params = it.params.map { p -> p.copy(type = hide(p.type)) }) },
-            if (qs.any {it.params.isNotEmpty()}) reveal else exp)
+            if (qs.any { it.params.isNotEmpty() }) reveal else exp)
 }
 

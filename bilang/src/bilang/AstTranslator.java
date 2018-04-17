@@ -23,7 +23,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     private TypeExp makeType(TypeDecContext ctx) {
-        return (TypeExp)ctx.typeExp().accept(this);
+        return (TypeExp) ctx.typeExp().accept(this);
     }
 
     @Override
@@ -41,11 +41,11 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     private Exp exp(ExpContext ctx) {
-        return (Exp)ctx.accept(this);
+        return (Exp) ctx.accept(this);
     }
 
     private Ext ext(ExtContext ctx) {
-        return (Ext)ctx.accept(this);
+        return (Ext) ctx.accept(this);
     }
 
     @Override
@@ -76,7 +76,9 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     public Exp visitIdExp(IdExpContext ctx) {
         String name = ctx.name.getText();
         switch (name) {
-            case "true": case "false": assert false;
+            case "true":
+            case "false":
+                assert false;
         }
         return new Exp.Var(name);
     }
@@ -110,18 +112,22 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     public Exp.BinOp visitBinOpEqExp(BinOpEqExpContext ctx) {
         return binop(ctx.op, ctx.left, ctx.right);
     }
+
     @Override
     public Exp.BinOp visitBinOpAddExp(BinOpAddExpContext ctx) {
         return binop(ctx.op, ctx.left, ctx.right);
     }
+
     @Override
     public Exp.BinOp visitBinOpCompExp(BinOpCompExpContext ctx) {
         return binop(ctx.op, ctx.left, ctx.right);
     }
+
     @Override
     public Exp.BinOp visitBinOpBoolExp(BinOpBoolExpContext ctx) {
         return binop(ctx.op, ctx.left, ctx.right);
     }
+
     @Override
     public Exp.BinOp visitBinOpMultExp(BinOpMultExpContext ctx) {
         return binop(ctx.op, ctx.left, ctx.right);
@@ -175,10 +181,14 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     @NotNull
     private Kind toKind(Token kind) {
         switch (kind.getText()) {
-            case "join" : return Kind.JOIN;
-            case "yield" : return Kind.YIELD;
-            case "reveal" : return Kind.REVEAL;
-            case "many" : return Kind.MANY;
+            case "join":
+                return Kind.JOIN;
+            case "yield":
+                return Kind.YIELD;
+            case "reveal":
+                return Kind.REVEAL;
+            case "many":
+                return Kind.MANY;
         }
         throw new AssertionError();
     }
@@ -192,8 +202,10 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     @NotNull
     private TypeExp type(VarDecContext ctx) {
         switch (ctx.type.getText()) {
-            case "bool": return TypeExp.BOOL.INSTANCE;
-            case "int": return TypeExp.INT.INSTANCE;
+            case "bool":
+                return TypeExp.BOOL.INSTANCE;
+            case "int":
+                return TypeExp.INT.INSTANCE;
         }
         return new TypeExp.TypeId(ctx.type.getText());
     }

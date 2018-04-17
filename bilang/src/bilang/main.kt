@@ -1,9 +1,9 @@
 package bilang
 
-
-import org.antlr.v4.runtime.*
-
-import generated.*
+import generated.BiLangLexer
+import generated.BiLangParser
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
 import java.nio.file.Paths
 
 fun parse(inputFilename: String): ExpProgram {

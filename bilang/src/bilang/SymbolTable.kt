@@ -1,6 +1,6 @@
 package bilang
 
-import java.util.LinkedList
+import java.util.*
 
 internal class SymbolTable<T>(initial: MutableMap<String, T>) {
     private val scope = LinkedList<MutableMap<String, T>>(listOf(initial))

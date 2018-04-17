@@ -11,20 +11,22 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
     val env = _env.toMutableMap()
 
     private val ROLE = TypeId("role")
+
     companion object {
         fun typeCheck(program: ExpProgram) {
             Checker(
                     mapOf(
-                        Pair(Exp.Var("true"), BOOL),
-                        Pair(Exp.Var("false"), BOOL)),
+                            Pair(Exp.Var("true"), BOOL),
+                            Pair(Exp.Var("false"), BOOL)),
                     mapOf(
-                        Pair("bool", BOOL),
-                        Pair("role", TypeExp.ROLE),
-                        Pair("int", INT)
+                            Pair("bool", BOOL),
+                            Pair("role", TypeExp.ROLE),
+                            Pair("int", INT)
                     )
             ).type(program.game)
         }
     }
+
     private fun type(ext: Ext) {
         when (ext) {
             is Ext.Bind -> TODO()
@@ -35,23 +37,35 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
 
     private fun type(exp: Exp): TypeExp = when (exp) {
         is Exp.Call -> when (exp.target.name) {
-            "abs" -> { checkOp(INT, exp.args.map { type(it) }); INT }
+            "abs" -> {
+                checkOp(INT, exp.args.map { type(it) }); INT
+            }
             else -> throw IllegalArgumentException(exp.target.name)
         }
         is Exp.UnOp -> when (exp.op) {
-            "-" -> { checkOp(INT,  type(exp.operand)); INT  }
-            "!" -> { checkOp(BOOL, type(exp.operand)); BOOL }
+            "-" -> {
+                checkOp(INT, type(exp.operand)); INT
+            }
+            "!" -> {
+                checkOp(BOOL, type(exp.operand)); BOOL
+            }
             else -> throw IllegalArgumentException(exp.op)
         }
         is Exp.BinOp -> {
             val left = type(exp.left)
             val right = type(exp.right)
             when (exp.op) {
-                "+", "-", "*", "/"   -> { checkOp(INT,  left, right); INT  }
-                ">", ">=", "<", "<=" -> { checkOp(INT,  left, right); BOOL }
-                "||", "&&" ->           { checkOp(BOOL, left, right); BOOL }
+                "+", "-", "*", "/" -> {
+                    checkOp(INT, left, right); INT
+                }
+                ">", ">=", "<", "<=" -> {
+                    checkOp(INT, left, right); BOOL
+                }
+                "||", "&&" -> {
+                    checkOp(BOOL, left, right); BOOL
+                }
                 "==", "!=" -> {
-                    require(compatible(left, right) || compatible(right, left), { "$left <> $right"})
+                    require(compatible(left, right) || compatible(right, left), { "$left <> $right" })
                     BOOL
                 }
                 else -> throw IllegalArgumentException(exp.op)
@@ -84,8 +98,8 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
 
     private fun compatible(t1: TypeExp, t2: TypeExp): Boolean {
         return t1 == t2
-            || join(t1, t2) == t2
-            || join(t1, t2) == t1 && t1 is Range && t2 is Subset && t2.values.size == t1.max.n - t1.min.n
+                || join(t1, t2) == t2
+                || join(t1, t2) == t1 && t1 is Range && t2 is Subset && t2.values.size == t1.max.n - t1.min.n
     }
 
     private fun join(t1: TypeExp, t2: TypeExp): TypeExp = when {

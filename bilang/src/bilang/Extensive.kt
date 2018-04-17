@@ -1,19 +1,21 @@
 package bilang
+
 import bilang.Exp.*
 
 sealed class Tree {
     data class Node(val owner: String, val h: Map<Pair<Var, Var>, Const>,
                     val children: Map<Map<Var, Const>, Tree>) : Tree()
+
     data class Leaf(val payoff: Map<Var, Num>) : Tree()
 }
 
 class Extensive(private val name: String, private val desc: String, private val players: List<String>, private val game: Tree) {
     constructor(name: String, prog: ExpProgram) :
-        this(name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game, mapOf(), mapOf()))
+            this(name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game, mapOf(), mapOf()))
 
     fun toEfg(): String =
-        (listOf("EFG 2 R ${q(name)} ${stringList(players)}", q(desc), "")
-                + ExtensivePrinter().toEfg(game, players)).joinToString("\n")
+            (listOf("EFG 2 R ${q(name)} ${stringList(players)}", q(desc), "")
+                    + ExtensivePrinter().toEfg(game, players)).joinToString("\n")
 
     override fun toString(): String = game.toString()
 
@@ -26,8 +28,8 @@ class TreeMaker(val types: Map<String, TypeExp>) {
                 Kind.JOIN -> fromExp(exp.exp, g + Pair(exp.q.role, Address(maxAddress(g.values) + 1)), h)
                 Kind.YIELD -> {
                     val quit = h.any { (rv, k) -> rv.first == exp.q.role && k == UNDEFINED }
-                    val values = if (quit) listOf() else exp.q.params.map {
-                        d -> Pair(d.name, enumerateValues(d.type))
+                    val values = if (quit) listOf() else exp.q.params.map { d ->
+                        Pair(d.name, enumerateValues(d.type))
                     }.toMap().product().filter { newEnv ->
                         eval(exp.q.where, g, updateHeap(h, exp, g, newEnv)) == Bool(true)
                     }
@@ -58,7 +60,7 @@ class TreeMaker(val types: Map<String, TypeExp>) {
 }
 
 fun findRoles(exp: Ext): List<String> = when (exp) {
-    is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN } .map { it.role.name } + findRoles(exp.exp)
+    is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN }.map { it.role.name } + findRoles(exp.exp)
     is Ext.BindSingle -> (if (exp.q.kind == Kind.JOIN) listOf(exp.q.role.name) else listOf()) + findRoles(exp.exp)
     is Ext.Value -> listOf()
 }
@@ -66,7 +68,7 @@ fun findRoles(exp: Ext): List<String> = when (exp) {
 private fun revealHidden(h: Map<Pair<Var, Var>, Const>, q: Query) =
         h.mapValues { (rv, k) ->
             if (k is Hidden && rv.first == q.role
-                    && q.params.map{it.name.name}.contains(rv.second.name)) k.value else k
+                    && q.params.map { it.name.name }.contains(rv.second.name)) k.value else k
         }
 
 private fun eraseHidden(h: Map<Pair<Var, Var>, Const>, role: Var) =
@@ -74,21 +76,22 @@ private fun eraseHidden(h: Map<Pair<Var, Var>, Const>, role: Var) =
             if (k is Hidden && rv.first != role) Hidden(UNDEFINED) else k
         }
 
-private fun updateHeap(h: Map<Pair<Var, Var>, Const>, exp: Ext.BindSingle, g: Map<Var, Const>, newEnv: Map<Var, Const>) : Map<Pair<Var, Var>, Const> {
+private fun updateHeap(h: Map<Pair<Var, Var>, Const>, exp: Ext.BindSingle, g: Map<Var, Const>, newEnv: Map<Var, Const>): Map<Pair<Var, Var>, Const> {
     val mh = h.toMutableMap()
-    mh.putAll(newEnv.map{ (v, k) -> Pair(Pair(exp.q.role, v), k)})
+    mh.putAll(newEnv.map { (v, k) -> Pair(Pair(exp.q.role, v), k) })
     return mh.toMap()
 }
-private fun hide(v: Const) : Const = when (v) {
+
+private fun hide(v: Const): Const = when (v) {
     UNDEFINED -> UNDEFINED
     else -> Hidden(v)
 }
 
-private fun maxAddress(vs: Iterable<Const>) : Int =
+private fun maxAddress(vs: Iterable<Const>): Int =
         vs.map { (it as? Address)?.n ?: 0 }.max() ?: 0
 
 
-fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Const {
+fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>): Const {
     fun eval(exp: Exp) = eval(exp, g, h)
     return when (exp) {
         is Call -> TODO()
@@ -123,7 +126,7 @@ fun eval(exp: Exp, g: Map<Var, Const>, h: Map<Pair<Var, Var>, Const>) : Const {
             res
         }
         is Var -> g.getValue(exp)
-        is Member -> h.getValue( Pair(exp.target, Var(exp.field)) )
+        is Member -> h.getValue(Pair(exp.target, Var(exp.field)))
         is Cond -> {
             val cond = eval(exp.cond)
             when (cond) {
@@ -152,7 +155,7 @@ class ExtensivePrinter {
             // TODO: remove last assignment
             val infoset: Int = UniqueHash.of(eraseHidden(t.h, Var(t.owner))) // FIX: do we consider current choice???
             val infosetName = ""
-            val actionNamesForInfoset: String = stringList(values.map { env -> env.values.map{valueToName(it)}.joinToString("&") })
+            val actionNamesForInfoset: String = stringList(values.map { env -> env.values.map { valueToName(it) }.joinToString("&") })
             val outcome = 0
             val nameOfOutcome = ""
             val payoffs = 0
