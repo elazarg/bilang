@@ -1,20 +1,36 @@
 package bilang
 
-import java.nio.file.Paths
 
 import org.antlr.v4.runtime.*
 
 import generated.*
-import java.io.File
+import java.nio.file.Paths
 
-fun parse(inputFilename: String): ExpProgram =
-        AstTranslator().visitProgram(BiLangParser(CommonTokenStream(BiLangLexer(CharStreams.fromPath(Paths.get(inputFilename))))).program())
+fun parse(inputFilename: String): ExpProgram {
+    val chars = CharStreams.fromPath(Paths.get(inputFilename))
+    val tokens = CommonTokenStream(BiLangLexer(chars))
+    val ast = BiLangParser(tokens).program()
+    return AstTranslator().visitProgram(ast)
+}
+
+private fun run(name: String) {
+    val inputFilename = "examples/$name.bi"
+    println("Analyzing $inputFilename ...")
+    val program = parse(inputFilename)
+    writeFile("examples/gambit/$name.efg", Extensive(name, program).toEfg())
+    writeFile("examples/scribble/$name.scr", programToScribble(program).prettyPrint())
+    println("Done")
+    println()
+}
+
+private fun writeFile(filename: String, text: String) {
+    print("Writing file $filename... ")
+    Paths.get(filename).toFile().writeText(text)
+    println("Done")
+}
 
 fun main(args: Array<String>) {
-    val name = "MontyHall"
-    val program = parse("examples/$name.bi")
-    println(program)
-    val extensive = Extensive(name, program)
-    println(extensive)
-    File("examples/$name.efg").writeText(extensive.toEfg())
+    run("MontyHall")
+    run("OddsEvens")
+    run("ThreeWayLottery")
 }

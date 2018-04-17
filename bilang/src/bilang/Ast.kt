@@ -63,3 +63,11 @@ sealed class TypeExp : Ast() {
     data class Range(val min: Exp.Num, val max: Exp.Num): TypeExp(), IntClass
     data class Opt(val type: TypeExp): TypeExp()
 }
+fun hide(type: TypeExp) = type as? TypeExp.Hidden ?: TypeExp.Hidden(type)
+
+fun independent(qs: List<Query>, exp: Ext): Ext.Bind {
+    val reveal = Ext.Bind(qs.map { it.copy(kind = Kind.REVEAL, params = it.params.filterNot { it.type is TypeExp.Hidden }) }, exp)
+    return Ext.Bind(qs.map { it.copy(params = it.params.map { p -> p.copy(type = hide(p.type)) }) },
+            if (qs.any {it.params.isNotEmpty()}) reveal else exp)
+}
+

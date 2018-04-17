@@ -9,7 +9,7 @@ sealed class Tree {
 
 class Extensive(private val name: String, private val desc: String, private val players: List<String>, private val game: Tree) {
     constructor(name: String, prog: ExpProgram) :
-        this(name, prog.desc, findPlayers(prog.game), TreeMaker(prog.types).fromExp(prog.game, mapOf(), mapOf()))
+        this(name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game, mapOf(), mapOf()))
 
     fun toEfg(): String =
         (listOf("EFG 2 R ${q(name)} ${stringList(players)}", q(desc), "")
@@ -41,16 +41,10 @@ class TreeMaker(val types: Map<String, TypeExp>) {
                 Kind.MANY -> TODO()
             }
         }
-        is Ext.Bind -> {
-            val e = if (exp.qs.size == 1) {
-                Ext.BindSingle(exp.qs.first(), exp.exp)
-            } else {
-                val reveals = exp.qs.fold(exp.exp) { acc, q -> Ext.BindSingle(q.copy(kind = Kind.REVEAL), acc) }
-                val hides = exp.qs.fold(reveals) { acc, q -> Ext.BindSingle(hide(q), acc) }
-                hides
-            }
-            fromExp(e, g, h)
+        is Ext.Bind -> { // Independence is considered at AST construction step
+            fromExp(exp.qs.fold(exp.exp) { acc, q -> Ext.BindSingle(q, acc) }, g, h)
         }
+
         is Ext.Value -> Tree.Leaf((eval(exp.exp, g, h) as Payoff).ts as Map<Var, Num>)
     }
 
@@ -62,12 +56,10 @@ class TreeMaker(val types: Map<String, TypeExp>) {
         else -> throw AssertionError("cannot enumerate $t")
     }
 }
-private fun hide(q: Query) =
-    q.copy(params = q.params.map { it.copy(type = TypeExp.Hidden(it.type)) }, where = Bool(true))
 
-fun findPlayers(exp: Ext): List<String> = when (exp) {
-    is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN } .map { it.role.name } + findPlayers(exp.exp)
-    is Ext.BindSingle -> (if (exp.q.kind == Kind.JOIN) listOf(exp.q.role.name) else listOf()) + findPlayers(exp.exp)
+fun findRoles(exp: Ext): List<String> = when (exp) {
+    is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN } .map { it.role.name } + findRoles(exp.exp)
+    is Ext.BindSingle -> (if (exp.q.kind == Kind.JOIN) listOf(exp.q.role.name) else listOf()) + findRoles(exp.exp)
     is Ext.Value -> listOf()
 }
 

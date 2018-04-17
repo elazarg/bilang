@@ -14,6 +14,7 @@ ext : query+ ';' ext  # ReceiveExt
     | 'return' exp # ExpExt
     ;
 
+// only sensible combination is independent yield + many
 query : kind=('join'|'yield'|'reveal'|'many') (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
 
 whereClause : ('where' cond=exp)? ;

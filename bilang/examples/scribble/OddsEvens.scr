@@ -1,0 +1,14 @@
+explicit global protocol MyProtocol_null(role Server, role Odd, role Even) {
+    connect Server to Odd;
+    connect Server to Even;
+    Broadcast() from Server to Even;
+    Broadcast() from Server to Odd;
+    Hidden_c(hidden_bool) from Odd to Server;
+    Hidden_c(hidden_bool) from Even to Server;
+    Broadcast() from Server to Even;
+    Broadcast() from Server to Odd;
+    Reveal_c(bool) from Odd to Server;
+    Reveal_c(bool) from Even to Server;
+    Broadcast_c(bool) from Server to Even;
+    Broadcast_c(bool) from Server to Odd;
+}

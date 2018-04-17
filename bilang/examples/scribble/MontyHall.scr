@@ -1,0 +1,16 @@
+explicit global protocol MyProtocol_null(role Server, role Host, role Guest) {
+    connect Server to Host;
+    connect Server to Guest;
+    Broadcast() from Server to Guest;
+    Broadcast() from Server to Host;
+    Hidden_car(hidden_door) from Host to Server;
+    Broadcast() from Server to Guest;
+    Public_d(door) from Guest to Server;
+    Broadcast_d(door) from Server to Host;
+    Public_goat(door) from Host to Server;
+    Broadcast_goat(door) from Server to Guest;
+    Public_switch(bool) from Guest to Server;
+    Broadcast_switch(bool) from Server to Host;
+    Reveal_car(door) from Host to Server;
+    Broadcast_car(door) from Server to Guest;
+}

@@ -1,0 +1,20 @@
+explicit global protocol MyProtocol_null(role Server, role Issuer, role Alice, role Bob) {
+    connect Server to Issuer;
+    Broadcast() from Server to Alice, Bob;
+    connect Server to Alice;
+    Broadcast() from Server to Issuer, Bob;
+    connect Server to Bob;
+    Broadcast() from Server to Issuer, Alice;
+    Hidden_c(hidden_choice) from Issuer to Server;
+    Hidden_c(hidden_choice) from Alice to Server;
+    Hidden_c(hidden_choice) from Bob to Server;
+    Broadcast() from Server to Alice, Bob;
+    Broadcast() from Server to Issuer, Bob;
+    Broadcast() from Server to Issuer, Alice;
+    Reveal_c(choice) from Issuer to Server;
+    Reveal_c(choice) from Alice to Server;
+    Reveal_c(choice) from Bob to Server;
+    Broadcast_c(choice) from Server to Alice, Bob;
+    Broadcast_c(choice) from Server to Issuer, Bob;
+    Broadcast_c(choice) from Server to Issuer, Alice;
+}

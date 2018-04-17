@@ -1,5 +1,6 @@
-join A;
-join B;
-yield A(c1: bool) B(c2: bool);
-var Winner : role = (c1 != c2) ? A : B;
-transfer 10 from Even to Odd;
+join A();
+join B();
+yield A(c: bool) yield B(c: bool);
+return (A.c != B.c)
+    ? { A -> 10; B -> -10 }
+    : { A -> 10; B -> -10 }

@@ -49,8 +49,12 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Ext.Bind visitReceiveExt(ReceiveExtContext ctx) {
-        return new Ext.Bind(list(ctx.query(), this::visitQuery), ext(ctx.ext()));
+    public Ext visitReceiveExt(ReceiveExtContext ctx) {
+        Ext ext = ext(ctx.ext());
+        if (ctx.query().size() == 1)
+            return new Ext.BindSingle(visitQuery(ctx.query().get(0)), ext);
+        else
+            return bilang.AstKt.independent(list(ctx.query(), this::visitQuery), ext);
     }
 
     @Override
