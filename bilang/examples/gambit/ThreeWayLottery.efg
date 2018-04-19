@@ -1,5 +1,5 @@
 EFG 2 R "ThreeWayLottery" { "Issuer" "Alice" "Bob" }
-""
+"ThreeWayLottery"
 
 p "" 3 40 "" { "Hidden(1)" "Hidden(2)" "Hidden(3)" "None" } 0
 p "" 2 41 "" { "Hidden(1)" "Hidden(2)" "Hidden(3)" "None" } 0

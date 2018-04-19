@@ -16,9 +16,10 @@ fun parse(inputFilename: String): ExpProgram {
 private fun run(name: String) {
     val inputFilename = "examples/$name.bi"
     println("Analyzing $inputFilename ...")
-    val program = parse(inputFilename)
+    val program = parse(inputFilename).copy(desc=name)
     writeFile("examples/gambit/$name.efg", Extensive(name, program).toEfg())
     writeFile("examples/scribble/$name.scr", programToScribble(program).prettyPrint())
+    writeFile("examples/solidity/$name.sol", genGame(program))
     println("Done")
     println()
 }

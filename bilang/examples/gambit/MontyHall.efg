@@ -1,5 +1,5 @@
 EFG 2 R "MontyHall" { "Host" "Guest" }
-""
+"MontyHall"
 
 p "" 1 1 "" { "Hidden(0)" "Hidden(1)" "Hidden(2)" "None" } 0
 p "" 2 2 "" { "0" "1" "2" "None" } 0
