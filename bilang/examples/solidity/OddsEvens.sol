@@ -1,9 +1,9 @@
-
 pragma solidity ^0.4.22;
 contract OddsEvens {
     // roles
     enum Role { None, Odd, Even }
     mapping(address => Role) role;
+    mapping(address => uint) balanceOf;
     modifier by(Role r) {
         require(role[msg.sender] == r);
         _;
@@ -14,24 +14,27 @@ contract OddsEvens {
     uint __lastStep;
     modifier at_step(int _step) {
         require(step == _step);
-        require(block.timestamp == __lastStep + STEP_TIME);
+        require(block.timestamp < __lastStep + STEP_TIME);
         _;
-        __lastStep = block.timestamp;
     }
     // step 0
-    function join_Odd() at_step(0) public {
+    function join_Odd() at_step(0) public payable {
         require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Odd;
+        balanceOf[msg.sender] = msg.value;
         require(true);
     }
-    function join_Even() at_step(0) public {
+    function join_Even() at_step(0) public payable {
         require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Even;
+        balanceOf[msg.sender] = msg.value;
         require(true);
     }
     event Broadcast0(); // TODO: add params
-    function __nextStep0() public {
+    function __nextStep0() at_step(0) public {
         emit Broadcast0();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 0
     // step 1
@@ -52,8 +55,10 @@ contract OddsEvens {
         Even_hidden_c_done = true;
     }
     event Broadcast1(); // TODO: add params
-    function __nextStep1() public {
+    function __nextStep1() at_step(1) public {
         emit Broadcast1();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 1
     // step 2
@@ -76,8 +81,10 @@ contract OddsEvens {
         Even_c_done = true;
     }
     event Broadcast2(); // TODO: add params
-    function __nextStep2() public {
+    function __nextStep2() at_step(2) public {
         emit Broadcast2();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 2
 }

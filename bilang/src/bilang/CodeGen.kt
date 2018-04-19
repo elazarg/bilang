@@ -1,67 +1,5 @@
 package bilang
 
-fun join(role: String, decls: String, declsDone: String, params: String, where: String, assignments: String, inits: String, step: Int): String {
-    return """
-    $decls
-    $declsDone
-
-    function join_$role($params) at_step($step) public {
-        require(role[msg.sender] == Role.None);
-        role[msg.sender] = Role.$role;
-
-        require($where);
-
-        $assignments
-
-        $inits
-    }
-    """
-}
-
-fun yield(role: String, decls: String, declsDone: String, params: String, where: String, assignments: String, inits: String, step: Int): String {
-    return """
-    $decls
-    $declsDone
-
-    function yield_$role$step($params) at_step($step) public {
-        require(role[msg.sender] == Role.$role);
-
-        require($where);
-
-        $assignments
-
-        $inits
-    }
-    """
-}
-
-fun reveal(q: Query, step: Int) : String {
-    val vars = q.params.map { Pair(typeOf(it.type), varname(it)) }
-    val role = q.role.name
-    val params = vars.map { (type, name) -> "$type _$name" }.joinToString(", ")
-    val decls = vars.map { (type, name) -> "$type ${role}_$name;" }.joinToString("\n    ")
-    val declsDone = vars.map { (type, name) -> "bool ${role}_${name}_done;" }.joinToString("\n    ")
-    val reveals = vars.map { (_, name) -> "require(keccak256(_$name, salt) == bytes32(${role}_hidden_$name));" }.joinToString(";\n    ")
-    val where = exp(q.where)
-    val assignments = vars.map { (_, name) -> "${role}_$name = _$name;" }.joinToString("\n    ")
-    val inits = vars.map { (_, name) -> "${role}_${name}_done = true;" }.joinToString("\n    ")
-    return """
-    $decls
-    $declsDone
-
-    function reveal_$role$step($params, uint salt) at_step($step) public {
-        require(role[msg.sender] == Role.$role);
-
-        $reveals
-
-        require($where);
-
-        $assignments
-
-        $inits
-    }
-    """
-}
 
 fun makeQuery(q: Query, step: Int): String {
     val vars = q.params.map { Pair(typeOf(it.type), varname(it)) }
@@ -70,14 +8,61 @@ fun makeQuery(q: Query, step: Int): String {
     val decls = vars.map { (type, name) -> "$type ${role}_$name;" }.joinToString("    \n")
     val declsDone = vars.map { (type, name) -> "bool ${role}_${name}_done;" }.joinToString("\n    ")
     val where = exp(q.where)
+    val typeWheres = q.params.map { whereof(varname(it), it.type) }.joinToString("\n    ")
     val assignments = vars.map { (_, name) -> "${role}_$name = _$name;" }.joinToString("\n    ")
     val inits = vars.map { (_, name) -> "${role}_${name}_done = true;" }.joinToString("\n    ")
     return when (q.kind) {
-        Kind.JOIN -> join(role, decls, declsDone, params, where, assignments, inits, step)
-        Kind.YIELD -> yield(role, decls, declsDone, params, where, assignments, inits, step)
-        Kind.REVEAL -> reveal(q, step)
+        Kind.JOIN -> {
+            """
+            |    $decls
+            |    $declsDone
+            |
+            |    function join_$role($params) at_step($step) public payable {
+            |        require(role[msg.sender] == Role.None);
+            |        role[msg.sender] = Role.$role;
+            |        balanceOf[msg.sender] = msg.value;
+            |        $typeWheres
+            |        require($where);
+            |        $assignments
+            |        $inits
+            |    }
+            |"""
+        }
+
+        Kind.YIELD -> {
+            """
+            |    $decls
+            |    $declsDone
+            |
+            |    function yield_$role$step($params) at_step($step) public {
+            |        require(role[msg.sender] == Role.$role);
+            |        $typeWheres
+            |        require($where);
+            |        $assignments
+            |        $inits
+            |    }
+            |"""
+        }
+
+        Kind.REVEAL -> {
+            val reveals = vars.map { (_, name) -> "require(keccak256(_$name, salt) == bytes32(${role}_hidden_$name));" }.joinToString(";\n    ")
+            """
+            |    $decls
+            |    $declsDone
+            |
+            |    function reveal_$role$step($params, uint salt) at_step($step) public {
+            |        require(role[msg.sender] == Role.$role);
+            |        $typeWheres
+            |        $reveals
+            |        require($where);
+            |        $assignments
+            |        $inits
+            |    }
+            |"""
+        }
+
         Kind.MANY -> TODO()
-    }
+    }.trimMargin()
 }
 
 private fun varname(it: VarDec) =
@@ -89,11 +74,13 @@ fun makeStep(qs: List<Query>, step: Int): String {
     return """
     // step $step
 
-    $items
+$items
 
     event Broadcast$step(); // TODO: add params
-    function __nextStep$step() public {
+    function __nextStep$step() at_step($step) public {
         emit Broadcast$step();
+        step += 1;
+        __lastStep = block.timestamp;
     }
 
     // end $step
@@ -139,16 +126,22 @@ private fun typeOf(t: TypeExp): String = when (t) {
     is TypeExp.Opt -> typeOf(t.type)
 }
 
+private fun whereof(v: String, t: TypeExp): String = when (t) {
+    is TypeExp.Subset -> "require(${t.values.map { "$v == $it" }.joinToString(" || ")})"
+    is TypeExp.Range -> "require(${t.min} <= $v && $v <= ${t.max});"
+    else -> ""
+}
+
 fun genGame(p: ExpProgram): String {
     val roles = findRoles(p.game).joinToString(", ")
-    return """
-pragma solidity ^0.4.22;
+    return """pragma solidity ^0.4.22;
 
 contract ${p.desc} {
 
     // roles
     enum Role { None, $roles }
     mapping(address => Role) role;
+    mapping(address => uint) balanceOf;
 
     modifier by(Role r) {
         require(role[msg.sender] == r);
@@ -162,9 +155,8 @@ contract ${p.desc} {
 
     modifier at_step(int _step) {
         require(step == _step);
-        require(block.timestamp == __lastStep + STEP_TIME);
+        require(block.timestamp < __lastStep + STEP_TIME);
         _;
-        __lastStep = block.timestamp;
     }
 ${genExt(p.game, 0)}
 

@@ -1,9 +1,9 @@
-
 pragma solidity ^0.4.22;
 contract MontyHall {
     // roles
     enum Role { None, Host, Guest }
     mapping(address => Role) role;
+    mapping(address => uint) balanceOf;
     modifier by(Role r) {
         require(role[msg.sender] == r);
         _;
@@ -14,24 +14,27 @@ contract MontyHall {
     uint __lastStep;
     modifier at_step(int _step) {
         require(step == _step);
-        require(block.timestamp == __lastStep + STEP_TIME);
+        require(block.timestamp < __lastStep + STEP_TIME);
         _;
-        __lastStep = block.timestamp;
     }
     // step 0
-    function join_Host() at_step(0) public {
+    function join_Host() at_step(0) public payable {
         require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Host;
+        balanceOf[msg.sender] = msg.value;
         require(true);
     }
-    function join_Guest() at_step(0) public {
+    function join_Guest() at_step(0) public payable {
         require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Guest;
+        balanceOf[msg.sender] = msg.value;
         require(true);
     }
     event Broadcast0(); // TODO: add params
-    function __nextStep0() public {
+    function __nextStep0() at_step(0) public {
         emit Broadcast0();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 0
     // step 1
@@ -44,8 +47,10 @@ contract MontyHall {
         Host_hidden_car_done = true;
     }
     event Broadcast1(); // TODO: add params
-    function __nextStep1() public {
+    function __nextStep1() at_step(1) public {
         emit Broadcast1();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 1
     // step 2
@@ -58,8 +63,10 @@ contract MontyHall {
         Guest_d_done = true;
     }
     event Broadcast2(); // TODO: add params
-    function __nextStep2() public {
+    function __nextStep2() at_step(2) public {
         emit Broadcast2();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 2
     // step 3
@@ -72,8 +79,10 @@ contract MontyHall {
         Host_goat_done = true;
     }
     event Broadcast3(); // TODO: add params
-    function __nextStep3() public {
+    function __nextStep3() at_step(3) public {
         emit Broadcast3();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 3
     // step 4
@@ -86,8 +95,10 @@ contract MontyHall {
         Guest_switch_done = true;
     }
     event Broadcast4(); // TODO: add params
-    function __nextStep4() public {
+    function __nextStep4() at_step(4) public {
         emit Broadcast4();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 4
     // step 5
@@ -101,8 +112,10 @@ contract MontyHall {
         Host_car_done = true;
     }
     event Broadcast5(); // TODO: add params
-    function __nextStep5() public {
+    function __nextStep5() at_step(5) public {
         emit Broadcast5();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 5
 }

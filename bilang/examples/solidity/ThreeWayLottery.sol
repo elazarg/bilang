@@ -1,9 +1,9 @@
-
 pragma solidity ^0.4.22;
 contract ThreeWayLottery {
     // roles
     enum Role { None, Issuer, Alice, Bob }
     mapping(address => Role) role;
+    mapping(address => uint) balanceOf;
     modifier by(Role r) {
         require(role[msg.sender] == r);
         _;
@@ -14,41 +14,49 @@ contract ThreeWayLottery {
     uint __lastStep;
     modifier at_step(int _step) {
         require(step == _step);
-        require(block.timestamp == __lastStep + STEP_TIME);
+        require(block.timestamp < __lastStep + STEP_TIME);
         _;
-        __lastStep = block.timestamp;
     }
     // step 0
-    function join_Issuer() at_step(0) public {
+    function join_Issuer() at_step(0) public payable {
         require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Issuer;
+        balanceOf[msg.sender] = msg.value;
         require(true);
     }
     event Broadcast0(); // TODO: add params
-    function __nextStep0() public {
+    function __nextStep0() at_step(0) public {
         emit Broadcast0();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 0
     // step 1
-    function join_Alice() at_step(1) public {
+    function join_Alice() at_step(1) public payable {
         require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Alice;
+        balanceOf[msg.sender] = msg.value;
         require(true);
     }
     event Broadcast1(); // TODO: add params
-    function __nextStep1() public {
+    function __nextStep1() at_step(1) public {
         emit Broadcast1();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 1
     // step 2
-    function join_Bob() at_step(2) public {
+    function join_Bob() at_step(2) public payable {
         require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Bob;
+        balanceOf[msg.sender] = msg.value;
         require(true);
     }
     event Broadcast2(); // TODO: add params
-    function __nextStep2() public {
+    function __nextStep2() at_step(2) public {
         emit Broadcast2();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 2
     // step 3
@@ -77,8 +85,10 @@ contract ThreeWayLottery {
         Bob_hidden_c_done = true;
     }
     event Broadcast3(); // TODO: add params
-    function __nextStep3() public {
+    function __nextStep3() at_step(3) public {
         emit Broadcast3();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 3
     // step 4
@@ -110,8 +120,10 @@ contract ThreeWayLottery {
         Bob_c_done = true;
     }
     event Broadcast4(); // TODO: add params
-    function __nextStep4() public {
+    function __nextStep4() at_step(4) public {
         emit Broadcast4();
+        step += 1;
+        __lastStep = block.timestamp;
     }
     // end 4
 }
