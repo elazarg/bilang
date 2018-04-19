@@ -1,7 +1,8 @@
 
+pragma solidity ^0.4.22;
 contract MontyHall {
     // roles
-    enum Role { Host, Guest }
+    enum Role { None, Host, Guest }
     mapping(address => Role) role;
     modifier by(Role r) {
         require(role[msg.sender] == r);
@@ -13,88 +14,95 @@ contract MontyHall {
     uint __lastStep;
     modifier at_step(int _step) {
         require(step == _step);
+        require(block.timestamp == __lastStep + STEP_TIME);
         _;
+        __lastStep = block.timestamp;
     }
-    function join_Host() at_step(0) {
-        require(role[msg.sender] == address(0x0));
+    // step 0
+    function join_Host() at_step(0) public {
+        require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Host;
         require(true);
     }
-    function join_Guest() at_step(0) {
-        require(role[msg.sender] == address(0x0));
+    function join_Guest() at_step(0) public {
+        require(role[msg.sender] == Role.None);
         role[msg.sender] = Role.Guest;
         require(true);
     }
-    event Broadcast0();
-    function __nextStep0() {
-        require(block.timestamp == __lastStep + STEP_TIME);
-        Broadcast0();
-        __lastStep = block.timestamp;
+    event Broadcast0(); // TODO: add params
+    function __nextStep0() public {
+        emit Broadcast0();
     }
-    uint car;
-    function yield_Host1(uint _car) at_step(1) {
+    // end 0
+    // step 1
+    uint Host_hidden_car;
+    bool Host_hidden_car_done;
+    function yield_Host1(uint _hidden_car) at_step(1) public {
         require(role[msg.sender] == Role.Host);
         require(true);
-        Host_car = _car;
-        Host_car_done = true;
+        Host_hidden_car = _hidden_car;
+        Host_hidden_car_done = true;
     }
-    event Broadcast1();
-    function __nextStep1() {
-        require(block.timestamp == __lastStep + STEP_TIME);
-        Broadcast1();
-        __lastStep = block.timestamp;
+    event Broadcast1(); // TODO: add params
+    function __nextStep1() public {
+        emit Broadcast1();
     }
-    int d;
-    function yield_Guest2(int _d) at_step(2) {
+    // end 1
+    // step 2
+    int Guest_d;
+    bool Guest_d_done;
+    function yield_Guest2(int _d) at_step(2) public {
         require(role[msg.sender] == Role.Guest);
         require(true);
         Guest_d = _d;
         Guest_d_done = true;
     }
-    event Broadcast2();
-    function __nextStep2() {
-        require(block.timestamp == __lastStep + STEP_TIME);
-        Broadcast2();
-        __lastStep = block.timestamp;
+    event Broadcast2(); // TODO: add params
+    function __nextStep2() public {
+        emit Broadcast2();
     }
-    int goat;
-    function yield_Host3(int _goat) at_step(3) {
+    // end 2
+    // step 3
+    int Host_goat;
+    bool Host_goat_done;
+    function yield_Host3(int _goat) at_step(3) public {
         require(role[msg.sender] == Role.Host);
         require((Host_goat != Guest_d));
         Host_goat = _goat;
         Host_goat_done = true;
     }
-    event Broadcast3();
-    function __nextStep3() {
-        require(block.timestamp == __lastStep + STEP_TIME);
-        Broadcast3();
-        __lastStep = block.timestamp;
+    event Broadcast3(); // TODO: add params
+    function __nextStep3() public {
+        emit Broadcast3();
     }
-    bool switch;
-    function yield_Guest4(bool _switch) at_step(4) {
+    // end 3
+    // step 4
+    bool Guest_switch;
+    bool Guest_switch_done;
+    function yield_Guest4(bool _switch) at_step(4) public {
         require(role[msg.sender] == Role.Guest);
         require(true);
         Guest_switch = _switch;
         Guest_switch_done = true;
     }
-    event Broadcast4();
-    function __nextStep4() {
-        require(block.timestamp == __lastStep + STEP_TIME);
-        Broadcast4();
-        __lastStep = block.timestamp;
+    event Broadcast4(); // TODO: add params
+    function __nextStep4() public {
+        emit Broadcast4();
     }
+    // end 4
+    // step 5
     int Host_car;
-    function reveal_Host5(int _car, uint salt) at_step(5) {
+    bool Host_car_done;
+    function reveal_Host5(int _car, uint salt) at_step(5) public {
         require(role[msg.sender] == Role.Host);
-        require(sha3(_car, salt) == bytes32(hidden_car));
+        require(keccak256(_car, salt) == bytes32(Host_hidden_car));
         require((Host_goat != Host_car));
         Host_car = _car;
-        car_done = true;
+        Host_car_done = true;
     }
-    event Broadcast5();
-    function __nextStep5() {
-        require(block.timestamp == __lastStep + STEP_TIME);
-        Broadcast5();
-        __lastStep = block.timestamp;
+    event Broadcast5(); // TODO: add params
+    function __nextStep5() public {
+        emit Broadcast5();
     }
+    // end 5
 }
