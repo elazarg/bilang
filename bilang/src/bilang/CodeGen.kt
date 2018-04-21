@@ -204,7 +204,7 @@ private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "int"
     TypeExp.BOOL -> "bool"
     TypeExp.ROLE -> "Role"
-    TypeExp.ROLESET -> "mappping(address => bool)"
+    TypeExp.ROLESET -> "mapping(address => bool)"
     TypeExp.ADDRESS -> "address"
     is TypeExp.Hidden -> "uint"
     is TypeExp.TypeId -> "int" // FIX: either inline or declare types

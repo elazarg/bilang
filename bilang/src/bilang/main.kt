@@ -34,5 +34,6 @@ fun main(args: Array<String>) {
     run("Puzzle")
     run("MontyHall")
     run("OddsEvens")
+    run("OddsEvensShort")
     run("ThreeWayLottery")
 }

@@ -26,7 +26,7 @@ class TreeMaker(val types: Map<String, TypeExp>) {
         is Ext.BindSingle -> {
             fun subtree(e: Env) = fromExp(exp.ext, e)
             when (exp.q.kind) {
-                Kind.JOIN -> subtree(env.addRole(exp.q.role))
+                Kind.JOIN -> subtree(env.addRole(exp.q.role)) // TODO: Handle joins with parameters and concurrent joins
                 Kind.YIELD -> {
                     fun combineValues(f: (VarDec) -> List<Const>) = exp.q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
 
