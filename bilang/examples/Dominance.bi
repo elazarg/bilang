@@ -1,6 +1,6 @@
 join A();
 join B();
-yield A(c: bool) yield B(c: bool);
+yield A(c: bool) B(c: bool);
 return (A.c != B.c)
     ? { A -> 10; B -> -10 }
     : { A -> 10; B -> -10 }

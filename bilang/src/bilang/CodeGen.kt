@@ -33,8 +33,8 @@ ${genExt(p.game, 0)}
 }
 
 
-fun makeStep(qs: List<Query>, step: Int): String {
-    val items = qs.map { makeQuery(it, step) }.join("\n")
+fun makeStep(kind: Kind, qs: List<Query>, step: Int): String {
+    val items = qs.map { makeQuery(kind, it, step) }.join("\n")
     return """
     // step $step
 
@@ -52,7 +52,7 @@ $items
     """
 }
 
-fun makeQuery(q: Query, step: Int): String {
+fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val role = q.role.name
     val where = exp(q.where)
 
@@ -68,7 +68,7 @@ fun makeQuery(q: Query, step: Int): String {
     val args = names.map{ "_$it" }.join(", ")
     val doneRole = "done_${role}_$step"
 
-    return when (q.kind) {
+    return when (kind) {
         Kind.JOIN -> {
             val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
             val reveals = (vars.map { (type, name) -> "_$name" } + "salt").join(", ")
@@ -179,8 +179,8 @@ fun exp(e: Exp): String = when (e) {
 }
 
 fun genExt(ext: Ext, step: Int): String = when (ext) {
-    is Ext.Bind -> makeStep(ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
-    is Ext.BindSingle -> makeStep(listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
+    is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
+    is Ext.BindSingle -> makeStep(ext.kind, listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
     is Ext.Value -> "" // genPayoff(ext.exp, step)
 }
 

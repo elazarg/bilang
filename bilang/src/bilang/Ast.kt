@@ -7,10 +7,11 @@ data class ExpProgram(val desc: String, val types: Map<String, TypeExp>, val gam
 interface Step
 
 sealed class Ext : Ast() {
-    data class Bind(val qs: List<Query>, val ext: Ext) : Ext(), Step
-    data class BindSingle(val q: Query, val ext: Ext) : Ext(), Step
+    data class Bind(val kind: Kind, val qs: List<Query>, val ext: Ext) : Ext(), Step
+    data class BindSingle(val kind: Kind, val q: Query, val ext: Ext) : Ext(), Step
     data class Value(val exp: Exp) : Ext()
 }
+data class Query(val role: Exp.Var, val params: List<VarDec> = listOf(), val where: Exp = Exp.Bool(true)) : Ast()
 
 sealed class Exp : Ast() {
     data class Call(val target: Var, val args: List<Exp>) : Exp()
@@ -46,7 +47,6 @@ sealed class Exp : Ast() {
 }
 
 data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()
-data class Query(val kind: Kind, val role: Exp.Var, val params: List<VarDec> = listOf(), val where: Exp = Exp.Bool(true)) : Ast()
 enum class Kind { JOIN, YIELD, REVEAL, MANY }
 
 sealed class TypeExp : Ast() {
@@ -65,9 +65,8 @@ sealed class TypeExp : Ast() {
 
 fun hide(type: TypeExp) = type as? TypeExp.Hidden ?: TypeExp.Hidden(type)
 
-fun independent(qs: List<Query>, exp: Ext): Ext.Bind {
-    val reveal = Ext.Bind(qs.map { it.copy(kind = Kind.REVEAL, params = it.params.filterNot { it.type is TypeExp.Hidden }) }, exp)
-    return Ext.Bind(qs.map { it.copy(params = it.params.map { p -> p.copy(type = hide(p.type)) }) },
+fun independent(kind: Kind, qs: List<Query>, exp: Ext): Ext.Bind {
+    val reveal = Ext.Bind(Kind.REVEAL, qs.map { it.copy(params = it.params.filterNot { it.type is TypeExp.Hidden }) }, exp)
+    return Ext.Bind(kind, qs.map { it.copy(params = it.params.map { p -> p.copy(type = hide(p.type)) }) },
             if (qs.any { it.params.isNotEmpty() }) reveal else exp)
 }
-

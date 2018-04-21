@@ -9,15 +9,13 @@ typeExp
     | name=ID                             # TypeId
     ;
 
-ext : query+ ';' ext  # ReceiveExt
+// only sensible combination is independent yield + many
+ext : kind=('join'|'yield'|'reveal'|'many') query+ ';' ext  # ReceiveExt
     | 'let' 'fold' varDec '=' query 'from' from=ID exp ';' ext  # FoldExt
     | 'return' exp # ExpExt
     ;
 
-// only sensible combination is independent yield + many
-query : kind=('join'|'yield'|'reveal'|'many') (role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')?) whereClause ;
-
-whereClause : ('where' cond=exp)? ;
+query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('where' cond=exp)? ;
 
 exp
     : '(' exp ')'                             # ParenExp

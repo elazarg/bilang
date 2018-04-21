@@ -3,7 +3,7 @@ type choice = {1, 2, 3}
 join Issuer();
 join Alice();
 join Bob();
-yield Issuer(c: choice) yield Alice(c: choice) yield Bob(c: choice);
+yield Issuer(c: choice) Alice(c: choice) Bob(c: choice);
 
 return (Alice.c  == null || Bob.c == null)
             ? { Alice -> -10; Bob -> -10; Issuer ->  20 }

@@ -51,10 +51,20 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     @Override
     public Ext visitReceiveExt(ReceiveExtContext ctx) {
         Ext ext = ext(ctx.ext());
-        if (ctx.query().size() == 1)
-            return new Ext.BindSingle(visitQuery(ctx.query().get(0)), ext);
+        Kind kind = toKind(ctx.kind);
+        if (ctx.query().size() == 1) {
+            return new Ext.BindSingle(kind, query(ctx.query().get(0)), ext);
+        }
         else
-            return bilang.AstKt.independent(list(ctx.query(), this::visitQuery), ext);
+            return bilang.AstKt.independent(kind, list(ctx.query(), this::query), ext);
+    }
+
+    private Query query(QueryContext ctx) {
+        return new Query(var(ctx.role), list(ctx.decls, this::visitVarDec), where(ctx.cond));
+    }
+
+    private Exp where(ExpContext cond) {
+        return cond != null ? exp(cond) : new Exp.Bool(true);
     }
 
     @Override
@@ -168,15 +178,6 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return iterable.stream().map(f).collect(toList());
     }
 
-    @Override
-    public Exp visitWhereClause(WhereClauseContext ctx) {
-        return ctx.cond != null ? exp(ctx.cond) : new Exp.Bool(true);
-    }
-
-    @Override
-    public Query visitQuery(QueryContext ctx) {
-        return new Query(toKind(ctx.kind), var(ctx.role), list(ctx.decls, this::visitVarDec), this.visitWhereClause(ctx.whereClause()));
-    }
 
     @NotNull
     private Kind toKind(Token kind) {

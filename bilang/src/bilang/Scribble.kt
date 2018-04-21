@@ -82,7 +82,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
             )
         }
 
-        (when (ext.q.kind) {
+        (when (ext.kind) {
             Kind.JOIN -> listOf(Sast.Action.Connect(role)) + sendToServer()
             Kind.YIELD -> sendToServer()
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
@@ -92,7 +92,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
     }
 
     is Ext.Bind -> ext.qs.flatMap { query ->
-        gameToScribble(Ext.BindSingle(query, Ext.Value(Exp.UNDEFINED)), roles)
+        gameToScribble(Ext.BindSingle(ext.kind, query, Ext.Value(Exp.UNDEFINED)), roles)
     }.sortedBy { rankOrder(it) } + gameToScribble(ext.ext, roles)
 
     is Ext.Value -> if (ext.exp == Exp.UNDEFINED) listOf()
