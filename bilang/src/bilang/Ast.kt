@@ -55,7 +55,6 @@ sealed class TypeExp : Ast() {
     object ROLE : TypeExp()
     object ROLESET : TypeExp()
     object ADDRESS : TypeExp()
-    object UNIT : TypeExp()
     data class Hidden(val type: TypeExp) : TypeExp()
     data class TypeId(val name: String) : TypeExp()
     interface IntClass

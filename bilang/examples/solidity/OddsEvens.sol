@@ -18,26 +18,63 @@ contract OddsEvens {
         _;
     }
     // step 0
-    bool done_Odd_0;
-    function join_Odd() at_step(0) public payable {
-        require(role[msg.sender] == Role.None);
-        require(!done_Odd_0);
+    mapping(address => bytes32) commitsOdd;
+    mapping(address => uint) timesOdd;
+    bool halfStepOdd;
+    function join_commit_Odd(bytes32 c) at_step(0) public {
+        require(commitsOdd[msg.sender] == bytes32(0));
+        require(!halfStepOdd);
+        commitsOdd[msg.sender] = c;
+        timesOdd[msg.sender] = block.timestamp;
+    }
+    event BroadcastHalfOdd();
+    function __nextHalfStepOdd() at_step(0) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(halfStepOdd == false);
+        emit BroadcastHalfOdd();
+        halfStepOdd = true;
+        __lastStep = block.timestamp;
+    }
+    address chosenRoleOdd;
+    function join_Odd(uint salt) at_step(0) public payable {
+        require(keccak256(salt) == bytes32(commitsOdd[msg.sender]));
+        if (chosenRoleOdd != address(0x0))
+             require(timesOdd[msg.sender] < timesOdd[chosenRoleOdd]);
         role[msg.sender] = Role.Odd;
         balanceOf[msg.sender] = msg.value;
+        chosenRoleOdd = msg.sender;
         require(true);
-        done_Odd_0 = true;
     }
-    bool done_Even_0;
-    function join_Even() at_step(0) public payable {
-        require(role[msg.sender] == Role.None);
-        require(!done_Even_0);
+    mapping(address => bytes32) commitsEven;
+    mapping(address => uint) timesEven;
+    bool halfStepEven;
+    function join_commit_Even(bytes32 c) at_step(0) public {
+        require(commitsEven[msg.sender] == bytes32(0));
+        require(!halfStepEven);
+        commitsEven[msg.sender] = c;
+        timesEven[msg.sender] = block.timestamp;
+    }
+    event BroadcastHalfEven();
+    function __nextHalfStepEven() at_step(0) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(halfStepEven == false);
+        emit BroadcastHalfEven();
+        halfStepEven = true;
+        __lastStep = block.timestamp;
+    }
+    address chosenRoleEven;
+    function join_Even(uint salt) at_step(0) public payable {
+        require(keccak256(salt) == bytes32(commitsEven[msg.sender]));
+        if (chosenRoleEven != address(0x0))
+             require(timesEven[msg.sender] < timesEven[chosenRoleEven]);
         role[msg.sender] = Role.Even;
         balanceOf[msg.sender] = msg.value;
+        chosenRoleEven = msg.sender;
         require(true);
-        done_Even_0 = true;
     }
     event Broadcast0(); // TODO: add params
     function __nextStep0() at_step(0) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
         emit Broadcast0();
         step += 1;
         __lastStep = block.timestamp;
@@ -68,6 +105,7 @@ contract OddsEvens {
     }
     event Broadcast1(); // TODO: add params
     function __nextStep1() at_step(1) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
         emit Broadcast1();
         step += 1;
         __lastStep = block.timestamp;
@@ -100,6 +138,7 @@ contract OddsEvens {
     }
     event Broadcast2(); // TODO: add params
     function __nextStep2() at_step(2) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
         emit Broadcast2();
         step += 1;
         __lastStep = block.timestamp;

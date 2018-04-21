@@ -116,7 +116,6 @@ private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.ROLE -> "role"
     TypeExp.ROLESET -> "roleset"
     TypeExp.ADDRESS -> "address"
-    TypeExp.UNIT -> "unit"
     is TypeExp.Hidden -> "hidden_${typeOf(t.type)}"
     is TypeExp.TypeId -> t.name
     is TypeExp.Subset -> "subset_${t.values.joinToString("_")}"

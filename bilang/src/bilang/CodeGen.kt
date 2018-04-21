@@ -42,6 +42,7 @@ $items
 
     event Broadcast$step(); // TODO: add params
     function __nextStep$step() at_step($step) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
         emit Broadcast$step();
         step += 1;
         __lastStep = block.timestamp;
@@ -55,34 +56,58 @@ fun makeQuery(q: Query, step: Int): String {
     val role = q.role.name
     val where = exp(q.where)
 
-    val typeWheres = q.params.map { whereof(varname(it), it.type) }.lines()
+    val typeWheres = q.params.map { whereof(varname(it), it.type) }.statements()
     val vars = q.params.map { Pair(typeOf(it.type), varname(it)) }
     val params = vars.map { (type, name) -> "$type _$name" }.join(", ")
-    val decls = vars.map { (type, name) -> "$type ${role}_$name;" }.lines()
+    val decls = vars.map { (type, name) -> "$type ${role}_$name;" }.declarations()
 
     val names = vars.map { (_, name) -> name }
-    val declsDone = names.map { "bool ${role}_${it}_done;" }.lines()
-    val assignments = names.map { "${role}_$it = _$it;" }.lines()
-    val inits = names.map { "${role}_${it}_done = true;" }.lines()
+    val declsDone = names.map { "bool ${role}_${it}_done;" }.declarations()
+    val assignments = names.map { "${role}_$it = _$it;" }.statements()
+    val inits = names.map { "${role}_${it}_done = true;" }.statements()
+    val args = names.map{ "_$it" }.join(", ")
     val doneRole = "done_${role}_$step"
 
     return when (q.kind) {
         Kind.JOIN -> {
+            val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
+            val reveals = (vars.map { (type, name) -> "_$name" } + "salt").join(", ")
             """
+            |    mapping(address => bytes32) commits$role;
+            |    mapping(address => uint) times$role;
+            |    bool halfStep$role;
+            |
+            |    function join_commit_$role(bytes32 c) at_step($step) public {
+            |        require(commits$role[msg.sender] == bytes32(0));
+            |        require(!halfStep$role);
+            |        commits$role[msg.sender] = c;
+            |        times$role[msg.sender] = block.timestamp;
+            |    }
+            |
+            |    event BroadcastHalf$role();
+            |    function __nextHalfStep$role() at_step($step) public {
+            |        require(block.timestamp >= __lastStep + STEP_TIME);
+            |        require(halfStep$role == false);
+            |        emit BroadcastHalf$role();
+            |        halfStep$role = true;
+            |        __lastStep = block.timestamp;
+            |    }
+            |
+            |    address chosenRole$role;
             |    $decls
             |    $declsDone
-            |    bool $doneRole;
             |
-            |    function join_$role($params) at_step($step) public payable {
-            |        require(role[msg.sender] == Role.None);
-            |        require(!$doneRole);
+            |    function join_$role($revealArgs) at_step($step) public payable {
+            |        require(keccak256($reveals) == bytes32(commits$role[msg.sender]));
+            |        if (chosenRole$role != address(0x0))
+            |             require(times$role[msg.sender] < times$role[chosenRole$role]);
             |        role[msg.sender] = Role.$role;
             |        balanceOf[msg.sender] = msg.value;
+            |        chosenRole$role = msg.sender;
             |        $typeWheres
             |        require($where);
             |        $assignments
             |        $inits
-            |        $doneRole = true;
             |    }
             |"""
         }
@@ -108,7 +133,7 @@ fun makeQuery(q: Query, step: Int): String {
         Kind.REVEAL -> {
             val reveals = vars.map {
                 (_, name) -> "require(keccak256(_$name, salt) == bytes32(${role}_hidden_$name));"
-            }.lines()
+            }.statements()
             """
             |    $decls
             |    $declsDone
@@ -141,8 +166,8 @@ fun exp(e: Exp): String = when (e) {
     is Exp.Call -> "${exp(e.target)}(${e.args.map { exp(it) }.join(",")})"
     is Exp.UnOp -> "(${e.op} ${exp(e.operand)})"
     is Exp.BinOp -> "(${exp(e.left)} ${e.op} ${exp(e.right)})"
-    is Exp.Var -> e.name
-    is Exp.Member -> "${exp(e.target)}_${e.field}"
+    is Exp.Var -> "_${e.name}"
+    is Exp.Member -> "${e.target.name}_${e.field}"
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
     Exp.UNDEFINED -> "throwAssertUndefined()"
     is Exp.Num -> "${e.n}"
@@ -179,9 +204,8 @@ private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "int"
     TypeExp.BOOL -> "bool"
     TypeExp.ROLE -> "Role"
-    TypeExp.ROLESET -> "map(address => bool)"
+    TypeExp.ROLESET -> "mappping(address => bool)"
     TypeExp.ADDRESS -> "address"
-    TypeExp.UNIT -> "unit"
     is TypeExp.Hidden -> "uint"
     is TypeExp.TypeId -> "int" // FIX: either inline or declare types
     is TypeExp.Subset -> "int"
@@ -195,5 +219,6 @@ private fun whereof(v: String, t: TypeExp): String = when (t) {
     else -> ""
 }
 
-private fun Iterable<String>.lines() = join("\n    ")
+private fun Iterable<String>.declarations() = join("\n    ")
+private fun Iterable<String>.statements() = join("\n        ")
 private fun Iterable<String>.join(sep: String) = joinToString(sep)
