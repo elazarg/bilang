@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol_null(role Server, role Odd, role Even) {
+explicit global protocol MyProtocol(role Server, role Odd, role Even) {
     connect Server to Odd;
     connect Server to Even;
     Broadcast() from Server to Even;
@@ -11,4 +11,28 @@ explicit global protocol MyProtocol_null(role Server, role Odd, role Even) {
     Reveal_c(bool) from Even to Server;
     Broadcast_c(bool) from Server to Even;
     Broadcast_c(bool) from Server to Odd;
+    Withdraw() from Odd to Server;
+    Withdraw() from Even to Server;
+}
+
+
+explicit local protocol MyProtocol_Odd(role Server, role Odd) {
+    connect Server;
+    Broadcast() from Server;
+    Hidden_c(hidden_bool) to Server;
+    Broadcast() from Server;
+    Reveal_c(bool) to Server;
+    Broadcast_c(bool) from Server;
+    Withdraw() to Server;
+}
+
+
+explicit local protocol MyProtocol_Even(role Server, role Even) {
+    connect Server;
+    Broadcast() from Server;
+    Hidden_c(hidden_bool) to Server;
+    Broadcast() from Server;
+    Reveal_c(bool) to Server;
+    Broadcast_c(bool) from Server;
+    Withdraw() to Server;
 }

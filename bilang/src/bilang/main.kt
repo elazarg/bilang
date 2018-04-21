@@ -18,7 +18,7 @@ private fun run(name: String) {
     println("Analyzing $inputFilename ...")
     val program = parse(inputFilename).copy(desc=name)
     writeFile("examples/gambit/$name.efg", Extensive(name, program).toEfg())
-    writeFile("examples/scribble/$name.scr", programToScribble(program).prettyPrint())
+    writeFile("examples/scribble/$name.scr", programToScribble(program).prettyPrintAll())
     writeFile("examples/solidity/$name.sol", genGame(program))
     println("Done")
     println()
@@ -31,6 +31,7 @@ private fun writeFile(filename: String, text: String) {
 }
 
 fun main(args: Array<String>) {
+    run("Puzzle")
     run("MontyHall")
     run("OddsEvens")
     run("ThreeWayLottery")

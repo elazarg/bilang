@@ -24,7 +24,7 @@ class Extensive(private val name: String, private val desc: String, private val 
 class TreeMaker(val types: Map<String, TypeExp>) {
     fun fromExp(exp: Ext, env: Env = Env()): Tree = when (exp) {
         is Ext.BindSingle -> {
-            fun subtree(e: Env) = fromExp(exp.exp, e)
+            fun subtree(e: Env) = fromExp(exp.ext, e)
             when (exp.q.kind) {
                 Kind.JOIN -> subtree(env.addRole(exp.q.role))
                 Kind.YIELD -> {
@@ -43,7 +43,7 @@ class TreeMaker(val types: Map<String, TypeExp>) {
             }
         }
         is Ext.Bind -> { // Independence is considered at AST construction step
-            fromExp(exp.qs.fold(exp.exp) { acc, q -> Ext.BindSingle(q, acc) }, env)
+            fromExp(exp.qs.fold(exp.ext) { acc, q -> Ext.BindSingle(q, acc) }, env)
         }
         is Ext.Value -> Tree.Leaf((eval(exp.exp, env) as Payoff).ts as Map<Var, Num>)
     }
@@ -58,8 +58,8 @@ class TreeMaker(val types: Map<String, TypeExp>) {
 }
 
 fun findRoles(exp: Ext): List<String> = when (exp) {
-    is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN }.map { it.role.name } + findRoles(exp.exp)
-    is Ext.BindSingle -> if (exp.q.kind != Kind.JOIN) listOf() else listOf(exp.q.role.name) + findRoles(exp.exp)
+    is Ext.Bind -> exp.qs.filter { it.kind == Kind.JOIN }.map { it.role.name } + findRoles(exp.ext)
+    is Ext.BindSingle -> if (exp.q.kind != Kind.JOIN) listOf() else listOf(exp.q.role.name) + findRoles(exp.ext)
     is Ext.Value -> listOf()
 }
 

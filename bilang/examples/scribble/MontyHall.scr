@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol_null(role Server, role Host, role Guest) {
+explicit global protocol MyProtocol(role Server, role Host, role Guest) {
     connect Server to Host;
     connect Server to Guest;
     Broadcast() from Server to Guest;
@@ -13,4 +13,30 @@ explicit global protocol MyProtocol_null(role Server, role Host, role Guest) {
     Broadcast_switch(bool) from Server to Host;
     Reveal_car(door) from Host to Server;
     Broadcast_car(door) from Server to Guest;
+    Withdraw() from Host to Server;
+    Withdraw() from Guest to Server;
+}
+
+
+explicit local protocol MyProtocol_Host(role Server, role Host) {
+    connect Server;
+    Broadcast() from Server;
+    Hidden_car(hidden_door) to Server;
+    Broadcast_d(door) from Server;
+    Public_goat(door) to Server;
+    Broadcast_switch(bool) from Server;
+    Reveal_car(door) to Server;
+    Withdraw() to Server;
+}
+
+
+explicit local protocol MyProtocol_Guest(role Server, role Guest) {
+    connect Server;
+    Broadcast() from Server;
+    Broadcast() from Server;
+    Public_d(door) to Server;
+    Broadcast_goat(door) from Server;
+    Public_switch(bool) to Server;
+    Broadcast_car(door) from Server;
+    Withdraw() to Server;
 }

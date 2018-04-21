@@ -1,0 +1,26 @@
+explicit global protocol MyProtocol(role Server, role Q, role A) {
+    connect Server to Q;
+    Public_x(int) from Q to Server;
+    Broadcast_x(int) from Server to A;
+    connect Server to A;
+    Public_p_q(int, int) from A to Server;
+    Broadcast_p_q(int, int) from Server to Q;
+    Withdraw() from Q to Server;
+    Withdraw() from A to Server;
+}
+
+
+explicit local protocol MyProtocol_Q(role Server, role Q) {
+    connect Server;
+    Public_x(int) to Server;
+    Broadcast_p_q(int, int) from Server;
+    Withdraw() to Server;
+}
+
+
+explicit local protocol MyProtocol_A(role Server, role A) {
+    Broadcast_x(int) from Server;
+    connect Server;
+    Public_p_q(int, int) to Server;
+    Withdraw() to Server;
+}

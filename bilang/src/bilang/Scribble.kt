@@ -1,5 +1,6 @@
 package bilang
 
+typealias Role = String
 sealed class Sast {
 
     data class Protocol(val roles: Set<Role>, val block: Block) : Sast()
@@ -15,18 +16,22 @@ sealed class Sast {
     }
 
     data class Type(val name: String)
-    data class Role(val name: String)
     data class VarDec(val name: String, val type: Type)
 }
+
+fun Sast.Protocol.prettyPrintAll(): String =
+        (listOf(prettyPrint()) + roles.map { prettyPrint(it) }).joinToString("\n\n")
 
 fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
     fun pretty(x: Sast) = x.prettyPrint(role, indent)
     val code = when (this) {
         is Sast.Protocol -> {
             assert(indent == 0)
-            val ps = ", " + roles.joinToString(", ") { "role ${it.name}" }
+            val relevantRoles = if (role == null) roles else setOf(role)
+            val ps = ", " + relevantRoles.joinToString(", ") { "role $it" }
             val scope = if (role == null) "global" else "local"
-            "explicit $scope protocol MyProtocol_$role(role Server$ps) " + pretty(block)
+            val roletext = if (role == null) "" else "_$role"
+            "explicit $scope protocol MyProtocol$roletext(role Server$ps) " + pretty(block)
         }
         is Sast.Block -> stmts
                 .map { it.prettyPrint(role, indent + 1) }
@@ -36,16 +41,17 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
             val args = params.joinToString(", ") { it.type.name }
             val names = params.joinToString("_") { it.name }
             var res = if (params.isEmpty()) "$label()" else "${label}_$names($args)"
-            if (role == null || to.contains(Sast.Role(role)))
-                res += " from ${from.name}"
-            if (role == null || from.name == role)
-                res += " to ${to.joinToString(", ") { it.name }}"
-            res
+            if (role == null || to.contains(role))
+                res += " from $from"
+            if (role == null || from == role)
+                res += " to ${to.joinToString(", ")}"
+            if (res.contains(" to ") || res.contains(" from ")) res
+            else ""
         }
         is Sast.Action.Connect ->
             when (role) {
-                null -> "connect Server to ${to.name}"
-                to.name -> "connect Server"
+                null -> "connect Server to $to"
+                to -> "connect Server"
                 else -> ""
             }
         is Sast.Action.Choice -> {
@@ -59,37 +65,38 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
 }
 
 fun programToScribble(p: ExpProgram): Sast.Protocol {
-    val roles = findRoles(p.game).map { Sast.Role(it) }.toSet()
+    val roles = findRoles(p.game).toSet()
     return Sast.Protocol(roles, Sast.Block(gameToScribble(p.game, roles)))
 }
 
-private val server = Sast.Role("Server")
-
-private fun gameToScribble(ext: Ext, roles: Set<Sast.Role>): List<Sast.Action> = when (ext) {
+private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when (ext) {
     is Ext.BindSingle -> {
         val params = ext.q.params
-        val role = Sast.Role(ext.q.role.name)
-        fun send(label: String, decls: List<Sast.VarDec>, to: Set<Sast.Role> = setOf(server)) = Sast.Action.Send(label, decls, role, to)
+        val role = ext.q.role.name
+        fun send(label: String, decls: List<Sast.VarDec>, to: Set<Role> = setOf("Server")) = Sast.Action.Send(label, decls, role, to)
+        fun sendToServer(): List<Sast.Action.Send> {
+            val (priv, pub) = params.partition { p -> p.type is TypeExp.Hidden }.map { declsOf(it) }
+            return listOfNotNull(
+                    send("Hidden", priv).takeUnless { priv.isEmpty() },
+                    send("Public", pub).takeUnless { pub.isEmpty() }
+            )
+        }
+
         (when (ext.q.kind) {
-            Kind.JOIN -> listOf(Sast.Action.Connect(role))
-            Kind.YIELD -> {
-                val (priv, pub) = params.partition { p -> p.type is TypeExp.Hidden }.map { declsOf(it) }
-                listOfNotNull(
-                        send("Public", pub).takeUnless { pub.isEmpty() },
-                        send("Hidden", priv).takeUnless { priv.isEmpty() }
-                )
-            }
+            Kind.JOIN -> listOf(Sast.Action.Connect(role)) + sendToServer()
+            Kind.YIELD -> sendToServer()
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
             Kind.MANY -> TODO()
-        } + Sast.Action.Send("Broadcast", declsOf(params.filterNot { it.type is TypeExp.Hidden }), server, roles - role)
-        + gameToScribble(ext.exp, roles))
+        } + Sast.Action.Send("Broadcast", declsOf(params.filterNot { it.type is TypeExp.Hidden }), "Server", roles - role)
+        + gameToScribble(ext.ext, roles))
     }
 
     is Ext.Bind -> ext.qs.flatMap { query ->
         gameToScribble(Ext.BindSingle(query, Ext.Value(Exp.UNDEFINED)), roles)
-    }.sortedBy { rankOrder(it) } + gameToScribble(ext.exp, roles)
+    }.sortedBy { rankOrder(it) } + gameToScribble(ext.ext, roles)
 
-    is Ext.Value -> listOf()
+    is Ext.Value -> if (ext.exp == Exp.UNDEFINED) listOf()
+                    else roles.map { Sast.Action.Send("Withdraw", listOf(), it, setOf("Server")) }
 }
 
 private fun rankOrder(it: Sast.Action): Int =

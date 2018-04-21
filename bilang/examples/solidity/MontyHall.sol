@@ -18,17 +18,23 @@ contract MontyHall {
         _;
     }
     // step 0
+    bool done_Host_0;
     function join_Host() at_step(0) public payable {
         require(role[msg.sender] == Role.None);
+        require(!done_Host_0);
         role[msg.sender] = Role.Host;
         balanceOf[msg.sender] = msg.value;
         require(true);
+        done_Host_0 = true;
     }
+    bool done_Guest_0;
     function join_Guest() at_step(0) public payable {
         require(role[msg.sender] == Role.None);
+        require(!done_Guest_0);
         role[msg.sender] = Role.Guest;
         balanceOf[msg.sender] = msg.value;
         require(true);
+        done_Guest_0 = true;
     }
     event Broadcast0(); // TODO: add params
     function __nextStep0() at_step(0) public {
@@ -40,11 +46,14 @@ contract MontyHall {
     // step 1
     uint Host_hidden_car;
     bool Host_hidden_car_done;
+    bool done_Host_1;
     function yield_Host1(uint _hidden_car) at_step(1) public {
         require(role[msg.sender] == Role.Host);
+        require(!done_Host_1);
         require(true);
         Host_hidden_car = _hidden_car;
         Host_hidden_car_done = true;
+        done_Host_1 = true;
     }
     event Broadcast1(); // TODO: add params
     function __nextStep1() at_step(1) public {
@@ -56,11 +65,14 @@ contract MontyHall {
     // step 2
     int Guest_d;
     bool Guest_d_done;
+    bool done_Guest_2;
     function yield_Guest2(int _d) at_step(2) public {
         require(role[msg.sender] == Role.Guest);
+        require(!done_Guest_2);
         require(true);
         Guest_d = _d;
         Guest_d_done = true;
+        done_Guest_2 = true;
     }
     event Broadcast2(); // TODO: add params
     function __nextStep2() at_step(2) public {
@@ -72,11 +84,14 @@ contract MontyHall {
     // step 3
     int Host_goat;
     bool Host_goat_done;
+    bool done_Host_3;
     function yield_Host3(int _goat) at_step(3) public {
         require(role[msg.sender] == Role.Host);
+        require(!done_Host_3);
         require((Host_goat != Guest_d));
         Host_goat = _goat;
         Host_goat_done = true;
+        done_Host_3 = true;
     }
     event Broadcast3(); // TODO: add params
     function __nextStep3() at_step(3) public {
@@ -88,11 +103,14 @@ contract MontyHall {
     // step 4
     bool Guest_switch;
     bool Guest_switch_done;
+    bool done_Guest_4;
     function yield_Guest4(bool _switch) at_step(4) public {
         require(role[msg.sender] == Role.Guest);
+        require(!done_Guest_4);
         require(true);
         Guest_switch = _switch;
         Guest_switch_done = true;
+        done_Guest_4 = true;
     }
     event Broadcast4(); // TODO: add params
     function __nextStep4() at_step(4) public {
@@ -104,12 +122,15 @@ contract MontyHall {
     // step 5
     int Host_car;
     bool Host_car_done;
+    bool done_Host_5;
     function reveal_Host5(int _car, uint salt) at_step(5) public {
         require(role[msg.sender] == Role.Host);
+        require(!done_Host_5);
         require(keccak256(_car, salt) == bytes32(Host_hidden_car));
         require((Host_goat != Host_car));
         Host_car = _car;
         Host_car_done = true;
+        done_Host_5 = true;
     }
     event Broadcast5(); // TODO: add params
     function __nextStep5() at_step(5) public {
