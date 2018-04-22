@@ -22,30 +22,42 @@ class Extensive(private val name: String, private val desc: String, private val 
 }
 
 class TreeMaker(val types: Map<String, TypeExp>) {
-    fun fromExp(exp: Ext, env: Env = Env()): Tree = when (exp) {
+    fun fromExp(ext: Ext, env: Env = Env()): Tree = when (ext) {
         is Ext.BindSingle -> {
-            fun subtree(e: Env) = fromExp(exp.ext, e)
-            when (exp.kind) {
-                Kind.JOIN -> subtree(env.addRole(exp.q.role)) // TODO: Handle joins with parameters and concurrent joins
+            fun subtree(e: Env) = fromExp(ext.ext, e)
+            when (ext.kind) {
+                Kind.JOIN -> subtree(env.addRole(ext.q.role)) // TODO: Handle joins with parameters and concurrent joins
                 Kind.YIELD -> {
-                    fun combineValues(f: (VarDec) -> List<Const>) = exp.q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
+                    fun combineValues(f: (VarDec) -> List<Const>) = ext.q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
 
                     val children = combineValues { listOf<Const>(UNDEFINED) }.let { undefs ->
-                        if (env.quitted(exp.q.role)) undefs
+                        if (env.quitted(ext.q.role)) undefs
                         else (combineValues { enumerateValues(it.type) }.filter {
-                            eval(exp.q.where, env.updateHeap(exp.q, it)) == Bool(true)
+                            eval(ext.q.where, env.updateHeap(ext.q, it)) == Bool(true)
                         } + undefs)
-                    }.map { Pair(it, subtree(env.updateHeap(exp.q, it))) }.toMap()
-                    Tree.Node(exp.q.role.name, env, children)
+                    }.map { Pair(it, subtree(env.updateHeap(ext.q, it))) }.toMap()
+                    Tree.Node(ext.q.role.name, env, children)
                 }
-                Kind.REVEAL -> subtree(env.revealHidden(exp.q))
+                Kind.REVEAL -> {
+                    val revealed = env.mapHidden(ext.q){it.value}
+                    val revealedPacket = ext.q.params.map { Pair(it.name, revealed.getValue(ext.q.role, it.name.name)) }.toMap()
+                    val quit = env.mapHidden(ext.q){UNDEFINED}
+                    val quitPacket = ext.q.params.map { Pair(it.name, UNDEFINED) }.toMap()
+                    Tree.Node(ext.q.role.name, revealed, mapOf(
+                            Pair(revealedPacket, subtree(revealed)),
+                            Pair(quitPacket, subtree(quit))
+                        )
+                    )
+                }
                 Kind.MANY -> TODO()
             }
         }
-        is Ext.Bind -> { // Independence is considered at AST construction step
-            fromExp(exp.qs.fold(exp.ext) { acc, q -> Ext.BindSingle(exp.kind, q, acc) }, env)
+        is Ext.Bind -> {
+            TODO("FIX: infinite recursion")
+            val ext1 = independent(ext.kind, ext.qs, ext.ext)
+            fromExp(ext1.qs.fold(ext1.ext) { acc, q -> Ext.BindSingle(ext1.kind, q, acc) }, env)
         }
-        is Ext.Value -> Tree.Leaf((eval(exp.exp, env) as Payoff).ts as Map<Var, Num>)
+        is Ext.Value -> Tree.Leaf((eval(ext.exp, env) as Payoff).ts as Map<Var, Num>)
     }
 
     private fun enumerateValues(t: TypeExp): List<Const> = when (t) {
@@ -57,10 +69,10 @@ class TreeMaker(val types: Map<String, TypeExp>) {
     }
 }
 
-fun findRoles(ext: Ext): List<String> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role.name } else listOf()) + findRoles(ext.ext)
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role.name) else listOf()) + findRoles(ext.ext)
-    is Ext.Value -> listOf()
+fun independent(kind: Kind, qs: List<Query>, ext: Ext): Ext.Bind {
+    val reveal = Ext.Bind(Kind.REVEAL, qs.map { it.copy(params = it.params.filterNot { it.type is TypeExp.Hidden }) }, ext)
+    return Ext.Bind(kind, qs.map { it.copy(params = it.params.map { p -> p.copy(type = hide(p.type)) }) },
+            if (qs.any { it.params.isNotEmpty() }) reveal else ext)
 }
 
 private fun hide(v: Const): Const = when (v) {
@@ -103,7 +115,7 @@ fun eval(exp: Exp, env: Env): Const {
             res
         }
         is Var -> env.getValue(exp)
-        is Member -> env.getValue(exp.target.name, exp.field)
+        is Member -> env.getValue(exp.target, exp.field)
         is Cond -> {
             val cond = eval(exp.cond)
             when (cond) {
@@ -169,10 +181,10 @@ data class Env(private val g: Map<Var, Const>, private val h: Map<Pair<Var, Var>
 
     operator fun plus(p: Pair<Var, Const>) = Env(g + p, h)
 
-    fun revealHidden(q: Query) =copy(h=
+    fun mapHidden(q: Query, f: (Hidden) -> Const) = copy(h=
         h.mapValues { (rv, k) ->
             if (k is Hidden && rv.first == q.role
-                    && q.params.map { it.name.name }.contains(rv.second.name)) k.value else k
+                    && q.params.map { it.name.name }.contains(rv.second.name)) f(k) else k
         }
     )
 

@@ -32,9 +32,10 @@ private fun writeFile(filename: String, text: String) {
 }
 
 fun main(args: Array<String>) {
-    run("Puzzle")
+    run("Simple")
+    //run("Puzzle")
     run("MontyHall")
-    run("OddsEvens")
+    //run("OddsEvens")
     //run("OddsEvensShort")
-    run("ThreeWayLottery")
+    //run("ThreeWayLottery")
 }

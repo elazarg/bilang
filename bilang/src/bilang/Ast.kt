@@ -19,7 +19,7 @@ sealed class Exp : Ast() {
     data class BinOp(val op: String, val left: Exp, val right: Exp) : Exp()
 
     data class Var(val name: String) : Exp()
-    data class Member(val target: Var, val field: String) : Exp()
+    data class Member(val target: String, val field: String) : Exp()
     data class Cond(val cond: Exp, val ifTrue: Exp, val ifFalse: Exp) : Exp()
 
     interface Const : Step
@@ -65,8 +65,8 @@ sealed class TypeExp : Ast() {
 
 fun hide(type: TypeExp) = type as? TypeExp.Hidden ?: TypeExp.Hidden(type)
 
-fun independent(kind: Kind, qs: List<Query>, exp: Ext): Ext.Bind {
-    val reveal = Ext.Bind(Kind.REVEAL, qs.map { it.copy(params = it.params.filterNot { it.type is TypeExp.Hidden }) }, exp)
-    return Ext.Bind(kind, qs.map { it.copy(params = it.params.map { p -> p.copy(type = hide(p.type)) }) },
-            if (qs.any { it.params.isNotEmpty() }) reveal else exp)
+internal fun findRoles(ext: Ext): List<String> = when (ext) {
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role.name } else listOf()) + findRoles(ext.ext)
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role.name) else listOf()) + findRoles(ext.ext)
+    is Ext.Value -> listOf()
 }

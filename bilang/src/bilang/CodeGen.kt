@@ -167,7 +167,7 @@ fun exp(e: Exp): String = when (e) {
     is Exp.UnOp -> "(${e.op} ${exp(e.operand)})"
     is Exp.BinOp -> "(${exp(e.left)} ${e.op} ${exp(e.right)})"
     is Exp.Var -> "_${e.name}"
-    is Exp.Member -> "${e.target.name}_${e.field}"
+    is Exp.Member -> "${e.target}_${e.field}"
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
     Exp.UNDEFINED -> "throwAssertUndefined()"
     is Exp.Num -> "${e.n}"

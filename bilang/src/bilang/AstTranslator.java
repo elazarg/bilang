@@ -52,11 +52,10 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     public Ext visitReceiveExt(ReceiveExtContext ctx) {
         Ext ext = ext(ctx.ext());
         Kind kind = toKind(ctx.kind);
-        if (ctx.query().size() == 1) {
+        if (ctx.query().size() == 1)
             return new Ext.BindSingle(kind, query(ctx.query().get(0)), ext);
-        }
         else
-            return bilang.AstKt.independent(kind, list(ctx.query(), this::query), ext);
+            return new Ext.Bind(kind, list(ctx.query(), this::query), ext);
     }
 
     private Query query(QueryContext ctx) {
@@ -100,7 +99,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Exp.Member visitMemberExp(MemberExpContext ctx) {
-        return new Exp.Member(new Exp.Var(ctx.role.getText()), ctx.field.getText());
+        return new Exp.Member(ctx.role.getText(), ctx.field.getText());
     }
 
     @Override

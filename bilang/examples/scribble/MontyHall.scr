@@ -1,7 +1,7 @@
 explicit global protocol MyProtocol(role Server, role Host, role Guest) {
     connect Server to Host;
-    connect Server to Guest;
     Broadcast() from Server to Guest;
+    connect Server to Guest;
     Broadcast() from Server to Host;
     Hidden_car(hidden_door) from Host to Server;
     Broadcast() from Server to Guest;
@@ -31,8 +31,8 @@ explicit local protocol MyProtocol_Host(role Server, role Host) {
 
 
 explicit local protocol MyProtocol_Guest(role Server, role Guest) {
-    connect Server;
     Broadcast() from Server;
+    connect Server;
     Broadcast() from Server;
     Public_d(door) to Server;
     Broadcast_goat(door) from Server;

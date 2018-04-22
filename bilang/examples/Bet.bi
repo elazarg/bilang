@@ -1,8 +1,6 @@
-var Race : role = 0x225325;
+let Race : role = 0x225325;
 join Gambler(b: int);
 yield Race(winner: int);
-if (winner == undefined || winner == b) {
-    transfer Race.value from Race to Gambler;
-} else {
-    transfer Gambler.value from Gambler to Race;
-}
+return (Race.winner == undefined || Race.winner == b)
+    ? { Race -> 0; Gambler -> 100 }
+    : { Race -> 100; Gambler -> 0 }
