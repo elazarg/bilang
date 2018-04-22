@@ -533,9 +533,45 @@ hollow node/.style={circle,draw,inner sep=1.5}
   \node at ($(2)!.5!(3)$) {$P2$};
 \end{tikzpicture}
 
+Simple parallel example is an OddEvens game. If we assume that neither side is taking the timed-risk of checking whether the other player has played, we can translate the OddsEvens game 
+\lstinputlisting{../bilang/examples/OddsEvens.bi}
+
+To the following extensive form:
+
+\begin{tikzpicture}[scale=1.5,font=\footnotesize, grow=right]
+  % Specify spacing for each level of the tree
+  \tikzstyle{level 1}=[level distance=15mm,sibling distance=17mm]
+  \tikzstyle{level 2}=[level distance=15mm,sibling distance=7mm]
+  % The Tree
+  \node(0)[hollow node,label=above:{$Odd$}]{}
+  child{node(1)[solid node,label=above:{$Even$}]{}
+    child{node[hollow node]{} edge from parent node[below]{$quit$}}
+    child{node[hollow node]{} edge from parent node[below]{$false$}}
+    child{node[hollow node]{} edge from parent node[below]{$true$}}
+    edge from parent node[below,xshift=-5]{$quit$}
+  }
+  child{node(2)[solid node,label=above:{$Even$}]{}
+    child{node[hollow node]{} edge from parent node[below]{$quit$}}
+    child{node[hollow node]{} edge from parent node[below]{$false$}}
+    child{node[hollow node]{} edge from parent node[below]{$true$}}
+    edge from parent node[below,xshift=-5]{$false$}
+  }
+  child{node(3)[solid node,label=below:{$Even$}]{}
+    child{node[hollow node]{} edge from parent node[below]{$quit$}}
+    child{node[hollow node]{} edge from parent node[below]{$false$}}
+    child{node[hollow node]{} edge from parent node[below]{$true$}}
+    edge from parent node[above,xshift=-5]{$true$}
+  };
+  % information set
+  \draw[dashed,rounded corners=10]($(1) + (.2,-.25)$)rectangle($(3) +(-.2,.25)$);
+  % specify mover at 2nd information set
+  \node at ($(2)!.5!(3)$) {$P2$};
+\end{tikzpicture}
+
+
 Note that the games correspond only to certain types of extensive form games - ones that are implementable over blockchain. In particular, games are always perfect recall, by construction.
 
-As an example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that \texttt{undefined} values are not part of this specific equilibrium - which is a good sign.
+As another example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that \texttt{undefined} values are not part of this specific equilibrium - which is a good sign.
 
 \subsubsection{Multplayer Game}
 
