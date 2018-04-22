@@ -60,6 +60,9 @@
 \usepackage{syntax}
 \usepackage{stmaryrd}  % semantic brackets
 \usepackage{semantic}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+
 \lstset{
   language=Haskell,
   backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
@@ -83,6 +86,20 @@
   tabsize=2,	                     % sets default tabsize to 2 spaces
   caption=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
 }
+
+\tikzset{
+  % Two node styles for game trees: solid and hollow
+  solid node/.style={circle,draw,inner sep=2,fill=black},
+  hollow node/.style={circle,draw,inner sep=2},
+  empty node/.style={rectangle,draw,fill=white,color=white}
+}
+
+% macro for entering payoffs
+\newcommand\payoff[1]{
+  $\begin{pmatrix} #1 \end{pmatrix}$
+}
+
+
 \begin{document}
 
 %% Title information
@@ -221,16 +238,16 @@ $\\$
 
 \subsection{Syntax}
 \setlength{\grammarparsep}{20pt plus 1pt minus 1pt} % increase separation between rules
-\setlength{\grammarindent}{12em} % increase separation between LHS/RHS
+\setlength{\grammarindent}{8em} % increase separation between LHS/RHS
 
 \begin{grammar}
 
 <ext> ::= ...
-                \alt <query>+ ';' <ext>
-                \alt 'let' 'fold' <var> : <type> '=' <query> 'from' <var> <exp> ';' <ext>
-                \alt 'return' <exp>
+                \alt <query>+ ; <ext>
+                \alt let <var> : <type> = <query> from <var> fold <exp> ; <ext>
+                \alt return <exp>
 
-<query> ::= (join | yield | many) <var> (<var> : [hidden] <type>, ... ) where <exp>
+<query> ::= ( join | yield | reveal | many ) <var> (<var> : [ hidden ] <type>, ... ) where <exp>
 \end{grammar}
 
 \subsection{Semantics}
@@ -383,86 +400,6 @@ Translations:
 
 \vfill
 \pagebreak
-\subsubsection{Lowering}
-Use a simpler syntax:
-
-\begin{grammar}
-
-  <statement> ::= ...
-                  \alt broadcast;
-                  \alt receive <var> (<var> : <type>, ... );
-                  \alt goto <label>;
-                  \alt assume <exp>;
-                  \alt <label>: <statement>+;
-
-\end{grammar}
-
-\begin{align*}
-  n\in Id \wedge \overline{v} \in \overline{t} \over{
-  \llbracket \texttt{receive }R(\overline{v}: \overline{t}) \rrbracket (g, h) \rightsquigarrow (g[R \mapsto n], h(n)[\overline{v} \mapsto \overline{k}]) }\\
-  \\
-  broadcast \over{
-  <update\_observable> } \\
-\end{align*}
-
-
-The statement \texttt{join R; S} is translated to
-\begin{lstlisting}
-  broadcast;
-  receive R();
-  S;
-\end{lstlisting}
-
-The statement \texttt{join many R; S} is translated to
-\begin{lstlisting}
-  broadcast;
-  var R := {};
-L:
-  receive R1();
-  if (R == timeout) goto OUT;
-  R := R + { R1 };
-  goto L;
-OUT:
-  S;
-\end{lstlisting}
-
-The statement
-\begin{lstlisting}
-  yield (x1: tx1, ... xn: txn) where <exp1> from G1
-      | (y1: ty1, ... yn: tyn) where <exp2> from G2
-      | ... ;
-  <S>
-\end{lstlisting}
-
-is translated to
-\begin{lstlisting}
-  broadcast state;
-  receive R1(x1: tx1, ... xn: txn);
-  assume <exp> && R1 = G1;
-  delete R1;
-  receive R2(y1: ty1, ... xn: tyn);
-  assume <exp> && R2 = G2;
-  delete R2;
-  ...
-  S;
-\end{lstlisting}
-
-The statement \texttt{for yield R(x1: t1, ... xn: tn) where <exp> from G { <S1> } <S2> } is translated to
-\begin{lstlisting}
-broadcast state;
-var Q := G;  # copy contents
-L:
-  receive R(x1: t1, ... xn: tn)
-  if (R == timeout) goto OUT;  # only possible after timeout
-  assume R in Q;
-  assume <exp>;
-  S1;
-  Q := Q - { R };
-  goto L;
-OUT:
-  S1
-\end{lstlisting}
-
 
 \subsubsection{Multi-player Game}
 The syntax of a simple multiplayer game is like a simple program without loops, with the addition of three commands: a \texttt{join} command, a \texttt{yield} command, and a \texttt{reveal} command.
@@ -497,9 +434,6 @@ Hidden yields and reveals are translated to a simple commitment scheme: at the p
 
 No ether is sent during the interaction; the only transfers happen when players join, and when the game is done. Players withdraw their money from a capsule, guaranteeing that no other player or contract can interfere with this action.
 
-\section{Intermediate Form}
-To simplify analysis, we use intermediate form. An expression $\varphi$ of this form consists of a simple expression whose value is a mapping from names to numbers, or uses modalities of the form $Y^r_v\varphi$, $H^r_v\varphi$, $R_v\varphi$, $J_r\varphi$. These modalities correspond to \texttt{yield}, \texttt{yield hidden}, and \texttt{join} (we leave out \texttt{join many} and \texttt{for yield}). Parallel \texttt{yield} packets are translated to series of $Y$ and $R$. For example, \texttt{yield hidden A(x: int) B(y: int); transfer 10 from A to B;} is translated to $H^A_x, H^B_y, R^A_x, R^B_y, (A=-10; B=10)$, where the internal ordering between hides or reveals is not important.
-
 \section{Analysis}
 The language is amenable to the standard safety analysis, such as avoiding division by zero. In this paper we focus on different kind of analyses --- finding equilibria and dominant strategies, and some other sanity checks that are game-related. We also perform other analyses relating to handling of commitments and money.
 
@@ -517,12 +451,84 @@ $\exists \overline{x} \forall \overline{x'} \overline{y}: F(\overline{x}, \overl
 Only trivial games have dominant strategies, but the analysis can point to dominant strategies for playing \texttt{undefined}, which indicate bugs. It can also show the absence of dominant strategy, which is a good sanity check.
 
 \subsection{Equilibria Analysis}
-The game is translated to an extensive form, with information sets reflecting the use of \emph{private} and \emph{publish}.
+The game is translated to an extensive form, with information sets reflecting the use of \emph{hidden} and \emph{reveal}.
 This format can be analyzed to find Nash equilibria, taking into account the possibility of players quitting in the middle of the game. We use the `Gambit' tool to perform this analysis.
 
 When translating to extensive form, it is important to take into account one important fact, namely that it is impossible to perform a completely independent and parallel action. Commitment schemes force the opposing players to choose a value independently, but do not force the player to actually reveal it; players can always drop off the game. The first player that sends the packet that reveals her decision is on a disadvantage, since the opponent can choose whether to reveal too, or leave the game. This fact is exacerbated when we take into account the possibility of pseudonyms, and even more so when we consider games with unbounded number of players, in which case one agent can commit to any number of values, and reveal only subset to his choice.
 
 We address this problem in the way we translate the game to external form. Each move consists of to levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysis we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one player is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
+
+% Node styles
+\tikzset{
+% Two node styles for game trees: solid and hollow
+solid node/.style={circle,draw,inner sep=1.5,fill=black},
+hollow node/.style={circle,draw,inner sep=1.5}
+}
+\begin{tikzpicture}[scale=1.5,font=\footnotesize, grow=right]
+  % Specify spacing for each level of the tree
+  \tikzstyle{level 1}=[level distance=15mm,sibling distance=25mm]
+  \tikzstyle{level 2}=[level distance=15mm,sibling distance=9mm]
+  \tikzstyle{level 3}=[level distance=15mm,sibling distance=4mm]
+  % The Tree
+  \node(0)[hollow node,label=above:{$A$}]{}
+  child{node(1)[solid node,label=above:{$B$}]{}
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      edge from parent node[below]{$quit$}
+    }
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      edge from parent node[below]{$false$}
+    }
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      edge from parent node[below]{$true$}
+    }
+    edge from parent node[below,xshift=14]{$quit$}
+  }
+  child{node(2)[solid node,label=above:{$B$}]{}
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      child{node{} edge from parent node[above]{$true$}}
+      edge from parent node[below]{$quit$}
+    }
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      child{node{} edge from parent node[above]{$true$}}
+      edge from parent node[below]{$false$}
+    }
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      child{node{} edge from parent node[above]{$true$}}
+      edge from parent node[below]{$true$}
+    }
+    edge from parent node[below,xshift=8]{$true$}
+  }
+  child{node(3)[solid node,label=above:{$B$}]{}
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      child{node{} edge from parent node[above]{$false$}}
+      edge from parent node[below]{$quit$}
+    }
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      child{node{} edge from parent node[above]{$false$}}
+      edge from parent node[below]{$false$}
+    }
+    child{node[hollow node,label=above:{$A$}]{}
+      child{node{} edge from parent node[below]{$quit$}}
+      child{node{} edge from parent node[above]{$false$}}
+      edge from parent node[below]{$true$}
+    }
+    edge from parent node[below,xshift=8]{$false$}
+  };
+  % information set
+  \draw[dashed,rounded corners=10]($(2) + (.2,-.25)$)rectangle($(3) +(-.2,.25)$);
+  % specify mover at 2nd information set
+  \node at ($(2)!.5!(3)$) {$P2$};
+\end{tikzpicture}
+
+Note that the games correspond only to certain types of extensive form games - ones that are implementable over blockchain. In particular, games are always perfect recall, by construction.
 
 As an example we demonstrate Nash equilibria of the MontyHall game (with slightly different implementation), the OddsEvens game, and some others. This analysis reveals bugs and incentive problems, such as mishandling of quitting. Part of the resulting tree and analysis of the MontyHall game is shown below. Among other things, one can see that \texttt{undefined} values are not part of this specific equilibrium - which is a good sign.
 
