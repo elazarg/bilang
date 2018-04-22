@@ -456,7 +456,12 @@ This format can be analyzed to find Nash equilibria, taking into account the pos
 
 When translating to extensive form, it is important to take into account one important fact, namely that it is impossible to perform a completely independent and parallel action. Commitment schemes force the opposing players to choose a value independently, but do not force the player to actually reveal it; players can always drop off the game. The first player that sends the packet that reveals her decision is on a disadvantage, since the opponent can choose whether to reveal too, or leave the game. This fact is exacerbated when we take into account the possibility of pseudonyms, and even more so when we consider games with unbounded number of players, in which case one agent can commit to any number of values, and reveal only subset to his choice.
 
-We address this problem in the way we translate the game to external form. Each move consists of to levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysis we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one player is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
+We address this problem in the way we translate the game to external form. Each move consists of two levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysis we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one of the players is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
+
+As a simple example, take the following game:
+\lstinputlisting{../bilang/examples/Simple.bi}
+
+This game is translated to the following extensive form representation:
 
 % Node styles
 \tikzset{
@@ -562,6 +567,8 @@ In QBF, there is a order of quantifiers define uniquely the information on which
 In our case, it doesn't make sense to represent every dependency pattern, since many patterns do not make sense in our setting: we can only hide value (from everyone else) or reveal values (to everyone). In particular, the information flow graph must be transitive.
 
 \section{Evaluation}
+
+Finding a single Nash equilibrium in the MontyHall program takes roughly 80 minutes (after loading the game, which takes about 20 minutes).
 
 \section{Related Work}
 
