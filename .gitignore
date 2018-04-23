@@ -28,6 +28,7 @@ library/session/packages/
 /writeup/.texpadtmp/main.log
 target/
 bilang/src/generated/*
+bilang/bin/*
 scala.iml
 *.sbt
 
