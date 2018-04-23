@@ -230,7 +230,7 @@ fun exp(e: Exp): String = when (e) {
     is Exp.Var -> "_${e.name}"
     is Exp.Member -> "${e.target}_${e.field}"
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
-    is Exp.Const.Num -> "${e.n}"
+    is Exp.Const.Num -> "int(${e.n})"
     is Exp.Const.Bool -> "${e.truth}"
     is Exp.Const.Address -> "${e.n}" // todo hex
     is Exp.Const.Hidden -> exp(e.value as Exp)
@@ -252,11 +252,10 @@ fun genPayoff(switch: Payoff.Value, step: Int): String {
         """
     |    function withdraw_${step}_$role() by(Role.$role) public at_step($step) {
     |        require(role[msg.sender] == Role.$role);
-    |        // uint amount = balanceOf[msg.sender];
-    |        uint amount;
-    |        ${exp(money, "amount", "uint").statements()}
-    |        // balanceOf[msg.sender] = 0;
-    |        msg.sender.transfer(amount);
+    |        int amount;
+    |        ${exp(money, "amount", "int").statements()}
+    |        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+    |        delete balanceOf[msg.sender];
     |    }
     """.trimMargin()
     }.join("\n")

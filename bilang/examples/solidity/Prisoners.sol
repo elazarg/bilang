@@ -122,8 +122,7 @@ contract Prisoners {
     // end 2
     function withdraw_3_A() by(Role.A) public at_step(3) {
         require(role[msg.sender] == Role.A);
-        // uint amount = balanceOf[msg.sender];
-        uint amount;
+        int amount;
         bool freshVar59;
         {
         bool freshVar60;
@@ -141,23 +140,22 @@ contract Prisoners {
         freshVar59 = freshVar60 && freshVar62;
         }
         if (freshVar59) { 
-        amount = (((A_c && B_c)) ? (- 2) : (((A_c && (! B_c))) ? 0 : ((((! A_c) && B_c)) ? (- 3) : (- 1))));
+        amount = (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? int(0) : ((((! A_c) && B_c)) ? (- int(3)) : (- int(1)))));
         } else {
         bool freshVar64;
         freshVar64 = A_c_done;
         if (freshVar64) { 
-        amount = (- 100);
+        amount = (- int(100));
         } else {
-        amount = 10;
+        amount = int(10);
         }
         }
-        // balanceOf[msg.sender] = 0;
-        msg.sender.transfer(amount);
+        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+        delete balanceOf[msg.sender];
     }
     function withdraw_3_B() by(Role.B) public at_step(3) {
         require(role[msg.sender] == Role.B);
-        // uint amount = balanceOf[msg.sender];
-        uint amount;
+        int amount;
         bool freshVar65;
         {
         bool freshVar66;
@@ -175,17 +173,17 @@ contract Prisoners {
         freshVar65 = freshVar66 && freshVar68;
         }
         if (freshVar65) { 
-        amount = (((A_c && B_c)) ? (- 2) : (((A_c && (! B_c))) ? (- 3) : ((((! A_c) && B_c)) ? 0 : (- 1))));
+        amount = (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? (- int(3)) : ((((! A_c) && B_c)) ? int(0) : (- int(1)))));
         } else {
         bool freshVar70;
         freshVar70 = A_c_done;
         if (freshVar70) { 
-        amount = 10;
+        amount = int(10);
         } else {
-        amount = (- 100);
+        amount = (- int(100));
         }
         }
-        // balanceOf[msg.sender] = 0;
-        msg.sender.transfer(amount);
+        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+        delete balanceOf[msg.sender];
     }
 }

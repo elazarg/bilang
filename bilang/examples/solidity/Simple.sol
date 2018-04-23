@@ -152,18 +152,16 @@ contract Simple {
     // end 4
     function withdraw_5_A() by(Role.A) public at_step(5) {
         require(role[msg.sender] == Role.A);
-        // uint amount = balanceOf[msg.sender];
-        uint amount;
-        amount = 0;
-        // balanceOf[msg.sender] = 0;
-        msg.sender.transfer(amount);
+        int amount;
+        amount = int(0);
+        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+        delete balanceOf[msg.sender];
     }
     function withdraw_5_B() by(Role.B) public at_step(5) {
         require(role[msg.sender] == Role.B);
-        // uint amount = balanceOf[msg.sender];
-        uint amount;
-        amount = 0;
-        // balanceOf[msg.sender] = 0;
-        msg.sender.transfer(amount);
+        int amount;
+        amount = int(0);
+        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+        delete balanceOf[msg.sender];
     }
 }

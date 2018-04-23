@@ -192,8 +192,7 @@ contract MontyHall {
     // end 6
     function withdraw_7_Guest() by(Role.Guest) public at_step(7) {
         require(role[msg.sender] == Role.Guest);
-        // uint amount = balanceOf[msg.sender];
-        uint amount;
+        int amount;
         bool freshVar1;
         {
         bool freshVar2;
@@ -221,7 +220,7 @@ contract MontyHall {
         freshVar1 = freshVar2 && freshVar7;
         }
         if (freshVar1) { 
-        amount = ((((Guest_d != Host_car) == Guest_switch)) ? 20 : (- 20));
+        amount = ((((Guest_d != Host_car) == Guest_switch)) ? int(20) : (- int(20)));
         } else {
         bool freshVar9;
         {
@@ -232,18 +231,17 @@ contract MontyHall {
         freshVar9 = freshVar10 || freshVar11;
         }
         if (freshVar9) { 
-        amount = 20;
+        amount = int(20);
         } else {
-        amount = (- 100);
+        amount = (- int(100));
         }
         }
-        // balanceOf[msg.sender] = 0;
-        msg.sender.transfer(amount);
+        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+        delete balanceOf[msg.sender];
     }
     function withdraw_7_Host() by(Role.Host) public at_step(7) {
         require(role[msg.sender] == Role.Host);
-        // uint amount = balanceOf[msg.sender];
-        uint amount;
+        int amount;
         bool freshVar12;
         {
         bool freshVar13;
@@ -271,7 +269,7 @@ contract MontyHall {
         freshVar12 = freshVar13 && freshVar18;
         }
         if (freshVar12) { 
-        amount = 0;
+        amount = int(0);
         } else {
         bool freshVar20;
         {
@@ -282,12 +280,12 @@ contract MontyHall {
         freshVar20 = freshVar21 || freshVar22;
         }
         if (freshVar20) { 
-        amount = (- 100);
+        amount = (- int(100));
         } else {
-        amount = 0;
+        amount = int(0);
         }
         }
-        // balanceOf[msg.sender] = 0;
-        msg.sender.transfer(amount);
+        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+        delete balanceOf[msg.sender];
     }
 }
