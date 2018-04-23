@@ -1,5 +1,5 @@
-EFG 2 R "OddsEvens" { "Odd" "Even" }
-"OddsEvens"
+EFG 2 R "OddsEvensShort" { "Odd" "Even" }
+"OddsEvensShort"
 
 p "" 1 152 "" { "true" "false" "None" } 0
 p "" 2 152 "" { "true" "false" "None" } 0

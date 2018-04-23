@@ -1,5 +1,5 @@
-EFG 2 R "ThreeWayLottery" { "Issuer" "Alice" "Bob" }
-"ThreeWayLottery"
+EFG 2 R "ThreeWayLotteryShort" { "Issuer" "Alice" "Bob" }
+"ThreeWayLotteryShort"
 
 p "" 1 153 "" { "1" "2" "3" "None" } 0
 p "" 2 153 "" { "1" "2" "3" "None" } 0

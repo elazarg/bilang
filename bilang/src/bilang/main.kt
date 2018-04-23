@@ -32,10 +32,11 @@ private fun writeFile(filename: String, text: String) {
 }
 
 fun main(args: Array<String>) {
-    run("Simple")
-    //run("Puzzle")
-    run("MontyHall")
-    //run("OddsEvens")
-    //run("OddsEvensShort")
-    //run("ThreeWayLottery")
+    listOf(
+            "Simple",
+            "Puzzle",
+            "MontyHall",
+            "OddsEvens", "OddsEvensShort",
+            "ThreeWayLottery", "ThreeWayLotteryShort"
+    ).forEach { run(it) }
 }

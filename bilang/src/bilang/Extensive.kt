@@ -3,7 +3,7 @@ package bilang
 import bilang.Exp.*
 
 sealed class Tree {
-    data class Node(val owner: String, val env: Env, val children: Map<Map<Var, Const>, Tree>) : Tree()
+    data class Node(val owner: String, val env: Env, val infoset: Int, val edges: List<Map<Var, Const>>, val children: List<Tree>) : Tree()
 
     data class Leaf(val payoff: Map<Var, Num>) : Tree()
 }
@@ -13,7 +13,7 @@ class Extensive(private val name: String, private val desc: String, private val 
             this(name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game))
 
     fun toEfg(): String = (
-        listOf("EFG 2 R ${q(name)} ${stringList(players)}", q(desc), "")
+        listOf("EFG 2 R ${quote(name)} ${stringList(players)}", quote(desc), "")
                 + ExtensivePrinter().toEfg(game, players)
     ).joinToString("\n")
 
@@ -24,40 +24,61 @@ class Extensive(private val name: String, private val desc: String, private val 
 class TreeMaker(val types: Map<String, TypeExp>) {
     fun fromExp(ext: Ext, env: Env = Env()): Tree = when (ext) {
         is Ext.BindSingle -> {
-            fun subtree(e: Env) = fromExp(ext.ext, e)
+            val q = ext.q
+            val subExt = ext.ext
             when (ext.kind) {
-                Kind.JOIN -> subtree(env.addRole(ext.q.role)) // TODO: Handle joins with parameters and concurrent joins
-                Kind.YIELD -> {
-                    fun combineValues(f: (VarDec) -> List<Const>) = ext.q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
-
-                    val children = combineValues { listOf<Const>(UNDEFINED) }.let { undefs ->
-                        if (env.quitted(ext.q.role)) undefs
-                        else (combineValues { enumerateValues(it.type) }.filter {
-                            eval(ext.q.where, env.updateHeap(ext.q, it)) == Bool(true)
-                        } + undefs)
-                    }.map { Pair(it, subtree(env.updateHeap(ext.q, it))) }.toMap()
-                    Tree.Node(ext.q.role.name, env, children)
-                }
+                Kind.JOIN -> fromExp(subExt, env.addRole(q.role)) // independent(subExt, env.addRole(q.role), listOf(q))
+                Kind.YIELD -> independent(subExt, env, listOf(q))
                 Kind.REVEAL -> {
-                    val revealed = env.mapHidden(ext.q){it.value}
-                    val revealedPacket = ext.q.params.map { Pair(it.name, revealed.getValue(ext.q.role, it.name.name)) }.toMap()
-                    val quit = env.mapHidden(ext.q){UNDEFINED}
-                    val quitPacket = ext.q.params.map { Pair(it.name, UNDEFINED) }.toMap()
-                    Tree.Node(ext.q.role.name, revealed, mapOf(
-                            Pair(revealedPacket, subtree(revealed)),
-                            Pair(quitPacket, subtree(quit))
+                    val revealed = env.mapHidden(q){it.value}
+                    val revealedPacket = q.params.map { Pair(it.name, revealed.getValue(q.role, it.name.name)) }.toMap()
+                    val quit = env.mapHidden(q){UNDEFINED}
+                    val quitPacket = q.params.map { Pair(it.name, UNDEFINED) }.toMap()
+                    val infoset = UniqueHash.of(env.eraseHidden(q.role.name))
+                    Tree.Node(q.role.name, revealed, infoset,
+                            listOf(revealedPacket, quitPacket),
+                            listOf(fromExp(subExt, revealed), fromExp(subExt, quit))
                         )
-                    )
                 }
                 Kind.MANY -> TODO()
             }
         }
-        is Ext.Bind -> {
-            TODO("FIX: infinite recursion")
-            val ext1 = independent(ext.kind, ext.qs, ext.ext)
-            fromExp(ext1.qs.fold(ext1.ext) { acc, q -> Ext.BindSingle(ext1.kind, q, acc) }, env)
+        is Ext.Bind -> when (ext.kind) {
+            Kind.YIELD -> independent(ext.ext, env, ext.qs)
+            Kind.JOIN -> {
+                // Naive. Join then yield. Is this correct?
+                val newEnv = ext.qs.fold(env) { acc, t -> acc.addRole(t.role) }
+                independent(ext.ext, newEnv, ext.qs)
+            }
+            Kind.REVEAL -> TODO()
+            Kind.MANY -> TODO()
         }
         is Ext.Value -> Tree.Leaf((eval(ext.exp, env) as Payoff).ts as Map<Var, Num>)
+    }
+
+    private fun enumeratePackets(q: Query, env: Env): List<Map<Var, Const>> {
+        fun combineValues(f: (VarDec) -> List<Const>) =
+                q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
+
+        return combineValues { listOf<Const>(UNDEFINED) }.let { undefs ->
+            if (env.quitted(q.role)) undefs
+            else (combineValues { enumerateValues(it.type) }.filter {
+                value -> eval(q.where, env.updateHeap(q, value)) == Bool(true)
+            } + undefs)
+        }
+    }
+
+    private fun independent(next: Ext, origEnv: Env, qs: List<Query>): Tree {
+        fun independentRec(qs: List<Query>, env: Env): Tree {
+            if (qs.isEmpty())
+                return fromExp(next, env)
+            val q = qs.first()
+            val infoset = UniqueHash.of(origEnv.eraseHidden(q.role.name))
+            val edges = enumeratePackets(q, origEnv)
+            val children = edges.map { e -> independentRec(qs.drop(1), env.updateHeap(q, e)) }
+            return Tree.Node(q.role.name, env, infoset, edges, children)
+        }
+        return independentRec(qs, origEnv)
     }
 
     private fun enumerateValues(t: TypeExp): List<Const> = when (t) {
@@ -67,12 +88,6 @@ class TreeMaker(val types: Map<String, TypeExp>) {
         is TypeExp.TypeId -> enumerateValues(types.getValue(t.name))
         else -> throw AssertionError("cannot enumerate $t")
     }
-}
-
-fun independent(kind: Kind, qs: List<Query>, ext: Ext): Ext.Bind {
-    val reveal = Ext.Bind(Kind.REVEAL, qs.map { it.copy(params = it.params.filterNot { it.type is TypeExp.Hidden }) }, ext)
-    return Ext.Bind(kind, qs.map { it.copy(params = it.params.map { p -> p.copy(type = hide(p.type)) }) },
-            if (qs.any { it.params.isNotEmpty() }) reveal else ext)
 }
 
 private fun hide(v: Const): Const = when (v) {
@@ -138,18 +153,17 @@ class ExtensivePrinter {
 
     fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
         is Tree.Node -> {
-            val (values, children) = t.children.entries.map { it.toPair() }.unzip()
             val nodeName = ""
             val owner: Int = roleOrder.indexOf(t.owner) + 1
             // TODO: remove last assignment
-            val infoset: Int = UniqueHash.of(t.env.eraseHidden(t.owner)) // FIX: do we consider current choice???
+            val infoset: Int = t.infoset
             val infosetName = ""
-            val actionNamesForInfoset: String = stringList(values.map { v -> v.values.joinToString("&") { valueToName(it) } })
+            val actionNamesForInfoset: String = stringList(t.edges.map { v -> v.values.joinToString("&") { valueToName(it) } })
             val outcome = 0
             val nameOfOutcome = ""
             val payoffs = 0
-            listOf("p ${q(nodeName)} $owner $infoset ${q(infosetName)} $actionNamesForInfoset $payoffs") +
-                    children.flatMap { toEfg(it, roleOrder) }
+            listOf("p ${quote(nodeName)} $owner $infoset ${quote(infosetName)} $actionNamesForInfoset $payoffs") +
+                    t.children.flatMap { toEfg(it, roleOrder) }
         }
         is Tree.Leaf -> {
             val name = ""
@@ -158,7 +172,7 @@ class ExtensivePrinter {
             outcomeNumber += 1
             val nameOfOutcome = ""
             val payoffs = roleOrder.map { t.payoff.getValue(Var(it)).n }.joinToString(" ", "{ ", " }")
-            listOf("t ${q(name)} $outcome ${q(nameOfOutcome)} $payoffs")
+            listOf("t ${quote(name)} $outcome ${quote(nameOfOutcome)} $payoffs")
         }
     }
 
@@ -171,9 +185,9 @@ class ExtensivePrinter {
     }
 }
 
-private fun q(name: String) = '"' + name + '"'
+private fun quote(name: String) = '"' + name + '"'
 
-private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") { q(it) }
+private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") { quote(it) }
 
 
 data class Env(private val g: Map<Var, Const>, private val h: Map<Pair<Var, Var>, Const>) {

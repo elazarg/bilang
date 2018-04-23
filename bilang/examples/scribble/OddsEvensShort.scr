@@ -1,8 +1,6 @@
 explicit global protocol MyProtocol(role Server, role Odd, role Even) {
     connect Server to Odd;
-    Broadcast() from Server to Even;
     connect Server to Even;
-    Broadcast() from Server to Odd;
     Public_c(bool) from Odd to Server;
     Broadcast_c(bool) from Server to Even;
     Public_c(bool) from Even to Server;
@@ -14,7 +12,6 @@ explicit global protocol MyProtocol(role Server, role Odd, role Even) {
 
 explicit local protocol MyProtocol_Odd(role Server, role Odd) {
     connect Server;
-    Broadcast() from Server;
     Public_c(bool) to Server;
     Broadcast_c(bool) from Server;
     Withdraw() to Server;
@@ -22,7 +19,6 @@ explicit local protocol MyProtocol_Odd(role Server, role Odd) {
 
 
 explicit local protocol MyProtocol_Even(role Server, role Even) {
-    Broadcast() from Server;
     connect Server;
     Broadcast_c(bool) from Server;
     Public_c(bool) to Server;

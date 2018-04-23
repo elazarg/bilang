@@ -1,5 +1,5 @@
 pragma solidity ^0.4.22;
-contract ThreeWayLottery {
+contract ThreeWayLotteryShort {
     // roles
     enum Role { None, Issuer, Alice, Bob }
     mapping(address => Role) role;
@@ -36,14 +36,80 @@ contract ThreeWayLottery {
         __lastStep = block.timestamp;
     }
     address chosenRoleIssuer;
-    function join_Issuer(uint salt) at_step(0) public payable {
-        require(keccak256(salt) == bytes32(commitsIssuer[msg.sender]));
+    int Issuer_c;
+    bool Issuer_c_done;
+    function join_Issuer(int _c, uint salt) at_step(0) public payable {
+        require(keccak256(_c, salt) == bytes32(commitsIssuer[msg.sender]));
         if (chosenRoleIssuer != address(0x0))
              require(timesIssuer[msg.sender] < timesIssuer[chosenRoleIssuer]);
         role[msg.sender] = Role.Issuer;
         balanceOf[msg.sender] = msg.value;
         chosenRoleIssuer = msg.sender;
         require(true);
+        Issuer_c = _c;
+        Issuer_c_done = true;
+    }
+    mapping(address => bytes32) commitsAlice;
+    mapping(address => uint) timesAlice;
+    bool halfStepAlice;
+    function join_commit_Alice(bytes32 c) at_step(0) public {
+        require(commitsAlice[msg.sender] == bytes32(0));
+        require(!halfStepAlice);
+        commitsAlice[msg.sender] = c;
+        timesAlice[msg.sender] = block.timestamp;
+    }
+    event BroadcastHalfAlice();
+    function __nextHalfStepAlice() at_step(0) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(halfStepAlice == false);
+        emit BroadcastHalfAlice();
+        halfStepAlice = true;
+        __lastStep = block.timestamp;
+    }
+    address chosenRoleAlice;
+    int Alice_c;
+    bool Alice_c_done;
+    function join_Alice(int _c, uint salt) at_step(0) public payable {
+        require(keccak256(_c, salt) == bytes32(commitsAlice[msg.sender]));
+        if (chosenRoleAlice != address(0x0))
+             require(timesAlice[msg.sender] < timesAlice[chosenRoleAlice]);
+        role[msg.sender] = Role.Alice;
+        balanceOf[msg.sender] = msg.value;
+        chosenRoleAlice = msg.sender;
+        require(true);
+        Alice_c = _c;
+        Alice_c_done = true;
+    }
+    mapping(address => bytes32) commitsBob;
+    mapping(address => uint) timesBob;
+    bool halfStepBob;
+    function join_commit_Bob(bytes32 c) at_step(0) public {
+        require(commitsBob[msg.sender] == bytes32(0));
+        require(!halfStepBob);
+        commitsBob[msg.sender] = c;
+        timesBob[msg.sender] = block.timestamp;
+    }
+    event BroadcastHalfBob();
+    function __nextHalfStepBob() at_step(0) public {
+        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(halfStepBob == false);
+        emit BroadcastHalfBob();
+        halfStepBob = true;
+        __lastStep = block.timestamp;
+    }
+    address chosenRoleBob;
+    int Bob_c;
+    bool Bob_c_done;
+    function join_Bob(int _c, uint salt) at_step(0) public payable {
+        require(keccak256(_c, salt) == bytes32(commitsBob[msg.sender]));
+        if (chosenRoleBob != address(0x0))
+             require(timesBob[msg.sender] < timesBob[chosenRoleBob]);
+        role[msg.sender] = Role.Bob;
+        balanceOf[msg.sender] = msg.value;
+        chosenRoleBob = msg.sender;
+        require(true);
+        Bob_c = _c;
+        Bob_c_done = true;
     }
     event Broadcast0(); // TODO: add params
     function __nextStep0() at_step(0) public {
@@ -53,118 +119,4 @@ contract ThreeWayLottery {
         __lastStep = block.timestamp;
     }
     // end 0
-    // step 1
-    mapping(address => bytes32) commitsAlice;
-    mapping(address => uint) timesAlice;
-    bool halfStepAlice;
-    function join_commit_Alice(bytes32 c) at_step(1) public {
-        require(commitsAlice[msg.sender] == bytes32(0));
-        require(!halfStepAlice);
-        commitsAlice[msg.sender] = c;
-        timesAlice[msg.sender] = block.timestamp;
-    }
-    event BroadcastHalfAlice();
-    function __nextHalfStepAlice() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        require(halfStepAlice == false);
-        emit BroadcastHalfAlice();
-        halfStepAlice = true;
-        __lastStep = block.timestamp;
-    }
-    address chosenRoleAlice;
-    function join_Alice(uint salt) at_step(1) public payable {
-        require(keccak256(salt) == bytes32(commitsAlice[msg.sender]));
-        if (chosenRoleAlice != address(0x0))
-             require(timesAlice[msg.sender] < timesAlice[chosenRoleAlice]);
-        role[msg.sender] = Role.Alice;
-        balanceOf[msg.sender] = msg.value;
-        chosenRoleAlice = msg.sender;
-        require(true);
-    }
-    event Broadcast1(); // TODO: add params
-    function __nextStep1() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        emit Broadcast1();
-        step += 1;
-        __lastStep = block.timestamp;
-    }
-    // end 1
-    // step 2
-    mapping(address => bytes32) commitsBob;
-    mapping(address => uint) timesBob;
-    bool halfStepBob;
-    function join_commit_Bob(bytes32 c) at_step(2) public {
-        require(commitsBob[msg.sender] == bytes32(0));
-        require(!halfStepBob);
-        commitsBob[msg.sender] = c;
-        timesBob[msg.sender] = block.timestamp;
-    }
-    event BroadcastHalfBob();
-    function __nextHalfStepBob() at_step(2) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        require(halfStepBob == false);
-        emit BroadcastHalfBob();
-        halfStepBob = true;
-        __lastStep = block.timestamp;
-    }
-    address chosenRoleBob;
-    function join_Bob(uint salt) at_step(2) public payable {
-        require(keccak256(salt) == bytes32(commitsBob[msg.sender]));
-        if (chosenRoleBob != address(0x0))
-             require(timesBob[msg.sender] < timesBob[chosenRoleBob]);
-        role[msg.sender] = Role.Bob;
-        balanceOf[msg.sender] = msg.value;
-        chosenRoleBob = msg.sender;
-        require(true);
-    }
-    event Broadcast2(); // TODO: add params
-    function __nextStep2() at_step(2) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        emit Broadcast2();
-        step += 1;
-        __lastStep = block.timestamp;
-    }
-    // end 2
-    // step 3
-    int Issuer_c;
-    bool Issuer_c_done;
-    bool done_Issuer_3;
-    function yield_Issuer3(int _c) at_step(3) public {
-        require(role[msg.sender] == Role.Issuer);
-        require(!done_Issuer_3);
-        require(true);
-        Issuer_c = _c;
-        Issuer_c_done = true;
-        done_Issuer_3 = true;
-    }
-    int Alice_c;
-    bool Alice_c_done;
-    bool done_Alice_3;
-    function yield_Alice3(int _c) at_step(3) public {
-        require(role[msg.sender] == Role.Alice);
-        require(!done_Alice_3);
-        require(true);
-        Alice_c = _c;
-        Alice_c_done = true;
-        done_Alice_3 = true;
-    }
-    int Bob_c;
-    bool Bob_c_done;
-    bool done_Bob_3;
-    function yield_Bob3(int _c) at_step(3) public {
-        require(role[msg.sender] == Role.Bob);
-        require(!done_Bob_3);
-        require(true);
-        Bob_c = _c;
-        Bob_c_done = true;
-        done_Bob_3 = true;
-    }
-    event Broadcast3(); // TODO: add params
-    function __nextStep3() at_step(3) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        emit Broadcast3();
-        step += 1;
-        __lastStep = block.timestamp;
-    }
-    // end 3
 }
