@@ -243,11 +243,11 @@ $\\$
 \begin{grammar}
 
 <ext> ::= ...
-                \alt <query>+ ; <ext>
+                \alt ( join | yield | reveal | many ) <query>+ ; <ext>
                 \alt let <var> : <type> = <query> from <var> fold <exp> ; <ext>
                 \alt return <exp>
 
-<query> ::= ( join | yield | reveal | many ) <var> (<var> : [ hidden ] <type>, ... ) where <exp>
+<query> ::= <var> (<var> : [ hidden ] <type>, ... ) where <exp>
 \end{grammar}
 
 \subsection{Semantics}
@@ -509,7 +509,7 @@ hollow node/.style={circle,draw,inner sep=1.5}
     }
     edge from parent node[below,xshift=8]{$true$}
   }
-  child{node(3)[solid node,label=above:{$B$}]{}
+  child{node(3)[solid node,label=below:{$B$}]{}
     child{node[hollow node,label=above:{$A$}]{}
       child{node{} edge from parent node[below]{$quit$}}
       child{node{} edge from parent node[above]{$false$}}
