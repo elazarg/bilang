@@ -37,6 +37,7 @@ fun main(args: Array<String>) {
             "Puzzle",
             "MontyHall",
             "OddsEvens", "OddsEvensShort",
+            "Prisoners",
             "ThreeWayLottery", "ThreeWayLotteryShort"
     ).forEach { run(it) }
 }
