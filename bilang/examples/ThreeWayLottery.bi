@@ -9,10 +9,8 @@ return (Alice.c  == null || Bob.c == null)
             ? { Alice -> -10; Bob -> -10; Issuer ->  20 }
      : (Issuer.c == null)
             ? { Alice ->  20; Bob -> -10; Issuer -> -10 }
-     : let sum : int = Issuer.c + Alice.c + Bob.c in
-       let s1 : int = sum / 3 * 3 in
-       (s1 == sum)
+     : ((Issuer.c + Alice.c + Bob.c) / 3 * 3 == (Issuer.c + Alice.c + Bob.c))
             ? { Alice ->  20; Bob -> -10; Issuer -> -10 }
-     : (s1 == sum-1)
+     : ((Issuer.c + Alice.c + Bob.c) / 3 * 3 == (Issuer.c + Alice.c + Bob.c)-1)
             ? { Alice -> -10; Bob ->  20; Issuer -> -10 }
      :        { Alice -> -10; Bob -> -10; Issuer ->  20 }

@@ -169,13 +169,12 @@ fun exp(e: Exp): String = when (e) {
     is Exp.Var -> "_${e.name}"
     is Exp.Member -> "${e.target}_${e.field}"
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
-    Exp.UNDEFINED -> "throwAssertUndefined()"
-    is Exp.Num -> "${e.n}"
-    is Exp.Bool -> "${e.truth}"
-    is Exp.Address -> "${e.n}" // todo hex
-    is Exp.Hidden -> exp(e.value as Exp)
+    Exp.Const.UNDEFINED -> "throwAssertUndefined()"
+    is Exp.Const.Num -> "${e.n}"
+    is Exp.Const.Bool -> "${e.truth}"
+    is Exp.Const.Address -> "${e.n}" // todo hex
+    is Exp.Const.Hidden -> exp(e.value as Exp)
     is Exp.Let -> TODO()
-    is Exp.Payoff -> "SomePayoff" // TODO()
 }
 
 fun genExt(ext: Ext, step: Int): String = when (ext) {
@@ -184,11 +183,10 @@ fun genExt(ext: Ext, step: Int): String = when (ext) {
     is Ext.Value -> "" // genPayoff(ext.exp, step)
 }
 
-fun genPayoff(exp: Exp, step: Int): String {
+fun genPayoff(switch: Payoff.Value, step: Int): String {
     // idea: evaluate keys one by one; when the value equals to the value of the sender
     // evaluate the value and withdraw
     // so this is a "switch" expression...
-    val switch = exp as Exp.Payoff // TODO: might be e.g. a condition yielding payoff
     switch.ts.entries.map { (role, money) ->
         """
         |    function withdraw_${step}_$role() by(Role.$role) step($step) {

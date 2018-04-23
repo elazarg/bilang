@@ -12,10 +12,19 @@ typeExp
 // only sensible combination is independent yield + many
 ext : kind=('join'|'yield'| 'reveal'|'many') query+ ';' ext  # ReceiveExt
     | 'let' 'fold' varDec '=' query 'from' from=ID exp ';' ext  # FoldExt
-    | 'return' exp # ExpExt
+    | 'return' payoff # ExpExt
     ;
 
 query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('where' cond=exp)? ;
+
+payoff
+    : <assoc=right> cond=exp '?' ifTrue=payoff ':' ifFalse=payoff # IfPayoff
+    | 'let' dec=varDec '=' init=exp 'in' body=payoff  # LetPayoff
+    | '(' payoff ')'                          # ParenPayoff
+    | '{' items+=item+ '}'                    # PayoffExp
+    ;
+
+item : (ID '->' exp ';'?) ;
 
 exp
     : '(' exp ')'                             # ParenExp
@@ -28,16 +37,14 @@ exp
     | left=exp op=('==' | '!=') right=exp     # BinOpEqExp
     | left=exp op=('&&' | '||') right=exp     # BinOpBoolExp
     | <assoc=right> cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
-    | '{' items+=item+ '}'                    # PayoffExp
     | ('true'|'false')                        # BoolLiteralExp
     | name=ID                                 # IdExp
     | INT                                     # NumLiteralExp
     | ADDRESS                                 # AddressLiteralExp
     | 'null'                                  # UndefExp
-    | 'let' dec=varDec '=' init=exp 'in' body=exp  # LetExp
+    | 'let!' dec=varDec '=' init=exp 'in' body=exp  # LetExp
     ;
 
-item : (ID '->' exp ';'?) ;
 
 varDec : name=ID ':' hidden='hidden'? type=ID;
 

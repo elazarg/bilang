@@ -31,8 +31,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return new TypeExp.Subset(ctx.vals.stream().map(this::num).collect(toSet()));
     }
 
-    private Exp.Num num(Token v) {
-        return new Exp.Num(Integer.parseInt(v.getText()));
+    private Exp.Const.Num num(Token v) {
+        return new Exp.Const.Num(Integer.parseInt(v.getText()));
     }
 
     @Override
@@ -63,17 +63,17 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     private Exp where(ExpContext cond) {
-        return cond != null ? exp(cond) : new Exp.Bool(true);
+        return cond != null ? exp(cond) : new Exp.Const.Bool(true);
     }
 
     @Override
     public Ext.Value visitExpExt(ExpExtContext ctx) {
-        return new Ext.Value(exp(ctx.exp()));
+        return new Ext.Value(bilang.AstKt.desugar(payoff(ctx.payoff())));
     }
 
     @Override
-    public Exp.UNDEFINED visitUndefExp(UndefExpContext ctx) {
-        return Exp.UNDEFINED.INSTANCE;
+    public Exp.Const.UNDEFINED visitUndefExp(UndefExpContext ctx) {
+        return Exp.Const.UNDEFINED.INSTANCE;
     }
 
     @Override
@@ -93,8 +93,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Bool visitBoolLiteralExp(BoolLiteralExpContext ctx) {
-        return new Exp.Bool(Boolean.parseBoolean(ctx.getText()));
+    public Exp.Const.Bool visitBoolLiteralExp(BoolLiteralExpContext ctx) {
+        return new Exp.Const.Bool(Boolean.parseBoolean(ctx.getText()));
     }
 
     @Override
@@ -152,12 +152,16 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Address visitAddressLiteralExp(AddressLiteralExpContext ctx) {
-        return new Exp.Address(Integer.parseInt(ctx.ADDRESS().getText().substring(2), 16));
+    public Payoff visitParenPayoff(ParenPayoffContext ctx) {
+        return payoff(ctx.payoff());
+    }
+    @Override
+    public Exp.Const.Address visitAddressLiteralExp(AddressLiteralExpContext ctx) {
+        return new Exp.Const.Address(Integer.parseInt(ctx.ADDRESS().getText().substring(2), 16));
     }
 
     @Override
-    public Exp.Num visitNumLiteralExp(NumLiteralExpContext ctx) {
+    public Exp.Const.Num visitNumLiteralExp(NumLiteralExpContext ctx) {
         return num(ctx.INT().getSymbol());
     }
 
@@ -168,9 +172,23 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Payoff visitPayoffExp(PayoffExpContext ctx) {
-        Map<Exp.Var, Exp> m = ctx.items.stream().collect(toMap(e -> var(e.ID().getSymbol()), e -> exp(e.exp())));
-        return new Exp.Payoff(m);
+    public Payoff visitPayoffExp(PayoffExpContext ctx) {
+        Map<String, Exp> m = ctx.items.stream().collect(toMap(e -> e.ID().getText(), e -> exp(e.exp())));
+        return new Payoff.Value(m);
+    }
+
+    @Override
+    public Payoff visitIfPayoff(IfPayoffContext ctx) {
+        return new Payoff.Cond(exp(ctx.cond), payoff(ctx.ifTrue), payoff(ctx.ifFalse));
+    }
+
+    @Override
+    public Payoff visitLetPayoff(LetPayoffContext ctx) {
+        return new Payoff.Let(visitVarDec(ctx.dec), exp(ctx.init), payoff(ctx.payoff()));
+    }
+
+    private Payoff payoff(PayoffContext ctx) {
+        return (Payoff) ctx.accept(this);
     }
 
     private <T1, T2> List<T2> list(List<T1> iterable, Function<T1, T2> f) {

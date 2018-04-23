@@ -7,8 +7,8 @@ explicit global protocol MyProtocol(role Server, role Odd, role Even) {
     Broadcast_c(bool) from Server to Even;
     Public_c(bool) from Even to Server;
     Broadcast_c(bool) from Server to Odd;
-    Withdraw() from Odd to Server;
     Withdraw() from Even to Server;
+    Withdraw() from Odd to Server;
 }
 
 

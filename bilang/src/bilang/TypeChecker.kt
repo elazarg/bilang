@@ -26,6 +26,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             ).type(program.game)
         }
     }
+    private fun type(payoff: Payoff): Nothing = TODO()
 
     private fun type(ext: Ext) {
         when (ext) {
@@ -74,10 +75,11 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
                 else -> throw IllegalArgumentException(exp.op)
             }
         }
-        is Exp.Num -> INT
-        is Exp.Address -> ADDRESS
-        is Exp.Bool -> BOOL
-        is Exp.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
+        is Exp.Const.Num -> INT
+        is Exp.Const.Address -> ADDRESS
+        is Exp.Const.Bool -> BOOL
+        is Exp.Const.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
+        Exp.Const.UNDEFINED -> Opt(INT)
         is Exp.Var -> env.getValue(exp)
         is Exp.Member -> {
             checkOp(ROLE, type(Exp.Var(exp.target)))
@@ -87,10 +89,8 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             checkOp(BOOL, type(exp.cond))
             join(type(exp.ifTrue), type(exp.ifFalse))
         }
-        Exp.UNDEFINED -> Opt(INT)
 
         is Exp.Let -> TODO()
-        is Exp.Payoff -> TODO()
     }
 
     private fun checkOp(expected: TypeExp, args: Collection<TypeExp>) = checkOp(expected, *args.toTypedArray())
@@ -126,14 +126,14 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         t1 === INT && t2 is IntClass -> INT
         t1 is IntClass && t2 === INT -> INT
         t1 is Subset && t2 is Subset -> Subset(t1.values union t2.values)
-        t1 is Range && t2 is Range -> Range(Exp.Num(minOf(t1.min.n, t2.min.n)), Exp.Num(maxOf(t1.max.n, t2.max.n)))
+        t1 is Range && t2 is Range -> Range(Exp.Const.Num(minOf(t1.min.n, t2.min.n)), Exp.Const.Num(maxOf(t1.max.n, t2.max.n)))
         t1 is Subset && t2 is Range -> join(t2, t2)
         t1 is Range && t2 is Subset -> {
             val values = t2.values.map { it.n }
             val min = minOf(t1.min.n, values.min()!!)
             val max = minOf(t1.max.n, values.max()!!)
             if (t2.values.size == max - min) t2
-            else Range(Exp.Num(min), Exp.Num(max))
+            else Range(Exp.Const.Num(min), Exp.Const.Num(max))
         }
         else -> throw IncompatibleTypeError("$t1 !< $t2")
     }

@@ -13,8 +13,8 @@ explicit global protocol MyProtocol(role Server, role Host, role Guest) {
     Broadcast_switch(bool) from Server to Host;
     Reveal_car(door) from Host to Server;
     Broadcast_car(door) from Server to Guest;
-    Withdraw() from Host to Server;
     Withdraw() from Guest to Server;
+    Withdraw() from Host to Server;
 }
 
 

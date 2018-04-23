@@ -1,11 +1,12 @@
 package bilang
 
 import bilang.Exp.*
+import bilang.Exp.Const.*
 
 sealed class Tree {
     data class Node(val owner: String, val env: Env, val infoset: Int, val edges: List<Map<Var, Const>>, val children: List<Tree>) : Tree()
 
-    data class Leaf(val payoff: Map<Var, Num>) : Tree()
+    data class Leaf(val payoff: Map<String, Num>) : Tree()
 }
 
 class Extensive(private val name: String, private val desc: String, private val players: List<String>, private val game: Tree) {
@@ -53,7 +54,7 @@ class TreeMaker(val types: Map<String, TypeExp>) {
             Kind.REVEAL -> TODO()
             Kind.MANY -> TODO()
         }
-        is Ext.Value -> Tree.Leaf((eval(ext.exp, env) as Payoff).ts as Map<Var, Num>)
+        is Ext.Value -> Tree.Leaf((eval(ext.exp, env)).ts as Map<String, Num>)
     }
 
     private fun enumeratePackets(q: Query, env: Env): List<Map<Var, Const>> {
@@ -144,9 +145,11 @@ fun eval(exp: Exp, env: Env): Const {
         is Bool -> exp
         is Hidden -> exp
         is Let -> eval(exp.exp, env + Pair(exp.dec.name, eval(exp.init)))
-        is Payoff -> Payoff(exp.ts.map { (k, v) -> Pair(k, eval(v) as Num) }.toMap())
     }
 }
+
+fun eval(exp: Payoff.Value, env: Env): Payoff.Value =
+        Payoff.Value(exp.ts.map { (k, v) -> Pair(k, eval(v, env) as Num) }.toMap())
 
 class ExtensivePrinter {
     private var outcomeNumber: Int = 0
@@ -171,7 +174,7 @@ class ExtensivePrinter {
             // Seems like outcomes are "named payoffs" and should define the payoff uniquely
             outcomeNumber += 1
             val nameOfOutcome = ""
-            val payoffs = roleOrder.map { t.payoff.getValue(Var(it)).n }.joinToString(" ", "{ ", " }")
+            val payoffs = roleOrder.map { t.payoff.getValue(it).n }.joinToString(" ", "{ ", " }")
             listOf("t ${quote(name)} $outcome ${quote(nameOfOutcome)} $payoffs")
         }
     }

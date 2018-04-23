@@ -11,9 +11,9 @@ explicit global protocol MyProtocol(role Server, role Issuer, role Alice, role B
     Broadcast_c(choice) from Server to Issuer, Bob;
     Public_c(choice) from Bob to Server;
     Broadcast_c(choice) from Server to Issuer, Alice;
+    Withdraw() from Bob to Server;
     Withdraw() from Issuer to Server;
     Withdraw() from Alice to Server;
-    Withdraw() from Bob to Server;
 }
 
 

@@ -92,11 +92,10 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
     }
 
     is Ext.Bind -> ext.qs.flatMap { query ->
-        gameToScribble(Ext.BindSingle(ext.kind, query, Ext.Value(Exp.UNDEFINED)), roles)
+        gameToScribble(Ext.BindSingle(ext.kind, query, Ext.Value(Payoff.Value(mapOf()))), roles)
     }.sortedBy { rankOrder(it) } + gameToScribble(ext.ext, roles)
 
-    is Ext.Value -> if (ext.exp == Exp.UNDEFINED) listOf()
-                    else roles.map { Sast.Action.Send("Withdraw", listOf(), it, setOf("Server")) }
+    is Ext.Value -> ext.exp.ts.keys.map { Sast.Action.Send("Withdraw", listOf(), it, setOf("Server")) }
 }
 
 private fun rankOrder(it: Sast.Action): Int =
