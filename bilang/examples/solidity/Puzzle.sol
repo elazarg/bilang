@@ -43,6 +43,7 @@ contract Puzzle {
         if (chosenRoleQ != address(0x0))
              require(timesQ[msg.sender] < timesQ[chosenRoleQ]);
         role[msg.sender] = Role.Q;
+        require(msg.value == 50);
         balanceOf[msg.sender] = msg.value;
         chosenRoleQ = msg.sender;
         require(true);
@@ -85,6 +86,7 @@ contract Puzzle {
         if (chosenRoleA != address(0x0))
              require(timesA[msg.sender] < timesA[chosenRoleA]);
         role[msg.sender] = Role.A;
+        require(msg.value == 0);
         balanceOf[msg.sender] = msg.value;
         chosenRoleA = msg.sender;
         require(((_p * _q) == Q_x));

@@ -1,6 +1,8 @@
 type choice = {1, 2, 3}
 
-join Issuer(c: choice) Alice(c: choice) Bob(c: choice);
+join Issuer(c: choice) $ 10
+     Alice(c: choice) $ 10
+     Bob(c: choice) $ 10;
 
 return (Alice.c  == null || Bob.c == null)
              ? { Alice -> -10; Bob -> -10; Issuer ->  20 }

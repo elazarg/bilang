@@ -11,7 +11,7 @@ sealed class Ext : Ast() {
     data class BindSingle(val kind: Kind, val q: Query, val ext: Ext) : Ext(), Step
     data class Value(val exp: Payoff.Value) : Ext()
 }
-data class Query(val role: Exp.Var, val params: List<VarDec> = listOf(), val where: Exp = Exp.Const.Bool(true)) : Ast()
+data class Query(val role: Exp.Var, val params: List<VarDec>, val deposit: Exp.Const.Num, val where: Exp) : Ast()
 
 sealed class Exp : Ast() {
     data class Call(val target: Var, val args: List<Exp>) : Exp()
@@ -34,19 +34,12 @@ sealed class Exp : Ast() {
 
 sealed class Payoff: Ast() {
     data class Cond(val cond: Exp, val ifTrue: Payoff, val ifFalse: Payoff) : Payoff()
-    // Var is not evaluated, since the analysis does not handle addresses but roles.
-    // giving different payoff for different addresses of the same roles is a TODO
-
     // Idea: not a simple Var -> Exp mapping, but a `lambda (Var : RoleSet) . Exp` mapping
     // (the trivial case where RoleSet is a singleton van have Var -> Exp as a syntactic sugar)
     // This sounds like dependent types, but no complex type checking is involved.
 
     data class Value(val ts: Map<String, Exp>) : Payoff()
     data class Let(val dec: VarDec, val init: Exp, val payoff: Payoff) : Payoff()
-
-    // Payoff is considered constant only when all the Exp are Num.
-    // `Num` should be replaced by a tuple of monetary values, parameterized
-    //data class PayoffConst(val ts: Map<Var, Num>) : Exp(), Const
 }
 
 data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()

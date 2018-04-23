@@ -41,6 +41,7 @@ contract MontyHall {
         if (chosenRoleHost != address(0x0))
              require(timesHost[msg.sender] < timesHost[chosenRoleHost]);
         role[msg.sender] = Role.Host;
+        require(msg.value == 100);
         balanceOf[msg.sender] = msg.value;
         chosenRoleHost = msg.sender;
         require(true);
@@ -77,6 +78,7 @@ contract MontyHall {
         if (chosenRoleGuest != address(0x0))
              require(timesGuest[msg.sender] < timesGuest[chosenRoleGuest]);
         role[msg.sender] = Role.Guest;
+        require(msg.value == 100);
         balanceOf[msg.sender] = msg.value;
         chosenRoleGuest = msg.sender;
         require(true);

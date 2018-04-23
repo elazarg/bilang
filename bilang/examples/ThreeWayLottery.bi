@@ -1,8 +1,8 @@
 type choice = {1, 2, 3}
 
-join Issuer();
-join Alice();
-join Bob();
+join Issuer() $ 10;
+join Alice() $ 10;
+join Bob() $ 10;
 yield Issuer(c: choice) Alice(c: choice) Bob(c: choice);
 
 return (Alice.c  == null || Bob.c == null)

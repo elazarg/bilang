@@ -1,5 +1,5 @@
-join A();
-join B();
+join A() $ 100;
+join B() $ 100;
 yield A(c: bool) B(c: bool); // true means cooperate
 return (A.c != null && B.c != null)
 ?(  (A.c && B.c )   ? { A -> -2; B -> -2 }

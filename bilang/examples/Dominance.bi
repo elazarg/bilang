@@ -1,5 +1,5 @@
-join A();
-join B();
+join A() $ 10;
+join B() $ 10;
 yield A(c: bool) B(c: bool);
 return (A.c != B.c)
     ? { A -> 10; B -> -10 }

@@ -1,7 +1,7 @@
 type door = {0, 1, 2}
 
-join Host();
-join Guest();
+join Host() $ 100;
+join Guest() $ 100;
 yield Host(car: hidden door);
 yield Guest(d: door);
 yield Host(goat: door) where Host.goat != Guest.d;

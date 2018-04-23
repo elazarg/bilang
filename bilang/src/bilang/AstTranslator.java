@@ -32,7 +32,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     private Exp.Const.Num num(Token v) {
-        return new Exp.Const.Num(Integer.parseInt(v.getText()));
+        String text = v == null ? "0" : v.getText();
+        return new Exp.Const.Num(Integer.parseInt(text));
     }
 
     @Override
@@ -59,7 +60,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     private Query query(QueryContext ctx) {
-        return new Query(var(ctx.role), list(ctx.decls, this::visitVarDec), where(ctx.cond));
+        return new Query(var(ctx.role), list(ctx.decls, this::visitVarDec), num(ctx.deposit), where(ctx.cond));
     }
 
     private Exp where(ExpContext cond) {

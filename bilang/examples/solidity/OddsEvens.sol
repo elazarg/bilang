@@ -41,6 +41,7 @@ contract OddsEvens {
         if (chosenRoleOdd != address(0x0))
              require(timesOdd[msg.sender] < timesOdd[chosenRoleOdd]);
         role[msg.sender] = Role.Odd;
+        require(msg.value == 100);
         balanceOf[msg.sender] = msg.value;
         chosenRoleOdd = msg.sender;
         require(true);
@@ -77,6 +78,7 @@ contract OddsEvens {
         if (chosenRoleEven != address(0x0))
              require(timesEven[msg.sender] < timesEven[chosenRoleEven]);
         role[msg.sender] = Role.Even;
+        require(msg.value == 100);
         balanceOf[msg.sender] = msg.value;
         chosenRoleEven = msg.sender;
         require(true);
@@ -139,7 +141,7 @@ contract OddsEvens {
         }
         freshVar23 = freshVar24 && freshVar26;
         }
-        if (freshVar23) { 
+        if (freshVar23) {
         amount = (((Even_c == Odd_c)) ? int(10) : (- int(10)));
         } else {
         bool freshVar28;
@@ -154,7 +156,7 @@ contract OddsEvens {
         }
         freshVar28 = freshVar29 && freshVar30;
         }
-        if (freshVar28) { 
+        if (freshVar28) {
         amount = (- int(100));
         } else {
         amount = (- int(100));
@@ -182,7 +184,7 @@ contract OddsEvens {
         }
         freshVar32 = freshVar33 && freshVar35;
         }
-        if (freshVar32) { 
+        if (freshVar32) {
         amount = (((Even_c == Odd_c)) ? (- int(10)) : int(10));
         } else {
         bool freshVar37;
@@ -197,7 +199,7 @@ contract OddsEvens {
         }
         freshVar37 = freshVar38 && freshVar39;
         }
-        if (freshVar37) { 
+        if (freshVar37) {
         amount = int(10);
         } else {
         amount = (- int(100));

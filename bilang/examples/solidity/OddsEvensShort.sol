@@ -43,6 +43,7 @@ contract OddsEvensShort {
         if (chosenRoleOdd != address(0x0))
              require(timesOdd[msg.sender] < timesOdd[chosenRoleOdd]);
         role[msg.sender] = Role.Odd;
+        require(msg.value == 100);
         balanceOf[msg.sender] = msg.value;
         chosenRoleOdd = msg.sender;
         require(true);
@@ -74,6 +75,7 @@ contract OddsEvensShort {
         if (chosenRoleEven != address(0x0))
              require(timesEven[msg.sender] < timesEven[chosenRoleEven]);
         role[msg.sender] = Role.Even;
+        require(msg.value == 100);
         balanceOf[msg.sender] = msg.value;
         chosenRoleEven = msg.sender;
         require(true);

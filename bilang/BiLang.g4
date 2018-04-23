@@ -15,7 +15,7 @@ ext : kind=('join'|'yield'| 'reveal'|'many') query+ ';' ext  # ReceiveExt
     | 'return' payoff # ExpExt
     ;
 
-query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('where' cond=exp)? ;
+query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('$' deposit=INT)? ('where' cond=exp)? ;
 
 payoff
     : <assoc=right> cond=exp '?' ifTrue=payoff ':' ifFalse=payoff # IfPayoff

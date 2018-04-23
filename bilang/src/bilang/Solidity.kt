@@ -68,6 +68,8 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val args = names.map{ "_$it" }.join(", ")
     val doneRole = "done_${role}_$step"
 
+    val deposit = q.deposit.n
+
     return when (kind) {
         Kind.JOIN -> {
             val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
@@ -102,6 +104,7 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        if (chosenRole$role != address(0x0))
             |             require(times$role[msg.sender] < times$role[chosenRole$role]);
             |        role[msg.sender] = Role.$role;
+            |        require(msg.value == $deposit);
             |        balanceOf[msg.sender] = msg.value;
             |        chosenRole$role = msg.sender;
             |        $typeWheres

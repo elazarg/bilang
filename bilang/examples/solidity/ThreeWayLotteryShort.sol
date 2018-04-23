@@ -43,6 +43,7 @@ contract ThreeWayLotteryShort {
         if (chosenRoleIssuer != address(0x0))
              require(timesIssuer[msg.sender] < timesIssuer[chosenRoleIssuer]);
         role[msg.sender] = Role.Issuer;
+        require(msg.value == 10);
         balanceOf[msg.sender] = msg.value;
         chosenRoleIssuer = msg.sender;
         require(true);
@@ -74,6 +75,7 @@ contract ThreeWayLotteryShort {
         if (chosenRoleAlice != address(0x0))
              require(timesAlice[msg.sender] < timesAlice[chosenRoleAlice]);
         role[msg.sender] = Role.Alice;
+        require(msg.value == 10);
         balanceOf[msg.sender] = msg.value;
         chosenRoleAlice = msg.sender;
         require(true);
@@ -105,6 +107,7 @@ contract ThreeWayLotteryShort {
         if (chosenRoleBob != address(0x0))
              require(timesBob[msg.sender] < timesBob[chosenRoleBob]);
         role[msg.sender] = Role.Bob;
+        require(msg.value == 10);
         balanceOf[msg.sender] = msg.value;
         chosenRoleBob = msg.sender;
         require(true);

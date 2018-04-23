@@ -1,5 +1,5 @@
-join  Odd();
-join Even();
+join  Odd() $ 100;
+join Even() $ 100;
 yield Odd(c: bool) Even(c: bool);
 return (Even.c != null && Odd.c != null) ?
      { Even -> ((Even.c <-> Odd.c) ? 10 : -10); Odd -> ((Even.c <-> Odd.c) ? -10 : 10) }

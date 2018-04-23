@@ -41,6 +41,7 @@ contract Simple {
         if (chosenRoleA != address(0x0))
              require(timesA[msg.sender] < timesA[chosenRoleA]);
         role[msg.sender] = Role.A;
+        require(msg.value == 0);
         balanceOf[msg.sender] = msg.value;
         chosenRoleA = msg.sender;
         require(true);
@@ -77,6 +78,7 @@ contract Simple {
         if (chosenRoleB != address(0x0))
              require(timesB[msg.sender] < timesB[chosenRoleB]);
         role[msg.sender] = Role.B;
+        require(msg.value == 0);
         balanceOf[msg.sender] = msg.value;
         chosenRoleB = msg.sender;
         require(true);
