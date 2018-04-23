@@ -160,7 +160,46 @@ private fun varname(it: VarDec) =
         if (it.type is TypeExp.Hidden) "hidden_${it.name.name}"
         else it.name.name
 
-fun exp(e: Exp, outvar: String): String = TODO()
+fun exp(e: Exp, outvar: String, type: String): List<String> = when (e) {
+    is Exp.Call -> TODO("${exp(e.target)}(${e.args.map { exp(it) }.join(",")})")
+    is Exp.UnOp -> {
+        if (e.op == "isUndefined") {
+            val member = exp(e.operand)
+            listOf("$outvar = ${member}_done;")
+        } else {
+            val fresh = Fresh.vvar()
+            val freshType = "var"
+            val prev = exp(e.operand, fresh, freshType)
+            listOf("$freshType $fresh;") + prev + "$outvar = ${e.op} $fresh;"
+        }
+    }
+    is Exp.BinOp -> {
+        val freshLeft = Fresh.vvar()
+        val freshRight = Fresh.vvar()
+        val freshType = when (e.op) {
+            "+", "-", "*", "/" -> "int"
+            ">", ">=", "<", "<=" -> "int"
+            "||", "&&" -> "bool"
+            "==", "!=" -> "var"
+            else -> throw IllegalArgumentException(e.op)
+        }
+        val prev = exp(e.left, freshLeft, freshType) + exp(e.right, freshRight, freshType)
+        listOf("$freshType $freshLeft;", "$freshType $freshRight;") +
+                prev + "$outvar = $freshLeft ${e.op} $freshRight;"
+    }
+    is Exp.Var -> listOf("$outvar = ${e.name};")
+    is Exp.Member -> listOf("$outvar = ${e.target}_${e.field};")
+    is Exp.Cond -> {
+        val condVar = Fresh.vvar()
+        listOf("bool $condVar;") + exp(e.cond, condVar, "bool") +
+                "if ($condVar) { " + exp(e.ifTrue, outvar, type) + "} else {" + exp(e.ifFalse, outvar, type) + "}"
+    }
+    is Exp.Const -> listOf("$outvar = ${exp(e)};")
+    is Exp.Let -> {
+        exp(e.init, e.dec.name.name, (e.dec.type as TypeExp.TypeId).name ) + exp(e.exp, outvar, type)
+    }
+}
+
 
 fun exp(e: Exp): String = when (e) {
     is Exp.Call -> "${exp(e.target)}(${e.args.map { exp(it) }.join(",")})"
@@ -169,33 +208,36 @@ fun exp(e: Exp): String = when (e) {
     is Exp.Var -> "_${e.name}"
     is Exp.Member -> "${e.target}_${e.field}"
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
-    Exp.Const.UNDEFINED -> "throwAssertUndefined()"
     is Exp.Const.Num -> "${e.n}"
     is Exp.Const.Bool -> "${e.truth}"
     is Exp.Const.Address -> "${e.n}" // todo hex
     is Exp.Const.Hidden -> exp(e.value as Exp)
     is Exp.Let -> TODO()
+    Exp.Const.UNDEFINED -> TODO()
 }
 
 fun genExt(ext: Ext, step: Int): String = when (ext) {
     is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
     is Ext.BindSingle -> makeStep(ext.kind, listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
-    is Ext.Value -> "" // genPayoff(ext.exp, step)
+    is Ext.Value -> genPayoff(ext.exp, step)
 }
 
 fun genPayoff(switch: Payoff.Value, step: Int): String {
     // idea: evaluate keys one by one; when the value equals to the value of the sender
     // evaluate the value and withdraw
     // so this is a "switch" expression...
-    switch.ts.entries.map { (role, money) ->
+    return switch.ts.entries.map { (role: String, money: Exp) ->
         """
         |    function withdraw_${step}_$role() by(Role.$role) step($step) {
-        |        ${exp(money, "money")};
-        |        transfer(money, msg.sender);
+        |        require(role[msg.sender] == Role.$role);
+        |        // uint amount = balanceOf[msg.sender];
+        |        uint amount;
+        |        ${exp(money, "amount", "uint").statements()}
+        |        // balanceOf[msg.sender] = 0;
+        |        transfer(amount, msg.sender);
         |    }
         """.trimMargin()
-    }
-    TODO("not implemented")
+    }.join("\n")
 }
 
 private fun typeOf(t: TypeExp): String = when (t) {
@@ -220,3 +262,11 @@ private fun whereof(v: String, t: TypeExp): String = when (t) {
 private fun Iterable<String>.declarations() = join("\n    ")
 private fun Iterable<String>.statements() = join("\n        ")
 private fun Iterable<String>.join(sep: String) = joinToString(sep)
+
+object Fresh {
+    private var v = 0
+    fun vvar(): String {
+        v += 1
+        return "freshVar$v"
+    }
+}

@@ -103,6 +103,7 @@ fun eval(exp: Exp, env: Env): Const {
         is UnOp -> when (exp.op) {
             "-" -> Num(-(eval(exp.operand) as Num).n)
             "!" -> Bool(!(eval(exp.operand) as Bool).truth)
+            "isUndefined" -> Bool(eval(exp.operand) == UNDEFINED)
             else -> throw AssertionError()
         }
         is BinOp -> {
