@@ -101,4 +101,20 @@ contract Puzzle {
         __lastStep = block.timestamp;
     }
     // end 1
+    function withdraw_2_Q() by(Role.Q) public at_step(2) {
+        require(role[msg.sender] == Role.Q);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        amount = 0;
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
+    function withdraw_2_A() by(Role.A) public at_step(2) {
+        require(role[msg.sender] == Role.A);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        amount = 50;
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
 }

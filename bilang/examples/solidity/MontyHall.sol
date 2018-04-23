@@ -190,4 +190,104 @@ contract MontyHall {
         __lastStep = block.timestamp;
     }
     // end 6
+    function withdraw_7_Guest() by(Role.Guest) public at_step(7) {
+        require(role[msg.sender] == Role.Guest);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        bool freshVar1;
+        {
+        bool freshVar2;
+        {
+        bool freshVar3;
+        {
+        bool freshVar4;
+        freshVar4 = Host_car_done;
+        freshVar3 = ! freshVar4;
+        }
+        bool freshVar5;
+        {
+        bool freshVar6;
+        freshVar6 = Host_goat_done;
+        freshVar5 = ! freshVar6;
+        }
+        freshVar2 = freshVar3 && freshVar5;
+        }
+        bool freshVar7;
+        {
+        bool freshVar8;
+        freshVar8 = Guest_switch_done;
+        freshVar7 = ! freshVar8;
+        }
+        freshVar1 = freshVar2 && freshVar7;
+        }
+        if (freshVar1) { 
+        amount = ((((Guest_d != Host_car) == Guest_switch)) ? 20 : (- 20));
+        } else {
+        bool freshVar9;
+        {
+        bool freshVar10;
+        freshVar10 = Host_car_done;
+        bool freshVar11;
+        freshVar11 = Host_goat_done;
+        freshVar9 = freshVar10 || freshVar11;
+        }
+        if (freshVar9) { 
+        amount = 20;
+        } else {
+        amount = (- 100);
+        }
+        }
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
+    function withdraw_7_Host() by(Role.Host) public at_step(7) {
+        require(role[msg.sender] == Role.Host);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        bool freshVar12;
+        {
+        bool freshVar13;
+        {
+        bool freshVar14;
+        {
+        bool freshVar15;
+        freshVar15 = Host_car_done;
+        freshVar14 = ! freshVar15;
+        }
+        bool freshVar16;
+        {
+        bool freshVar17;
+        freshVar17 = Host_goat_done;
+        freshVar16 = ! freshVar17;
+        }
+        freshVar13 = freshVar14 && freshVar16;
+        }
+        bool freshVar18;
+        {
+        bool freshVar19;
+        freshVar19 = Guest_switch_done;
+        freshVar18 = ! freshVar19;
+        }
+        freshVar12 = freshVar13 && freshVar18;
+        }
+        if (freshVar12) { 
+        amount = 0;
+        } else {
+        bool freshVar20;
+        {
+        bool freshVar21;
+        freshVar21 = Host_car_done;
+        bool freshVar22;
+        freshVar22 = Host_goat_done;
+        freshVar20 = freshVar21 || freshVar22;
+        }
+        if (freshVar20) { 
+        amount = (- 100);
+        } else {
+        amount = 0;
+        }
+        }
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
 }

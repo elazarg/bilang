@@ -50,6 +50,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             "!" -> {
                 checkOp(BOOL, type(exp.operand)); BOOL
             }
+            "isUndefined" -> { require(type(exp.operand) is Opt); BOOL }
             else -> throw IllegalArgumentException(exp.op)
         }
         is Exp.BinOp -> {
@@ -72,6 +73,10 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
                     require(compatible(left, right) || compatible(right, left), { "$left <> $right" })
                     BOOL
                 }
+                "<->", "<-!->" -> {
+                    require(compatible(left, BOOL) || compatible(right, BOOL), { "$left <> $right" })
+                    BOOL
+                }
                 else -> throw IllegalArgumentException(exp.op)
             }
         }
@@ -79,7 +84,6 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         is Exp.Const.Address -> ADDRESS
         is Exp.Const.Bool -> BOOL
         is Exp.Const.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
-        Exp.Const.UNDEFINED -> Opt(INT)
         is Exp.Var -> env.getValue(exp)
         is Exp.Member -> {
             checkOp(ROLE, type(Exp.Var(exp.target)))
@@ -91,6 +95,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         }
 
         is Exp.Let -> TODO()
+        Exp.Const.UNDEFINED -> TODO() // We shouldn't really get here
     }
 
     private fun checkOp(expected: TypeExp, args: Collection<TypeExp>) = checkOp(expected, *args.toTypedArray())

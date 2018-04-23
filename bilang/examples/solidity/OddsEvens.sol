@@ -120,4 +120,92 @@ contract OddsEvens {
         __lastStep = block.timestamp;
     }
     // end 2
+    function withdraw_3_Even() by(Role.Even) public at_step(3) {
+        require(role[msg.sender] == Role.Even);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        bool freshVar23;
+        {
+        bool freshVar24;
+        {
+        bool freshVar25;
+        freshVar25 = Even_c_done;
+        freshVar24 = ! freshVar25;
+        }
+        bool freshVar26;
+        {
+        bool freshVar27;
+        freshVar27 = Odd_c_done;
+        freshVar26 = ! freshVar27;
+        }
+        freshVar23 = freshVar24 && freshVar26;
+        }
+        if (freshVar23) { 
+        amount = (((Even_c == Odd_c)) ? 10 : (- 10));
+        } else {
+        bool freshVar28;
+        {
+        bool freshVar29;
+        freshVar29 = Even_c_done;
+        bool freshVar30;
+        {
+        bool freshVar31;
+        freshVar31 = Odd_c_done;
+        freshVar30 = ! freshVar31;
+        }
+        freshVar28 = freshVar29 && freshVar30;
+        }
+        if (freshVar28) { 
+        amount = (- 100);
+        } else {
+        amount = (- 100);
+        }
+        }
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
+    function withdraw_3_Odd() by(Role.Odd) public at_step(3) {
+        require(role[msg.sender] == Role.Odd);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        bool freshVar32;
+        {
+        bool freshVar33;
+        {
+        bool freshVar34;
+        freshVar34 = Even_c_done;
+        freshVar33 = ! freshVar34;
+        }
+        bool freshVar35;
+        {
+        bool freshVar36;
+        freshVar36 = Odd_c_done;
+        freshVar35 = ! freshVar36;
+        }
+        freshVar32 = freshVar33 && freshVar35;
+        }
+        if (freshVar32) { 
+        amount = (((Even_c == Odd_c)) ? (- 10) : 10);
+        } else {
+        bool freshVar37;
+        {
+        bool freshVar38;
+        freshVar38 = Even_c_done;
+        bool freshVar39;
+        {
+        bool freshVar40;
+        freshVar40 = Odd_c_done;
+        freshVar39 = ! freshVar40;
+        }
+        freshVar37 = freshVar38 && freshVar39;
+        }
+        if (freshVar37) { 
+        amount = 10;
+        } else {
+        amount = (- 100);
+        }
+        }
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
 }

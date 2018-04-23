@@ -1,0 +1,30 @@
+explicit global protocol MyProtocol(role Server, role A, role B) {
+    connect Server to A;
+    Broadcast() from Server to B;
+    connect Server to B;
+    Broadcast() from Server to A;
+    Public_c(bool) from A to Server;
+    Broadcast_c(bool) from Server to B;
+    Public_c(bool) from B to Server;
+    Broadcast_c(bool) from Server to A;
+    Withdraw() from A to Server;
+    Withdraw() from B to Server;
+}
+
+
+explicit local protocol MyProtocol_A(role Server, role A) {
+    connect Server;
+    Broadcast() from Server;
+    Public_c(bool) to Server;
+    Broadcast_c(bool) from Server;
+    Withdraw() to Server;
+}
+
+
+explicit local protocol MyProtocol_B(role Server, role B) {
+    Broadcast() from Server;
+    connect Server;
+    Broadcast_c(bool) from Server;
+    Public_c(bool) to Server;
+    Withdraw() to Server;
+}

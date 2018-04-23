@@ -160,51 +160,73 @@ private fun varname(it: VarDec) =
         if (it.type is TypeExp.Hidden) "hidden_${it.name.name}"
         else it.name.name
 
-fun exp(e: Exp, outvar: String, type: String): List<String> = when (e) {
-    is Exp.Call -> TODO("${exp(e.target)}(${e.args.map { exp(it) }.join(",")})")
-    is Exp.UnOp -> {
-        if (e.op == "isUndefined") {
-            val member = exp(e.operand)
-            listOf("$outvar = ${member}_done;")
-        } else {
-            val fresh = Fresh.vvar()
-            val freshType = "var"
-            val prev = exp(e.operand, fresh, freshType)
-            listOf("$freshType $fresh;") + prev + "$outvar = ${e.op} $fresh;"
+fun exp(e: Exp, outvar: String, type: String): List<String> {
+    try {
+        return listOf("$outvar = ${exp(e)};")
+    } catch (ex: StaticError) {}
+    return when (e) {
+        is Exp.Call -> TODO("${exp(e.target)}(${e.args.map { exp(it) }.join(",")})")
+        is Exp.UnOp -> {
+            if (e.op == "isUndefined") {
+                val member = exp(e.operand)
+                listOf("$outvar = ${member}_done;")
+            } else {
+                if (e.operand is Exp.Const || e.operand is Exp.Var)
+                    listOf("$outvar = ${e.op} ${exp(e.operand)};")
+                else {
+                    val fresh = Fresh.vvar()
+                    val freshType = if (e.op == "!") "bool" else "int"
+                    val prev = exp(e.operand, fresh, freshType)
+                    listOf("{", "$freshType $fresh;") + prev + listOf("$outvar = ${e.op} $fresh;", "}")
+                }
+            }
         }
-    }
-    is Exp.BinOp -> {
-        val freshLeft = Fresh.vvar()
-        val freshRight = Fresh.vvar()
-        val freshType = when (e.op) {
-            "+", "-", "*", "/" -> "int"
-            ">", ">=", "<", "<=" -> "int"
-            "||", "&&" -> "bool"
-            "==", "!=" -> "var"
-            else -> throw IllegalArgumentException(e.op)
+        is Exp.BinOp -> {
+            val freshType = when (e.op) {
+                "+", "-", "*", "/" -> "int"
+                ">", ">=", "<", "<=" -> "int"
+                "||", "&&" -> "bool"
+                "==", "!=" -> "int"
+                "<->", "<-!->" -> "bool"
+                else -> throw IllegalArgumentException(e.op)
+            }
+
+            val (left, leftInit) = if (e.left is Exp.Const || e.left is Exp.Var) Pair(exp(e.left), listOf())
+            else {
+                val v = Fresh.vvar()
+                Pair(v, listOf("$freshType $v;") + exp(e.left, v, freshType))
+            }
+            val (right, rightInit) = if (e.right is Exp.Const || e.right is Exp.Var) Pair(exp(e.right), listOf())
+            else {
+                val v = Fresh.vvar()
+                Pair(v, listOf("$freshType $v;") + exp(e.right, v, freshType))
+            }
+
+            val op = if (e.op == "<->") "==" else if (e.op == "<-!->") "!=" else e.op
+            listOf("{") + leftInit + rightInit + listOf("$outvar = $left $op $right;", "}")
         }
-        val prev = exp(e.left, freshLeft, freshType) + exp(e.right, freshRight, freshType)
-        listOf("$freshType $freshLeft;", "$freshType $freshRight;") +
-                prev + "$outvar = $freshLeft ${e.op} $freshRight;"
-    }
-    is Exp.Var -> listOf("$outvar = ${e.name};")
-    is Exp.Member -> listOf("$outvar = ${e.target}_${e.field};")
-    is Exp.Cond -> {
-        val condVar = Fresh.vvar()
-        listOf("bool $condVar;") + exp(e.cond, condVar, "bool") +
-                "if ($condVar) { " + exp(e.ifTrue, outvar, type) + "} else {" + exp(e.ifFalse, outvar, type) + "}"
-    }
-    is Exp.Const -> listOf("$outvar = ${exp(e)};")
-    is Exp.Let -> {
-        exp(e.init, e.dec.name.name, (e.dec.type as TypeExp.TypeId).name ) + exp(e.exp, outvar, type)
+        is Exp.Var -> listOf("$outvar = ${e.name};")
+        is Exp.Member -> listOf("$outvar = ${e.target}_${e.field};")
+        is Exp.Cond -> {
+            val condVar = Fresh.vvar()
+            listOf("bool $condVar;") + exp(e.cond, condVar, "bool") +
+                    "if ($condVar) { " + exp(e.ifTrue, outvar, type) + "} else {" + exp(e.ifFalse, outvar, type) + "}"
+        }
+        is Exp.Const -> listOf("$outvar = ${exp(e)};")
+        is Exp.Let -> {
+            exp(e.init, e.dec.name.name, (e.dec.type as TypeExp.TypeId).name) + exp(e.exp, outvar, type)
+        }
     }
 }
 
-
 fun exp(e: Exp): String = when (e) {
     is Exp.Call -> "${exp(e.target)}(${e.args.map { exp(it) }.join(",")})"
-    is Exp.UnOp -> "(${e.op} ${exp(e.operand)})"
-    is Exp.BinOp -> "(${exp(e.left)} ${e.op} ${exp(e.right)})"
+    is Exp.UnOp -> if (e.op == "isUndefined") throw StaticError(0, "Undefined")
+                    else "(${e.op} ${exp(e.operand)})"
+    is Exp.BinOp -> {
+        val op = if (e.op == "<->") "==" else if (e.op == "<-!->") "!=" else e.op
+        "(${exp(e.left)} $op ${exp(e.right)})"
+    }
     is Exp.Var -> "_${e.name}"
     is Exp.Member -> "${e.target}_${e.field}"
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
@@ -213,7 +235,7 @@ fun exp(e: Exp): String = when (e) {
     is Exp.Const.Address -> "${e.n}" // todo hex
     is Exp.Const.Hidden -> exp(e.value as Exp)
     is Exp.Let -> TODO()
-    Exp.Const.UNDEFINED -> TODO()
+    Exp.Const.UNDEFINED -> throw StaticError(0, "Undefined")
 }
 
 fun genExt(ext: Ext, step: Int): String = when (ext) {
@@ -228,15 +250,15 @@ fun genPayoff(switch: Payoff.Value, step: Int): String {
     // so this is a "switch" expression...
     return switch.ts.entries.map { (role: String, money: Exp) ->
         """
-        |    function withdraw_${step}_$role() by(Role.$role) step($step) {
-        |        require(role[msg.sender] == Role.$role);
-        |        // uint amount = balanceOf[msg.sender];
-        |        uint amount;
-        |        ${exp(money, "amount", "uint").statements()}
-        |        // balanceOf[msg.sender] = 0;
-        |        transfer(amount, msg.sender);
-        |    }
-        """.trimMargin()
+    |    function withdraw_${step}_$role() by(Role.$role) public at_step($step) {
+    |        require(role[msg.sender] == Role.$role);
+    |        // uint amount = balanceOf[msg.sender];
+    |        uint amount;
+    |        ${exp(money, "amount", "uint").statements()}
+    |        // balanceOf[msg.sender] = 0;
+    |        msg.sender.transfer(amount);
+    |    }
+    """.trimMargin()
     }.join("\n")
 }
 

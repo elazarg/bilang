@@ -72,8 +72,9 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Const.UNDEFINED visitUndefExp(UndefExpContext ctx) {
-        return Exp.Const.UNDEFINED.INSTANCE;
+    public Exp.UnOp visitUndefExp(UndefExpContext ctx) {
+        Exp.UnOp isUndefined = new Exp.UnOp("isUndefined", exp(ctx.exp()));
+        return ctx.op.getText().equals("==") ? isUndefined : new Exp.UnOp("!", isUndefined);
     }
 
     @Override

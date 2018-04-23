@@ -111,6 +111,8 @@ fun eval(exp: Exp, env: Env): Const {
             val res: Const = when {
                 exp.op == "==" -> Bool(left == right)
                 exp.op == "!=" -> Bool(left != right)
+                exp.op == "<->" -> Bool(left == right)
+                exp.op == "<-!->" -> Bool(left != right)
                 left is Num && right is Num -> when (exp.op) {
                     "+" -> Num(left.n + right.n)
                     "-" -> Num(left.n - right.n)

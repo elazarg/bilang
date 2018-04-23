@@ -1,5 +1,5 @@
 pragma solidity ^0.4.22;
-contract Simple {
+contract Prisoners {
     // roles
     enum Role { None, A, B }
     mapping(address => Role) role;
@@ -90,16 +90,27 @@ contract Simple {
     }
     // end 1
     // step 2
-    uint A_hidden_x;
-    bool A_hidden_x_done;
+    bool A_c;
+    bool A_c_done;
     bool done_A_2;
-    function yield_A2(uint _hidden_x) at_step(2) public {
+    function yield_A2(bool _c) at_step(2) public {
         require(role[msg.sender] == Role.A);
         require(!done_A_2);
         require(true);
-        A_hidden_x = _hidden_x;
-        A_hidden_x_done = true;
+        A_c = _c;
+        A_c_done = true;
         done_A_2 = true;
+    }
+    bool B_c;
+    bool B_c_done;
+    bool done_B_2;
+    function yield_B2(bool _c) at_step(2) public {
+        require(role[msg.sender] == Role.B);
+        require(!done_B_2);
+        require(true);
+        B_c = _c;
+        B_c_done = true;
+        done_B_2 = true;
     }
     event Broadcast2(); // TODO: add params
     function __nextStep2() at_step(2) public {
@@ -109,60 +120,71 @@ contract Simple {
         __lastStep = block.timestamp;
     }
     // end 2
-    // step 3
-    bool B_y;
-    bool B_y_done;
-    bool done_B_3;
-    function yield_B3(bool _y) at_step(3) public {
-        require(role[msg.sender] == Role.B);
-        require(!done_B_3);
-        require(true);
-        B_y = _y;
-        B_y_done = true;
-        done_B_3 = true;
-    }
-    event Broadcast3(); // TODO: add params
-    function __nextStep3() at_step(3) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        emit Broadcast3();
-        step += 1;
-        __lastStep = block.timestamp;
-    }
-    // end 3
-    // step 4
-    bool A_x;
-    bool A_x_done;
-    bool done_A_4;
-    function reveal_A4(bool _x, uint salt) at_step(4) public {
-        require(role[msg.sender] == Role.A);
-        require(!done_A_4);
-        require(keccak256(_x, salt) == bytes32(A_hidden_x));
-        require(true);
-        A_x = _x;
-        A_x_done = true;
-        done_A_4 = true;
-    }
-    event Broadcast4(); // TODO: add params
-    function __nextStep4() at_step(4) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        emit Broadcast4();
-        step += 1;
-        __lastStep = block.timestamp;
-    }
-    // end 4
-    function withdraw_5_A() by(Role.A) public at_step(5) {
+    function withdraw_3_A() by(Role.A) public at_step(3) {
         require(role[msg.sender] == Role.A);
         // uint amount = balanceOf[msg.sender];
         uint amount;
-        amount = 0;
+        bool freshVar59;
+        {
+        bool freshVar60;
+        {
+        bool freshVar61;
+        freshVar61 = A_c_done;
+        freshVar60 = ! freshVar61;
+        }
+        bool freshVar62;
+        {
+        bool freshVar63;
+        freshVar63 = B_c_done;
+        freshVar62 = ! freshVar63;
+        }
+        freshVar59 = freshVar60 && freshVar62;
+        }
+        if (freshVar59) { 
+        amount = (((A_c && B_c)) ? (- 2) : (((A_c && (! B_c))) ? 0 : ((((! A_c) && B_c)) ? (- 3) : (- 1))));
+        } else {
+        bool freshVar64;
+        freshVar64 = A_c_done;
+        if (freshVar64) { 
+        amount = (- 100);
+        } else {
+        amount = 10;
+        }
+        }
         // balanceOf[msg.sender] = 0;
         msg.sender.transfer(amount);
     }
-    function withdraw_5_B() by(Role.B) public at_step(5) {
+    function withdraw_3_B() by(Role.B) public at_step(3) {
         require(role[msg.sender] == Role.B);
         // uint amount = balanceOf[msg.sender];
         uint amount;
-        amount = 0;
+        bool freshVar65;
+        {
+        bool freshVar66;
+        {
+        bool freshVar67;
+        freshVar67 = A_c_done;
+        freshVar66 = ! freshVar67;
+        }
+        bool freshVar68;
+        {
+        bool freshVar69;
+        freshVar69 = B_c_done;
+        freshVar68 = ! freshVar69;
+        }
+        freshVar65 = freshVar66 && freshVar68;
+        }
+        if (freshVar65) { 
+        amount = (((A_c && B_c)) ? (- 2) : (((A_c && (! B_c))) ? (- 3) : ((((! A_c) && B_c)) ? 0 : (- 1))));
+        } else {
+        bool freshVar70;
+        freshVar70 = A_c_done;
+        if (freshVar70) { 
+        amount = 10;
+        } else {
+        amount = (- 100);
+        }
+        }
         // balanceOf[msg.sender] = 0;
         msg.sender.transfer(amount);
     }

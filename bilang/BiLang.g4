@@ -33,15 +33,15 @@ exp
     | op=('-' | '!') exp                      # UnOpExp
     | left=exp op=('*' | '/') right=exp       # BinOpMultExp
     | left=exp op=('+' | '-') right=exp       # BinOpAddExp
+    | exp op=('!='|'==') 'null'                  # UndefExp
     | left=exp op=('<' | '<=' | '>=' | '>') right=exp    # BinOpCompExp
-    | left=exp op=('==' | '!=') right=exp     # BinOpEqExp
+    | left=exp op=('==' | '!=' | '<->' | '<-!->') right=exp     # BinOpEqExp
     | left=exp op=('&&' | '||') right=exp     # BinOpBoolExp
     | <assoc=right> cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
     | ('true'|'false')                        # BoolLiteralExp
     | name=ID                                 # IdExp
     | INT                                     # NumLiteralExp
     | ADDRESS                                 # AddressLiteralExp
-    | 'null'                                  # UndefExp
     | 'let!' dec=varDec '=' init=exp 'in' body=exp  # LetExp
     ;
 

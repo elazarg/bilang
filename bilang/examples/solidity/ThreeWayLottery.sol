@@ -167,4 +167,82 @@ contract ThreeWayLottery {
         __lastStep = block.timestamp;
     }
     // end 3
+    function withdraw_4_Bob() by(Role.Bob) public at_step(4) {
+        require(role[msg.sender] == Role.Bob);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        bool freshVar71;
+        {
+        bool freshVar72;
+        freshVar72 = Alice_c_done;
+        bool freshVar73;
+        freshVar73 = Bob_c_done;
+        freshVar71 = freshVar72 || freshVar73;
+        }
+        if (freshVar71) { 
+        amount = (- 10);
+        } else {
+        bool freshVar74;
+        freshVar74 = Issuer_c_done;
+        if (freshVar74) { 
+        amount = (- 10);
+        } else {
+        amount = (((((((Issuer_c + Alice_c) + Bob_c) / 3) * 3) == ((Issuer_c + Alice_c) + Bob_c))) ? (- 10) : (((((((Issuer_c + Alice_c) + Bob_c) / 3) * 3) == (((Issuer_c + Alice_c) + Bob_c) - 1))) ? 20 : (- 10)));
+        }
+        }
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
+    function withdraw_4_Issuer() by(Role.Issuer) public at_step(4) {
+        require(role[msg.sender] == Role.Issuer);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        bool freshVar75;
+        {
+        bool freshVar76;
+        freshVar76 = Alice_c_done;
+        bool freshVar77;
+        freshVar77 = Bob_c_done;
+        freshVar75 = freshVar76 || freshVar77;
+        }
+        if (freshVar75) { 
+        amount = 20;
+        } else {
+        bool freshVar78;
+        freshVar78 = Issuer_c_done;
+        if (freshVar78) { 
+        amount = (- 10);
+        } else {
+        amount = (((((((Issuer_c + Alice_c) + Bob_c) / 3) * 3) == ((Issuer_c + Alice_c) + Bob_c))) ? (- 10) : (((((((Issuer_c + Alice_c) + Bob_c) / 3) * 3) == (((Issuer_c + Alice_c) + Bob_c) - 1))) ? (- 10) : 20));
+        }
+        }
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
+    function withdraw_4_Alice() by(Role.Alice) public at_step(4) {
+        require(role[msg.sender] == Role.Alice);
+        // uint amount = balanceOf[msg.sender];
+        uint amount;
+        bool freshVar79;
+        {
+        bool freshVar80;
+        freshVar80 = Alice_c_done;
+        bool freshVar81;
+        freshVar81 = Bob_c_done;
+        freshVar79 = freshVar80 || freshVar81;
+        }
+        if (freshVar79) { 
+        amount = (- 10);
+        } else {
+        bool freshVar82;
+        freshVar82 = Issuer_c_done;
+        if (freshVar82) { 
+        amount = 20;
+        } else {
+        amount = (((((((Issuer_c + Alice_c) + Bob_c) / 3) * 3) == ((Issuer_c + Alice_c) + Bob_c))) ? 20 : (((((((Issuer_c + Alice_c) + Bob_c) / 3) * 3) == (((Issuer_c + Alice_c) + Bob_c) - 1))) ? (- 10) : (- 10)));
+        }
+        }
+        // balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
 }
