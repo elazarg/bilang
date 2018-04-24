@@ -131,73 +131,19 @@ contract ThreeWayLotteryShort {
     // end 0
     function withdraw_1_Bob() by(Role.Bob) at_step(1) public {
         int amount;
-        bool freshVar83;
-        {
-        bool freshVar84;
-        freshVar84 = Alice_c_done;
-        bool freshVar85;
-        freshVar85 = Bob_c_done;
-        freshVar83 = freshVar84 || freshVar85;
-        }
-        if (freshVar83) { 
-        amount = (- int(10));
-        } else {
-        bool freshVar86;
-        freshVar86 = Issuer_c_done;
-        if (freshVar86) { 
-        amount = (- int(10));
-        } else {
-        amount = (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? int(20) : (- int(10))));
-        }
-        }
+        amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? int(20) : (- int(10))))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_1_Issuer() by(Role.Issuer) at_step(1) public {
         int amount;
-        bool freshVar87;
-        {
-        bool freshVar88;
-        freshVar88 = Alice_c_done;
-        bool freshVar89;
-        freshVar89 = Bob_c_done;
-        freshVar87 = freshVar88 || freshVar89;
-        }
-        if (freshVar87) { 
-        amount = int(20);
-        } else {
-        bool freshVar90;
-        freshVar90 = Issuer_c_done;
-        if (freshVar90) { 
-        amount = (- int(10));
-        } else {
-        amount = (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : int(20)));
-        }
-        }
+        amount = (((! Alice_c_done || ! Bob_c_done)) ? int(20) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : int(20)))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_1_Alice() by(Role.Alice) at_step(1) public {
         int amount;
-        bool freshVar91;
-        {
-        bool freshVar92;
-        freshVar92 = Alice_c_done;
-        bool freshVar93;
-        freshVar93 = Bob_c_done;
-        freshVar91 = freshVar92 || freshVar93;
-        }
-        if (freshVar91) { 
-        amount = (- int(10));
-        } else {
-        bool freshVar94;
-        freshVar94 = Issuer_c_done;
-        if (freshVar94) { 
-        amount = int(20);
-        } else {
-        amount = (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : (- int(10))));
-        }
-        }
+        amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : (- int(10))))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

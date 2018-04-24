@@ -22,7 +22,7 @@ class Extensive(private val name: String, private val desc: String, private val 
 
 }
 
-class TreeMaker(val types: Map<String, TypeExp>) {
+class TreeMaker(private val types: Map<String, TypeExp>) {
     fun fromExp(ext: Ext, env: Env = Env()): Tree = when (ext) {
         is Ext.BindSingle -> {
             val q = ext.q

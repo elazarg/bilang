@@ -1,0 +1,50 @@
+explicit global protocol MyProtocol(role Server, role Issuer, role Alice, role Bob) {
+    connect Server to Issuer;
+    Broadcast() from Server to Alice, Bob;
+    connect Server to Alice;
+    Broadcast() from Server to Issuer, Bob;
+    connect Server to Bob;
+    Broadcast() from Server to Issuer, Alice;
+    Public_c(choice) from Issuer to Server;
+    Broadcast_c(choice) from Server to Alice, Bob;
+    Public_c(choice) from Alice to Server;
+    Broadcast_c(choice) from Server to Issuer, Bob;
+    Public_c(choice) from Bob to Server;
+    Broadcast_c(choice) from Server to Issuer, Alice;
+    Withdraw() from Bob to Server;
+    Withdraw() from Issuer to Server;
+    Withdraw() from Alice to Server;
+}
+
+
+explicit local protocol MyProtocol_Issuer(role Server, role Issuer) {
+    connect Server;
+    Broadcast() from Server;
+    Broadcast() from Server;
+    Public_c(choice) to Server;
+    Broadcast_c(choice) from Server;
+    Broadcast_c(choice) from Server;
+    Withdraw() to Server;
+}
+
+
+explicit local protocol MyProtocol_Alice(role Server, role Alice) {
+    Broadcast() from Server;
+    connect Server;
+    Broadcast() from Server;
+    Broadcast_c(choice) from Server;
+    Public_c(choice) to Server;
+    Broadcast_c(choice) from Server;
+    Withdraw() to Server;
+}
+
+
+explicit local protocol MyProtocol_Bob(role Server, role Bob) {
+    Broadcast() from Server;
+    Broadcast() from Server;
+    connect Server;
+    Broadcast_c(choice) from Server;
+    Broadcast_c(choice) from Server;
+    Public_c(choice) to Server;
+    Withdraw() to Server;
+}

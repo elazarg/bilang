@@ -40,7 +40,13 @@ ${genExt(p.game, 0)}
 }
 
 
-fun makeStep(kind: Kind, qs: List<Query>, step: Int): String {
+private fun genExt(ext: Ext, step: Int): String = when (ext) {
+    is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
+    is Ext.BindSingle -> makeStep(ext.kind, listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
+    is Ext.Value -> genPayoff(ext.exp, step)
+}
+
+private fun makeStep(kind: Kind, qs: List<Query>, step: Int): String {
     val items = qs.map { makeQuery(kind, it, step) }.join("\n")
     return """
     // step $step
@@ -60,7 +66,7 @@ $items
     """
 }
 
-fun makeQuery(kind: Kind, q: Query, step: Int): String {
+private fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val role = q.role.name
     val where = exp(q.where)
 
@@ -85,7 +91,7 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             if (q.params.isNotEmpty()) {
                 val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
                 val reveals = (vars.map { (type, name) -> "_$name" } + "salt").join(", ")
-                """
+            """
             |    mapping(address => bytes32) commits$role;
             |    mapping(address => uint) times$role;
             |    bool halfStep$role;
@@ -186,7 +192,23 @@ private fun varname(it: VarDec) =
         if (it.type is TypeExp.Hidden) "hidden_${it.name.name}"
         else it.name.name
 
-fun exp(e: Exp, outvar: String, type: String): List<String> {
+private fun genPayoff(switch: Payoff.Value, step: Int): String {
+    // idea: evaluate keys one by one; when the value equals to the value of the sender
+    // evaluate the value and withdraw
+    // so this is a "switch" expression...
+    return switch.ts.entries.map { (role: String, money: Exp) ->
+        """
+        |    function withdraw_${step}_$role() by(Role.$role) at_step($step) public {
+        |        int amount;
+        |        ${exp(money, "amount", "int").statements()}
+        |        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
+        |        delete balanceOf[msg.sender];
+        |    }
+        """.trimMargin()
+        }.join("\n")
+}
+
+private fun exp(e: Exp, outvar: String, type: String): List<String> {
     try {
         return listOf("$outvar = ${exp(e)};")
     } catch (ex: StaticError) {}
@@ -197,7 +219,7 @@ fun exp(e: Exp, outvar: String, type: String): List<String> {
                 val member = exp(e.operand)
                 listOf("$outvar = ${member}_done;")
             } else {
-                if (e.operand is Exp.Const || e.operand is Exp.Var)
+                if (trivial(e.operand))
                     listOf("$outvar = ${e.op} ${exp(e.operand)};")
                 else {
                     val fresh = Fresh.vvar()
@@ -217,12 +239,12 @@ fun exp(e: Exp, outvar: String, type: String): List<String> {
                 else -> throw IllegalArgumentException(e.op)
             }
 
-            val (left, leftInit) = if (e.left is Exp.Const || e.left is Exp.Var) Pair(exp(e.left), listOf())
+            val (left, leftInit) = if (trivial(e.left)) Pair(exp(e.left), listOf())
             else {
                 val v = Fresh.vvar()
                 Pair(v, listOf("$freshType $v;") + exp(e.left, v, freshType))
             }
-            val (right, rightInit) = if (e.right is Exp.Const || e.right is Exp.Var) Pair(exp(e.right), listOf())
+            val (right, rightInit) = if (trivial(e.right)) Pair(exp(e.right), listOf())
             else {
                 val v = Fresh.vvar()
                 Pair(v, listOf("$freshType $v;") + exp(e.right, v, freshType))
@@ -245,10 +267,21 @@ fun exp(e: Exp, outvar: String, type: String): List<String> {
     }
 }
 
-fun exp(e: Exp): String = when (e) {
+private fun trivial(e: Exp): Boolean {
+    try {
+        exp(e)
+    } catch (ex: StaticError) {
+        return false
+    }
+    return true
+}
+
+private fun exp(e: Exp): String = when (e) {
     is Exp.Call -> "${exp(e.target)}(${e.args.map { exp(it) }.join(",")})"
-    is Exp.UnOp -> if (e.op == "isUndefined") throw StaticError(0, "Undefined")
-                    else "(${e.op} ${exp(e.operand)})"
+    is Exp.UnOp -> if (e.op == "isUndefined") {
+        val operand = e.operand as Exp.Member
+        "! ${operand.target}_${operand.field}_done"
+    } else "(${e.op} ${exp(e.operand)})"
     is Exp.BinOp -> {
         val op = if (e.op == "<->") "==" else if (e.op == "<-!->") "!=" else e.op
         "(${exp(e.left)} $op ${exp(e.right)})"
@@ -258,32 +291,10 @@ fun exp(e: Exp): String = when (e) {
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
     is Exp.Const.Num -> "int(${e.n})"
     is Exp.Const.Bool -> "${e.truth}"
-    is Exp.Const.Address -> "${e.n}" // todo hex
+    is Exp.Const.Address -> "address(${e.n.toString(16)})" // todo hex
     is Exp.Const.Hidden -> exp(e.value as Exp)
     is Exp.Let -> TODO()
     Exp.Const.UNDEFINED -> throw StaticError(0, "Undefined")
-}
-
-fun genExt(ext: Ext, step: Int): String = when (ext) {
-    is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
-    is Ext.BindSingle -> makeStep(ext.kind, listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
-    is Ext.Value -> genPayoff(ext.exp, step)
-}
-
-fun genPayoff(switch: Payoff.Value, step: Int): String {
-    // idea: evaluate keys one by one; when the value equals to the value of the sender
-    // evaluate the value and withdraw
-    // so this is a "switch" expression...
-    return switch.ts.entries.map { (role: String, money: Exp) ->
-        """
-    |    function withdraw_${step}_$role() by(Role.$role) at_step($step) public {
-    |        int amount;
-    |        ${exp(money, "amount", "int").statements()}
-    |        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
-    |        delete balanceOf[msg.sender];
-    |    }
-    """.trimMargin()
-    }.join("\n")
 }
 
 private fun typeOf(t: TypeExp): String = when (t) {
@@ -309,7 +320,7 @@ private fun Iterable<String>.declarations() = join("\n    ")
 private fun Iterable<String>.statements() = join("\n        ")
 private fun Iterable<String>.join(sep: String) = joinToString(sep)
 
-object Fresh {
+private object Fresh {
     private var v = 0
     fun vvar(): String {
         v += 1

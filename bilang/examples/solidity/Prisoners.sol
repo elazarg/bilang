@@ -25,7 +25,7 @@ contract Prisoners {
     }
     // step 0
     bool doneA;
-    function join_A() at_step(0) public payable {
+    function join_A() at_step(0) public by(Role.None) payable {
         role[msg.sender] = Role.A;
         require(msg.value == 100); 
         require(!doneA);
@@ -44,7 +44,7 @@ contract Prisoners {
     // end 0
     // step 1
     bool doneB;
-    function join_B() at_step(1) public payable {
+    function join_B() at_step(1) public by(Role.None) payable {
         role[msg.sender] = Role.B;
         require(msg.value == 100); 
         require(!doneB);
@@ -93,65 +93,13 @@ contract Prisoners {
     // end 2
     function withdraw_3_A() by(Role.A) at_step(3) public {
         int amount;
-        bool freshVar59;
-        {
-        bool freshVar60;
-        {
-        bool freshVar61;
-        freshVar61 = A_c_done;
-        freshVar60 = ! freshVar61;
-        }
-        bool freshVar62;
-        {
-        bool freshVar63;
-        freshVar63 = B_c_done;
-        freshVar62 = ! freshVar63;
-        }
-        freshVar59 = freshVar60 && freshVar62;
-        }
-        if (freshVar59) { 
-        amount = (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? int(0) : ((((! A_c) && B_c)) ? (- int(3)) : (- int(1)))));
-        } else {
-        bool freshVar64;
-        freshVar64 = A_c_done;
-        if (freshVar64) { 
-        amount = (- int(100));
-        } else {
-        amount = int(10);
-        }
-        }
+        amount = ((((! ! A_c_done) && (! ! B_c_done))) ? (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? int(0) : ((((! A_c) && B_c)) ? (- int(3)) : (- int(1))))) : ((! A_c_done) ? (- int(100)) : int(10)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_3_B() by(Role.B) at_step(3) public {
         int amount;
-        bool freshVar65;
-        {
-        bool freshVar66;
-        {
-        bool freshVar67;
-        freshVar67 = A_c_done;
-        freshVar66 = ! freshVar67;
-        }
-        bool freshVar68;
-        {
-        bool freshVar69;
-        freshVar69 = B_c_done;
-        freshVar68 = ! freshVar69;
-        }
-        freshVar65 = freshVar66 && freshVar68;
-        }
-        if (freshVar65) { 
-        amount = (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? (- int(3)) : ((((! A_c) && B_c)) ? int(0) : (- int(1)))));
-        } else {
-        bool freshVar70;
-        freshVar70 = A_c_done;
-        if (freshVar70) { 
-        amount = int(10);
-        } else {
-        amount = (- int(100));
-        }
-        }
+        amount = ((((! ! A_c_done) && (! ! B_c_done))) ? (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? (- int(3)) : ((((! A_c) && B_c)) ? int(0) : (- int(1))))) : ((! A_c_done) ? int(10) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

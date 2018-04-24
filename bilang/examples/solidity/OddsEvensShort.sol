@@ -99,85 +99,13 @@ contract OddsEvensShort {
     // end 0
     function withdraw_1_Even() by(Role.Even) at_step(1) public {
         int amount;
-        bool freshVar41;
-        {
-        bool freshVar42;
-        {
-        bool freshVar43;
-        freshVar43 = Even_c_done;
-        freshVar42 = ! freshVar43;
-        }
-        bool freshVar44;
-        {
-        bool freshVar45;
-        freshVar45 = Odd_c_done;
-        freshVar44 = ! freshVar45;
-        }
-        freshVar41 = freshVar42 && freshVar44;
-        }
-        if (freshVar41) { 
-        amount = (((Even_c == Odd_c)) ? int(10) : (- int(10)));
-        } else {
-        bool freshVar46;
-        {
-        bool freshVar47;
-        freshVar47 = Even_c_done;
-        bool freshVar48;
-        {
-        bool freshVar49;
-        freshVar49 = Odd_c_done;
-        freshVar48 = ! freshVar49;
-        }
-        freshVar46 = freshVar47 && freshVar48;
-        }
-        if (freshVar46) { 
-        amount = (- int(100));
-        } else {
-        amount = (- int(100));
-        }
-        }
+        amount = ((((! ! Even_c_done) && (! ! Odd_c_done))) ? (((Even_c == Odd_c)) ? int(10) : (- int(10))) : (((! Even_c_done && (! ! Odd_c_done))) ? (- int(100)) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_1_Odd() by(Role.Odd) at_step(1) public {
         int amount;
-        bool freshVar50;
-        {
-        bool freshVar51;
-        {
-        bool freshVar52;
-        freshVar52 = Even_c_done;
-        freshVar51 = ! freshVar52;
-        }
-        bool freshVar53;
-        {
-        bool freshVar54;
-        freshVar54 = Odd_c_done;
-        freshVar53 = ! freshVar54;
-        }
-        freshVar50 = freshVar51 && freshVar53;
-        }
-        if (freshVar50) { 
-        amount = (((Even_c == Odd_c)) ? (- int(10)) : int(10));
-        } else {
-        bool freshVar55;
-        {
-        bool freshVar56;
-        freshVar56 = Even_c_done;
-        bool freshVar57;
-        {
-        bool freshVar58;
-        freshVar58 = Odd_c_done;
-        freshVar57 = ! freshVar58;
-        }
-        freshVar55 = freshVar56 && freshVar57;
-        }
-        if (freshVar55) { 
-        amount = int(10);
-        } else {
-        amount = (- int(100));
-        }
-        }
+        amount = ((((! ! Even_c_done) && (! ! Odd_c_done))) ? (((Even_c == Odd_c)) ? (- int(10)) : int(10)) : (((! Even_c_done && (! ! Odd_c_done))) ? int(10) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

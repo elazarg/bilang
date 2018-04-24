@@ -25,7 +25,7 @@ contract Simple {
     }
     // step 0
     bool doneA;
-    function join_A() at_step(0) public {
+    function join_A() at_step(0) public by(Role.None) {
         role[msg.sender] = Role.A;
         require(!doneA);
         balanceOf[msg.sender] = msg.value;
@@ -43,7 +43,7 @@ contract Simple {
     // end 0
     // step 1
     bool doneB;
-    function join_B() at_step(1) public {
+    function join_B() at_step(1) public by(Role.None) {
         role[msg.sender] = Role.B;
         require(!doneB);
         balanceOf[msg.sender] = msg.value;

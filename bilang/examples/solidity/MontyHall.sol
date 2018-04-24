@@ -25,7 +25,7 @@ contract MontyHall {
     }
     // step 0
     bool doneHost;
-    function join_Host() at_step(0) public payable {
+    function join_Host() at_step(0) public by(Role.None) payable {
         role[msg.sender] = Role.Host;
         require(msg.value == 100); 
         require(!doneHost);
@@ -44,7 +44,7 @@ contract MontyHall {
     // end 0
     // step 1
     bool doneGuest;
-    function join_Guest() at_step(1) public payable {
+    function join_Guest() at_step(1) public by(Role.None) payable {
         role[msg.sender] = Role.Guest;
         require(msg.value == 100); 
         require(!doneGuest);
@@ -164,97 +164,13 @@ contract MontyHall {
     // end 6
     function withdraw_7_Guest() by(Role.Guest) at_step(7) public {
         int amount;
-        bool freshVar1;
-        {
-        bool freshVar2;
-        {
-        bool freshVar3;
-        {
-        bool freshVar4;
-        freshVar4 = Host_car_done;
-        freshVar3 = ! freshVar4;
-        }
-        bool freshVar5;
-        {
-        bool freshVar6;
-        freshVar6 = Host_goat_done;
-        freshVar5 = ! freshVar6;
-        }
-        freshVar2 = freshVar3 && freshVar5;
-        }
-        bool freshVar7;
-        {
-        bool freshVar8;
-        freshVar8 = Guest_switch_done;
-        freshVar7 = ! freshVar8;
-        }
-        freshVar1 = freshVar2 && freshVar7;
-        }
-        if (freshVar1) { 
-        amount = ((((Guest_d != Host_car) == Guest_switch)) ? int(20) : (- int(20)));
-        } else {
-        bool freshVar9;
-        {
-        bool freshVar10;
-        freshVar10 = Host_car_done;
-        bool freshVar11;
-        freshVar11 = Host_goat_done;
-        freshVar9 = freshVar10 || freshVar11;
-        }
-        if (freshVar9) { 
-        amount = int(20);
-        } else {
-        amount = (- int(100));
-        }
-        }
+        amount = (((((! ! Host_car_done) && (! ! Host_goat_done)) && (! ! Guest_switch_done))) ? ((((Guest_d != Host_car) == Guest_switch)) ? int(20) : (- int(20))) : (((! Host_car_done || ! Host_goat_done)) ? int(20) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_7_Host() by(Role.Host) at_step(7) public {
         int amount;
-        bool freshVar12;
-        {
-        bool freshVar13;
-        {
-        bool freshVar14;
-        {
-        bool freshVar15;
-        freshVar15 = Host_car_done;
-        freshVar14 = ! freshVar15;
-        }
-        bool freshVar16;
-        {
-        bool freshVar17;
-        freshVar17 = Host_goat_done;
-        freshVar16 = ! freshVar17;
-        }
-        freshVar13 = freshVar14 && freshVar16;
-        }
-        bool freshVar18;
-        {
-        bool freshVar19;
-        freshVar19 = Guest_switch_done;
-        freshVar18 = ! freshVar19;
-        }
-        freshVar12 = freshVar13 && freshVar18;
-        }
-        if (freshVar12) { 
-        amount = int(0);
-        } else {
-        bool freshVar20;
-        {
-        bool freshVar21;
-        freshVar21 = Host_car_done;
-        bool freshVar22;
-        freshVar22 = Host_goat_done;
-        freshVar20 = freshVar21 || freshVar22;
-        }
-        if (freshVar20) { 
-        amount = (- int(100));
-        } else {
-        amount = int(0);
-        }
-        }
+        amount = (((((! ! Host_car_done) && (! ! Host_goat_done)) && (! ! Guest_switch_done))) ? int(0) : (((! Host_car_done || ! Host_goat_done)) ? (- int(100)) : int(0)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

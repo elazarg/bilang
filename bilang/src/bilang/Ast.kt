@@ -69,13 +69,9 @@ fun desugar(payoff: Payoff): Payoff.Value = desugar(payoff, listOf())
 
 // TODO: FIX. let binding does not seem to happen
 private fun desugar(payoff: Payoff, names: List<Pair<VarDec, Exp>>): Payoff.Value = when (payoff) {
-    is Payoff.Value -> {
-        val res = payoff.copy(ts = payoff.ts.mapValues { (_, exp) ->
-            names.foldRight(exp){(vd, init), acc -> Exp.Let(vd, init, acc)}
-        })
-        println(res)
-        res
-    }
+    is Payoff.Value -> payoff.copy(ts = payoff.ts.mapValues { (_, exp) ->
+        names.foldRight(exp){(vd, init), acc -> Exp.Let(vd, init, acc)}
+    })
     is Payoff.Cond -> {
         val ifTrue = desugar(payoff.ifTrue).ts
         val ifFalse = desugar(payoff.ifFalse).ts
