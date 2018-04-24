@@ -211,16 +211,31 @@ An important previous work was done by Velner et al., which demonstrate how adde
 In this paper we suggest a programming language and techniques that are amenable to analysis on several levels, by making explicit the expected information dependency and sequence of messages, and by using existing tools that perform game-theoretical analysis and guaranteeing absence of communication mismatches with clients. This is different from Velner et al. in that we allow more refined control over information dependencies, and that we do other analyses --- in particular we enumerate Nash equilibria and decide the existence of dominant strategy. It is also possible to express games with unbounded number of players, while still guaranteeing bounded execution time pre transaction, and lack of communication mismatch between server and clients.
 
 \subsection{Execution Model and Assumptions}
-The execution model consists of a single stateful server, infinite number of clients, and a message-passing channel between them. The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly. We assume fair miners, meaning that transaction requests will be performed within a reasonable window of time (much lower than some predefined timeout). Note that this last assumption cannot be assumed in general in Ethereum, since the price of gas might be too low so no miner will have any incentive to perform the transaction; we do not try to solve this problem in this paper.
+The execution model consists of a single stateful server, infinite number of clients, and a database of messages to which client has write permissions, and the server has read permissions; there's also a log to which the server has append-only permissions and the clients has read permissions. The state of the server is always fully reflected on the log, except for hidden values sent by clients which are opaque tokens. The server executes a single game described in our language. A client can send messages, and can read the state of the server and act accordingly. We assume fair miners, meaning that transaction requests will be performed within a reasonable window of time (much lower than some predefined timeout). Note that this last assumption cannot be assumed in general in Ethereum, since miners have their own incentives -- in particular the price of gas might be too low so no miner will have any incentive to perform the transaction; we do not try to solve this problem in this paper.
 
-We assume that clients are alert and waiting, and respond within predefined window of time.
+We assume that clients are alert and waiting, and respond within a predefined window of time.
 
 
-\subsection{Running Example}
+\subsection{Describing Games}
+We start with a very simple example of a guessing game. Player $A$ chooses a boolean value, and player $B$ tries to guess that value.
+In our language, this game can be implemented this way:
+
+\lstinputlisting{../bilang/examples/Simple.bi}
+
+Since in our model there is an infinite number of players, we should pick two of them for the actual game. This is accomplished in the first two lines. A \texttt{join} command waits for some arbitrary user to send a join request; of all these users, the server picks one arbitrarily. This command is racy, and implemented in a way that encourages users to respond quickly, in order to somewhat mitigate look-into-messages attacks. After this command is executed, the name $A$ is bound to an address of some user that sent an appropriate join request, and from this point forward we call this user `player A'. The syntax \texttt{\$ 1} means that valid join requests must be accompanied with an amount of 1 unit of token (\texttt{wei}, in Ethereum) which will be owned by the contract.
+
+The second command is identical in execution. However, there's a subtle point here: while the second command is waiting, the game cannot be continued and player $A$'s money is locked. There's no perfect solution here, but as long as $A$ is the only player, it makes sense to let her leave the game without penalty. She can also (in this game) can try to become player $B$, in which the only payment will be that of execution cost -- gas, on the Ethereum platform (note that we cannot in general know whether the same user plays two different roles, due the pseudonimity of the blockchain). We chose to implement a timer, after which player $B$ becomes the null player, and all its values will be \texttt{null}.
+
+Next is a \texttt{yield} command. At this point we know who player $A$ is, we can wait for it to send the appropriate message, so there's no race here. If player $A$'s message is received within the time limit, the value is bound to the field \texttt{A.x}. However, this value is \texttt{hidden} from other players (implemented in a commitment scheme) so no checks can be performed on it. It can only be passed around.
+
+The next \texttt{yield} command is similar and simpler, since there's no hiding involved.
+
+The last \texttt{yield} command requires player $A$ to publish her hidden value (reveal the commitment and the salt value). If the player fails to give the right value, it is as if she quit the game, and the value becomes \texttt{null}.
+
+Games end with a description of payoff - how much money each of the players get.
+
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
 $\\$
-
-\lstinputlisting{../bilang/examples/OddsEvens.bi}
 
 \lstinputlisting{../bilang/examples/MontyHall.bi}
 
@@ -411,6 +426,8 @@ When the \texttt{yield} command executes, the system pauses, but now only the re
 A \texttt{reveal} command waits for the variable to be bound for the revealed value; the sender should send the random salt together with the value.
 
 The \texttt{transfer} command is a shorthand for adding value to one role and subtracting it from another role. No actual transaction is performed during the game, except the initial investment upon \texttt{join} and the final withdrawal. This way players are not affected by external transactions.
+
+\subsubsection{Identities} In principle, we should allow the same player (same identity) to be registered to different roles. We cannot prevent a person from hiding behind two identities, and if we encourage revealing this fact we can optimise the protocol and take advantage of having less players and less incentives to take into account.
 
 \subsubsection{N-player Role: Aggregation}
 
