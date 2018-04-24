@@ -33,6 +33,7 @@ private fun writeFile(filename: String, text: String) {
 
 fun main(args: Array<String>) {
     listOf(
+            "Trivial1",
             "Simple",
             "Puzzle",
             "MontyHall",

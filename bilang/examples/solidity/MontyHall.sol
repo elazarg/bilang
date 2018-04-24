@@ -1,5 +1,17 @@
 pragma solidity ^0.4.22;
 contract MontyHall {
+    constructor() public {
+        lastBlock = block.timestamp;
+    }
+    // Step
+    uint constant STEP_TIME = 500;
+    int step;
+    uint lastBlock;
+    modifier at_step(int _step) {
+        require(step == _step);
+        //require(block.timestamp < lastBlock + STEP_TIME);
+        _;
+    }
     // roles
     enum Role { None, Host, Guest }
     mapping(address => Role) role;
@@ -8,87 +20,42 @@ contract MontyHall {
         require(role[msg.sender] == r);
         _;
     }
-    // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint __lastStep;
-    modifier at_step(int _step) {
-        require(step == _step);
-        require(block.timestamp < __lastStep + STEP_TIME);
-        _;
-    }
     // step 0
-    mapping(address => bytes32) commitsHost;
-    mapping(address => uint) timesHost;
-    bool halfStepHost;
-    function join_commit_Host(bytes32 c) at_step(0) public {
-        require(commitsHost[msg.sender] == bytes32(0));
-        require(!halfStepHost);
-        commitsHost[msg.sender] = c;
-        timesHost[msg.sender] = block.timestamp;
-    }
-    event BroadcastHalfHost();
-    function __nextHalfStepHost() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        require(halfStepHost == false);
-        emit BroadcastHalfHost();
-        halfStepHost = true;
-        __lastStep = block.timestamp;
-    }
-    address chosenRoleHost;
-    function join_Host(uint salt) at_step(0) public payable {
-        require(keccak256(salt) == bytes32(commitsHost[msg.sender]));
-        if (chosenRoleHost != address(0x0))
-             require(timesHost[msg.sender] < timesHost[chosenRoleHost]);
+    bool doneHost;
+    function join_Host() at_step(0) public payable {
         role[msg.sender] = Role.Host;
         require(msg.value == 100);
+        require(!doneHost);
         balanceOf[msg.sender] = msg.value;
-        chosenRoleHost = msg.sender;
         require(true);
+        doneHost = true;
     }
     event Broadcast0(); // TODO: add params
-    function __nextStep0() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep0() public {
+        require(step == 0);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast0();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 1;
+        lastBlock = block.timestamp;
     }
     // end 0
     // step 1
-    mapping(address => bytes32) commitsGuest;
-    mapping(address => uint) timesGuest;
-    bool halfStepGuest;
-    function join_commit_Guest(bytes32 c) at_step(1) public {
-        require(commitsGuest[msg.sender] == bytes32(0));
-        require(!halfStepGuest);
-        commitsGuest[msg.sender] = c;
-        timesGuest[msg.sender] = block.timestamp;
-    }
-    event BroadcastHalfGuest();
-    function __nextHalfStepGuest() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        require(halfStepGuest == false);
-        emit BroadcastHalfGuest();
-        halfStepGuest = true;
-        __lastStep = block.timestamp;
-    }
-    address chosenRoleGuest;
-    function join_Guest(uint salt) at_step(1) public payable {
-        require(keccak256(salt) == bytes32(commitsGuest[msg.sender]));
-        if (chosenRoleGuest != address(0x0))
-             require(timesGuest[msg.sender] < timesGuest[chosenRoleGuest]);
+    bool doneGuest;
+    function join_Guest() at_step(1) public payable {
         role[msg.sender] = Role.Guest;
         require(msg.value == 100);
+        require(!doneGuest);
         balanceOf[msg.sender] = msg.value;
-        chosenRoleGuest = msg.sender;
         require(true);
+        doneGuest = true;
     }
     event Broadcast1(); // TODO: add params
-    function __nextStep1() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep1() public {
+        require(step == 1);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast1();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 2;
+        lastBlock = block.timestamp;
     }
     // end 1
     // step 2
@@ -104,11 +71,12 @@ contract MontyHall {
         done_Host_2 = true;
     }
     event Broadcast2(); // TODO: add params
-    function __nextStep2() at_step(2) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep2() public {
+        require(step == 2);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast2();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 3;
+        lastBlock = block.timestamp;
     }
     // end 2
     // step 3
@@ -124,11 +92,12 @@ contract MontyHall {
         done_Guest_3 = true;
     }
     event Broadcast3(); // TODO: add params
-    function __nextStep3() at_step(3) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep3() public {
+        require(step == 3);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast3();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 4;
+        lastBlock = block.timestamp;
     }
     // end 3
     // step 4
@@ -144,11 +113,12 @@ contract MontyHall {
         done_Host_4 = true;
     }
     event Broadcast4(); // TODO: add params
-    function __nextStep4() at_step(4) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep4() public {
+        require(step == 4);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast4();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 5;
+        lastBlock = block.timestamp;
     }
     // end 4
     // step 5
@@ -164,11 +134,12 @@ contract MontyHall {
         done_Guest_5 = true;
     }
     event Broadcast5(); // TODO: add params
-    function __nextStep5() at_step(5) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep5() public {
+        require(step == 5);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast5();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 6;
+        lastBlock = block.timestamp;
     }
     // end 5
     // step 6
@@ -185,11 +156,12 @@ contract MontyHall {
         done_Host_6 = true;
     }
     event Broadcast6(); // TODO: add params
-    function __nextStep6() at_step(6) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep6() public {
+        require(step == 6);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast6();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 7;
+        lastBlock = block.timestamp;
     }
     // end 6
     function withdraw_7_Guest() by(Role.Guest) public at_step(7) {

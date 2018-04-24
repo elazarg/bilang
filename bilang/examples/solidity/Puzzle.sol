@@ -1,20 +1,23 @@
 pragma solidity ^0.4.22;
 contract Puzzle {
+    constructor() public {
+        lastBlock = block.timestamp;
+    }
+    // Step
+    uint constant STEP_TIME = 500;
+    int step;
+    uint lastBlock;
+    modifier at_step(int _step) {
+        require(step == _step);
+        //require(block.timestamp < lastBlock + STEP_TIME);
+        _;
+    }
     // roles
     enum Role { None, Q, A }
     mapping(address => Role) role;
     mapping(address => uint) balanceOf;
     modifier by(Role r) {
         require(role[msg.sender] == r);
-        _;
-    }
-    // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint __lastStep;
-    modifier at_step(int _step) {
-        require(step == _step);
-        require(block.timestamp < __lastStep + STEP_TIME);
         _;
     }
     // step 0
@@ -29,11 +32,11 @@ contract Puzzle {
     }
     event BroadcastHalfQ();
     function __nextHalfStepQ() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(block.timestamp >= lastBlock + STEP_TIME);
         require(halfStepQ == false);
         emit BroadcastHalfQ();
         halfStepQ = true;
-        __lastStep = block.timestamp;
+        lastBlock = block.timestamp;
     }
     address chosenRoleQ;
     int Q_x;
@@ -51,11 +54,12 @@ contract Puzzle {
         Q_x_done = true;
     }
     event Broadcast0(); // TODO: add params
-    function __nextStep0() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep0() public {
+        require(step == 0);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast0();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 1;
+        lastBlock = block.timestamp;
     }
     // end 0
     // step 1
@@ -70,17 +74,17 @@ contract Puzzle {
     }
     event BroadcastHalfA();
     function __nextHalfStepA() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(block.timestamp >= lastBlock + STEP_TIME);
         require(halfStepA == false);
         emit BroadcastHalfA();
         halfStepA = true;
-        __lastStep = block.timestamp;
+        lastBlock = block.timestamp;
     }
     address chosenRoleA;
     int A_p;
-    int A_q;
+int A_q;
     bool A_p_done;
-    bool A_q_done;
+bool A_q_done;
     function join_A(int _p, int _q, uint salt) at_step(1) public payable {
         require(keccak256(_p, _q, salt) == bytes32(commitsA[msg.sender]));
         if (chosenRoleA != address(0x0))
@@ -89,18 +93,19 @@ contract Puzzle {
         require(msg.value == 0);
         balanceOf[msg.sender] = msg.value;
         chosenRoleA = msg.sender;
-        require(((_p * _q) == Q_x));
+        require(((((A_p * A_q) == Q_x) && (A_p != int(1))) && (A_q != int(1))));
         A_p = _p;
-        A_q = _q;
+    A_q = _q;
         A_p_done = true;
-        A_q_done = true;
+    A_q_done = true;
     }
     event Broadcast1(); // TODO: add params
-    function __nextStep1() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep1() public {
+        require(step == 1);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast1();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 2;
+        lastBlock = block.timestamp;
     }
     // end 1
     function withdraw_2_Q() by(Role.Q) public at_step(2) {

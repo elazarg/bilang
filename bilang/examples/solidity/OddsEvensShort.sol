@@ -1,20 +1,23 @@
 pragma solidity ^0.4.22;
 contract OddsEvensShort {
+    constructor() public {
+        lastBlock = block.timestamp;
+    }
+    // Step
+    uint constant STEP_TIME = 500;
+    int step;
+    uint lastBlock;
+    modifier at_step(int _step) {
+        require(step == _step);
+        //require(block.timestamp < lastBlock + STEP_TIME);
+        _;
+    }
     // roles
     enum Role { None, Odd, Even }
     mapping(address => Role) role;
     mapping(address => uint) balanceOf;
     modifier by(Role r) {
         require(role[msg.sender] == r);
-        _;
-    }
-    // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint __lastStep;
-    modifier at_step(int _step) {
-        require(step == _step);
-        require(block.timestamp < __lastStep + STEP_TIME);
         _;
     }
     // step 0
@@ -29,11 +32,11 @@ contract OddsEvensShort {
     }
     event BroadcastHalfOdd();
     function __nextHalfStepOdd() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(block.timestamp >= lastBlock + STEP_TIME);
         require(halfStepOdd == false);
         emit BroadcastHalfOdd();
         halfStepOdd = true;
-        __lastStep = block.timestamp;
+        lastBlock = block.timestamp;
     }
     address chosenRoleOdd;
     bool Odd_c;
@@ -61,11 +64,11 @@ contract OddsEvensShort {
     }
     event BroadcastHalfEven();
     function __nextHalfStepEven() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+        require(block.timestamp >= lastBlock + STEP_TIME);
         require(halfStepEven == false);
         emit BroadcastHalfEven();
         halfStepEven = true;
-        __lastStep = block.timestamp;
+        lastBlock = block.timestamp;
     }
     address chosenRoleEven;
     bool Even_c;
@@ -83,11 +86,12 @@ contract OddsEvensShort {
         Even_c_done = true;
     }
     event Broadcast0(); // TODO: add params
-    function __nextStep0() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep0() public {
+        require(step == 0);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast0();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 1;
+        lastBlock = block.timestamp;
     }
     // end 0
     function withdraw_1_Even() by(Role.Even) public at_step(1) {

@@ -5,7 +5,25 @@ fun genGame(p: ExpProgram): String {
     return """pragma solidity ^0.4.22;
 
 contract ${p.desc} {
+    constructor() public {
+        lastBlock = block.timestamp;
+    }
 
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
+
+    // Step
+    uint constant STEP_TIME = 500;
+    int step;
+    uint lastBlock;
+
+    modifier at_step(int _step) {
+        require(step == _step);
+        //require(block.timestamp < lastBlock + STEP_TIME);
+        _;
+    }
+    
     // roles
     enum Role { None, $roles }
     mapping(address => Role) role;
@@ -13,17 +31,6 @@ contract ${p.desc} {
 
     modifier by(Role r) {
         require(role[msg.sender] == r);
-        _;
-    }
-
-    // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint __lastStep;
-
-    modifier at_step(int _step) {
-        require(step == _step);
-        require(block.timestamp < __lastStep + STEP_TIME);
         _;
     }
 ${genExt(p.game, 0)}
@@ -41,11 +48,12 @@ fun makeStep(kind: Kind, qs: List<Query>, step: Int): String {
 $items
 
     event Broadcast$step(); // TODO: add params
-    function __nextStep$step() at_step($step) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep$step() public {
+        require(step == $step);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast$step();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = ${step + 1};
+        lastBlock = block.timestamp;
     }
 
     // end $step
@@ -72,9 +80,10 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
 
     return when (kind) {
         Kind.JOIN -> {
-            val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
-            val reveals = (vars.map { (type, name) -> "_$name" } + "salt").join(", ")
-            """
+            if (q.params.isNotEmpty()) {
+                val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
+                val reveals = (vars.map { (type, name) -> "_$name" } + "salt").join(", ")
+                """
             |    mapping(address => bytes32) commits$role;
             |    mapping(address => uint) times$role;
             |    bool halfStep$role;
@@ -88,11 +97,11 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |
             |    event BroadcastHalf$role();
             |    function __nextHalfStep$role() at_step($step) public {
-            |        require(block.timestamp >= __lastStep + STEP_TIME);
+            |        require(block.timestamp >= lastBlock + STEP_TIME);
             |        require(halfStep$role == false);
             |        emit BroadcastHalf$role();
             |        halfStep$role = true;
-            |        __lastStep = block.timestamp;
+            |        lastBlock = block.timestamp;
             |    }
             |
             |    address chosenRole$role;
@@ -112,7 +121,21 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        $assignments
             |        $inits
             |    }
-            |"""
+            |""".trimIndent()
+            } else {
+                """
+            |    bool done$role;
+            |    function join_$role() at_step($step) public payable {
+            |        role[msg.sender] = Role.$role;
+            |        require(msg.value == $deposit);
+            |        require(!done$role);
+            |        balanceOf[msg.sender] = msg.value;
+            |        require($where);
+            |        $inits
+            |        done$role = true;
+            |    }
+            |""".trimIndent()
+            }
         }
 
         Kind.YIELD -> {
@@ -130,7 +153,7 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        $inits
             |        $doneRole = true;
             |    }
-            |"""
+            |""".trimIndent()
         }
 
         Kind.REVEAL -> {
@@ -152,7 +175,7 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        $inits
             |        $doneRole = true;
             |    }
-            |"""
+            |""".trimIndent()
         }
 
         Kind.MANY -> TODO()

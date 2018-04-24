@@ -1,0 +1,11 @@
+explicit global protocol MyProtocol(role Server, role A) {
+    connect Server to A;
+    Broadcast() from Server to ;
+    Withdraw() from A to Server;
+}
+
+
+explicit local protocol MyProtocol_A(role Server, role A) {
+    connect Server;
+    Withdraw() to Server;
+}

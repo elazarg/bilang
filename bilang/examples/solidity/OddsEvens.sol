@@ -1,5 +1,17 @@
 pragma solidity ^0.4.22;
 contract OddsEvens {
+    constructor() public {
+        lastBlock = block.timestamp;
+    }
+    // Step
+    uint constant STEP_TIME = 500;
+    int step;
+    uint lastBlock;
+    modifier at_step(int _step) {
+        require(step == _step);
+        //require(block.timestamp < lastBlock + STEP_TIME);
+        _;
+    }
     // roles
     enum Role { None, Odd, Even }
     mapping(address => Role) role;
@@ -8,87 +20,42 @@ contract OddsEvens {
         require(role[msg.sender] == r);
         _;
     }
-    // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint __lastStep;
-    modifier at_step(int _step) {
-        require(step == _step);
-        require(block.timestamp < __lastStep + STEP_TIME);
-        _;
-    }
     // step 0
-    mapping(address => bytes32) commitsOdd;
-    mapping(address => uint) timesOdd;
-    bool halfStepOdd;
-    function join_commit_Odd(bytes32 c) at_step(0) public {
-        require(commitsOdd[msg.sender] == bytes32(0));
-        require(!halfStepOdd);
-        commitsOdd[msg.sender] = c;
-        timesOdd[msg.sender] = block.timestamp;
-    }
-    event BroadcastHalfOdd();
-    function __nextHalfStepOdd() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        require(halfStepOdd == false);
-        emit BroadcastHalfOdd();
-        halfStepOdd = true;
-        __lastStep = block.timestamp;
-    }
-    address chosenRoleOdd;
-    function join_Odd(uint salt) at_step(0) public payable {
-        require(keccak256(salt) == bytes32(commitsOdd[msg.sender]));
-        if (chosenRoleOdd != address(0x0))
-             require(timesOdd[msg.sender] < timesOdd[chosenRoleOdd]);
+    bool doneOdd;
+    function join_Odd() at_step(0) public payable {
         role[msg.sender] = Role.Odd;
         require(msg.value == 100);
+        require(!doneOdd);
         balanceOf[msg.sender] = msg.value;
-        chosenRoleOdd = msg.sender;
         require(true);
+        doneOdd = true;
     }
     event Broadcast0(); // TODO: add params
-    function __nextStep0() at_step(0) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep0() public {
+        require(step == 0);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast0();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 1;
+        lastBlock = block.timestamp;
     }
     // end 0
     // step 1
-    mapping(address => bytes32) commitsEven;
-    mapping(address => uint) timesEven;
-    bool halfStepEven;
-    function join_commit_Even(bytes32 c) at_step(1) public {
-        require(commitsEven[msg.sender] == bytes32(0));
-        require(!halfStepEven);
-        commitsEven[msg.sender] = c;
-        timesEven[msg.sender] = block.timestamp;
-    }
-    event BroadcastHalfEven();
-    function __nextHalfStepEven() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
-        require(halfStepEven == false);
-        emit BroadcastHalfEven();
-        halfStepEven = true;
-        __lastStep = block.timestamp;
-    }
-    address chosenRoleEven;
-    function join_Even(uint salt) at_step(1) public payable {
-        require(keccak256(salt) == bytes32(commitsEven[msg.sender]));
-        if (chosenRoleEven != address(0x0))
-             require(timesEven[msg.sender] < timesEven[chosenRoleEven]);
+    bool doneEven;
+    function join_Even() at_step(1) public payable {
         role[msg.sender] = Role.Even;
         require(msg.value == 100);
+        require(!doneEven);
         balanceOf[msg.sender] = msg.value;
-        chosenRoleEven = msg.sender;
         require(true);
+        doneEven = true;
     }
     event Broadcast1(); // TODO: add params
-    function __nextStep1() at_step(1) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep1() public {
+        require(step == 1);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast1();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 2;
+        lastBlock = block.timestamp;
     }
     // end 1
     // step 2
@@ -115,11 +82,12 @@ contract OddsEvens {
         done_Even_2 = true;
     }
     event Broadcast2(); // TODO: add params
-    function __nextStep2() at_step(2) public {
-        require(block.timestamp >= __lastStep + STEP_TIME);
+    function __nextStep2() public {
+        require(step == 2);
+        //require(block.timestamp >= lastBlock + STEP_TIME);
         emit Broadcast2();
-        step += 1;
-        __lastStep = block.timestamp;
+        step = 3;
+        lastBlock = block.timestamp;
     }
     // end 2
     function withdraw_3_Even() by(Role.Even) public at_step(3) {
@@ -141,7 +109,7 @@ contract OddsEvens {
         }
         freshVar23 = freshVar24 && freshVar26;
         }
-        if (freshVar23) {
+        if (freshVar23) { 
         amount = (((Even_c == Odd_c)) ? int(10) : (- int(10)));
         } else {
         bool freshVar28;
@@ -156,7 +124,7 @@ contract OddsEvens {
         }
         freshVar28 = freshVar29 && freshVar30;
         }
-        if (freshVar28) {
+        if (freshVar28) { 
         amount = (- int(100));
         } else {
         amount = (- int(100));
@@ -184,7 +152,7 @@ contract OddsEvens {
         }
         freshVar32 = freshVar33 && freshVar35;
         }
-        if (freshVar32) {
+        if (freshVar32) { 
         amount = (((Even_c == Odd_c)) ? (- int(10)) : int(10));
         } else {
         bool freshVar37;
@@ -199,7 +167,7 @@ contract OddsEvens {
         }
         freshVar37 = freshVar38 && freshVar39;
         }
-        if (freshVar37) {
+        if (freshVar37) { 
         amount = int(10);
         } else {
         amount = (- int(100));
