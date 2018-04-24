@@ -92,7 +92,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
     }
 
     is Ext.Bind -> ext.qs.flatMap { query ->
-        gameToScribble(Ext.BindSingle(ext.kind, query, Ext.Value(Payoff.Value(mapOf()))), roles)
+        gameToScribble(Ext.BindSingle(ext.kind, query, Ext.Value(Outcome.Value(mapOf()))), roles)
     }.sortedBy { rankOrder(it) } + gameToScribble(ext.ext, roles)
 
     is Ext.Value -> ext.exp.ts.keys.map { Sast.Action.Send("Withdraw", listOf(), it, setOf("Server")) }

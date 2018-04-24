@@ -26,7 +26,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             ).type(program.game)
         }
     }
-    private fun type(payoff: Payoff): Nothing = TODO()
+    private fun type(outcome: Outcome): Nothing = TODO()
 
     private fun type(ext: Ext) {
         when (ext) {

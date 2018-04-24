@@ -43,7 +43,7 @@ ${genExt(p.game, 0)}
 private fun genExt(ext: Ext, step: Int): String = when (ext) {
     is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
     is Ext.BindSingle -> makeStep(ext.kind, listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
-    is Ext.Value -> genPayoff(ext.exp, step)
+    is Ext.Value -> genOutcome(ext.exp, step)
 }
 
 private fun makeStep(kind: Kind, qs: List<Query>, step: Int): String {
@@ -192,7 +192,7 @@ private fun varname(it: VarDec) =
         if (it.type is TypeExp.Hidden) "hidden_${it.name.name}"
         else it.name.name
 
-private fun genPayoff(switch: Payoff.Value, step: Int): String {
+private fun genOutcome(switch: Outcome.Value, step: Int): String {
     // idea: evaluate keys one by one; when the value equals to the value of the sender
     // evaluate the value and withdraw
     // so this is a "switch" expression...

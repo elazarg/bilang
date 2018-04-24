@@ -12,16 +12,16 @@ typeExp
 // only sensible combination is independent yield + many
 ext : kind=('join'|'yield'| 'reveal'|'many') query+ ';' ext  # ReceiveExt
     | 'let' 'fold' varDec '=' query 'from' from=ID exp ';' ext  # FoldExt
-    | 'return' payoff # ExpExt
+    | 'return' outcome # WithdrawExt // TODO: call it 'withdraw'
     ;
 
 query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('$' deposit=INT)? ('where' cond=exp)? ;
 
-payoff
-    : <assoc=right> cond=exp '?' ifTrue=payoff ':' ifFalse=payoff # IfPayoff
-    | 'let' dec=varDec '=' init=exp 'in' body=payoff  # LetPayoff
-    | '(' payoff ')'                          # ParenPayoff
-    | '{' items+=item+ '}'                    # PayoffExp
+outcome
+    : <assoc=right> cond=exp '?' ifTrue=outcome ':' ifFalse=outcome # IfOutcome
+    | 'let' dec=varDec '=' init=exp 'in' body=outcome  # LetOutcome
+    | '(' outcome ')'                          # ParenOutcome
+    | '{' items+=item+ '}'                    # OutcomeExp
     ;
 
 item : (ID '->' exp ';'?) ;

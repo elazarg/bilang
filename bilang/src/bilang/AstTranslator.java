@@ -68,8 +68,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Ext.Value visitExpExt(ExpExtContext ctx) {
-        return new Ext.Value(bilang.AstKt.desugar(payoff(ctx.payoff())));
+    public Ext.Value visitWithdrawExt(WithdrawExtContext ctx) {
+        return new Ext.Value(bilang.AstKt.desugar(outcome(ctx.outcome())));
     }
 
     @Override
@@ -154,8 +154,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Payoff visitParenPayoff(ParenPayoffContext ctx) {
-        return payoff(ctx.payoff());
+    public Outcome visitParenOutcome(ParenOutcomeContext ctx) {
+        return outcome(ctx.outcome());
     }
     @Override
     public Exp.Const.Address visitAddressLiteralExp(AddressLiteralExpContext ctx) {
@@ -174,23 +174,23 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     @Override
-    public Payoff visitPayoffExp(PayoffExpContext ctx) {
+    public Outcome visitOutcomeExp(OutcomeExpContext ctx) {
         Map<String, Exp> m = ctx.items.stream().collect(toMap(e -> e.ID().getText(), e -> exp(e.exp())));
-        return new Payoff.Value(m);
+        return new Outcome.Value(m);
     }
 
     @Override
-    public Payoff visitIfPayoff(IfPayoffContext ctx) {
-        return new Payoff.Cond(exp(ctx.cond), payoff(ctx.ifTrue), payoff(ctx.ifFalse));
+    public Outcome visitIfOutcome(IfOutcomeContext ctx) {
+        return new Outcome.Cond(exp(ctx.cond), outcome(ctx.ifTrue), outcome(ctx.ifFalse));
     }
 
     @Override
-    public Payoff visitLetPayoff(LetPayoffContext ctx) {
-        return new Payoff.Let(visitVarDec(ctx.dec), exp(ctx.init), payoff(ctx.payoff()));
+    public Outcome visitLetOutcome(LetOutcomeContext ctx) {
+        return new Outcome.Let(visitVarDec(ctx.dec), exp(ctx.init), outcome(ctx.outcome()));
     }
 
-    private Payoff payoff(PayoffContext ctx) {
-        return (Payoff) ctx.accept(this);
+    private Outcome outcome(OutcomeContext ctx) {
+        return (Outcome) ctx.accept(this);
     }
 
     private <T1, T2> List<T2> list(List<T1> iterable, Function<T1, T2> f) {
