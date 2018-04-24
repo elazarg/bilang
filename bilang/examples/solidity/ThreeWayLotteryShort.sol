@@ -3,6 +3,9 @@ contract ThreeWayLotteryShort {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -46,7 +49,7 @@ contract ThreeWayLotteryShort {
         if (chosenRoleIssuer != address(0x0))
              require(timesIssuer[msg.sender] < timesIssuer[chosenRoleIssuer]);
         role[msg.sender] = Role.Issuer;
-        require(msg.value == 10);
+        require(msg.value == 10); 
         balanceOf[msg.sender] = msg.value;
         chosenRoleIssuer = msg.sender;
         require(true);
@@ -78,7 +81,7 @@ contract ThreeWayLotteryShort {
         if (chosenRoleAlice != address(0x0))
              require(timesAlice[msg.sender] < timesAlice[chosenRoleAlice]);
         role[msg.sender] = Role.Alice;
-        require(msg.value == 10);
+        require(msg.value == 10); 
         balanceOf[msg.sender] = msg.value;
         chosenRoleAlice = msg.sender;
         require(true);
@@ -110,7 +113,7 @@ contract ThreeWayLotteryShort {
         if (chosenRoleBob != address(0x0))
              require(timesBob[msg.sender] < timesBob[chosenRoleBob]);
         role[msg.sender] = Role.Bob;
-        require(msg.value == 10);
+        require(msg.value == 10); 
         balanceOf[msg.sender] = msg.value;
         chosenRoleBob = msg.sender;
         require(true);
@@ -126,8 +129,7 @@ contract ThreeWayLotteryShort {
         lastBlock = block.timestamp;
     }
     // end 0
-    function withdraw_1_Bob() by(Role.Bob) public at_step(1) {
-        require(role[msg.sender] == Role.Bob);
+    function withdraw_1_Bob() by(Role.Bob) at_step(1) public {
         int amount;
         bool freshVar83;
         {
@@ -151,8 +153,7 @@ contract ThreeWayLotteryShort {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_1_Issuer() by(Role.Issuer) public at_step(1) {
-        require(role[msg.sender] == Role.Issuer);
+    function withdraw_1_Issuer() by(Role.Issuer) at_step(1) public {
         int amount;
         bool freshVar87;
         {
@@ -176,8 +177,7 @@ contract ThreeWayLotteryShort {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_1_Alice() by(Role.Alice) public at_step(1) {
-        require(role[msg.sender] == Role.Alice);
+    function withdraw_1_Alice() by(Role.Alice) at_step(1) public {
         int amount;
         bool freshVar91;
         {

@@ -3,6 +3,9 @@ contract Simple {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -22,9 +25,8 @@ contract Simple {
     }
     // step 0
     bool doneA;
-    function join_A() at_step(0) public payable {
+    function join_A() at_step(0) public {
         role[msg.sender] = Role.A;
-        require(msg.value == 0);
         require(!doneA);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -41,9 +43,8 @@ contract Simple {
     // end 0
     // step 1
     bool doneB;
-    function join_B() at_step(1) public payable {
+    function join_B() at_step(1) public {
         role[msg.sender] = Role.B;
-        require(msg.value == 0);
         require(!doneB);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -62,8 +63,7 @@ contract Simple {
     uint A_hidden_x;
     bool A_hidden_x_done;
     bool done_A_2;
-    function yield_A2(uint _hidden_x) at_step(2) public {
-        require(role[msg.sender] == Role.A);
+    function yield_A2(uint _hidden_x) by (Role.A) at_step(2) public {
         require(!done_A_2);
         require(true);
         A_hidden_x = _hidden_x;
@@ -83,8 +83,7 @@ contract Simple {
     bool B_y;
     bool B_y_done;
     bool done_B_3;
-    function yield_B3(bool _y) at_step(3) public {
-        require(role[msg.sender] == Role.B);
+    function yield_B3(bool _y) by (Role.B) at_step(3) public {
         require(!done_B_3);
         require(true);
         B_y = _y;
@@ -104,8 +103,7 @@ contract Simple {
     bool A_x;
     bool A_x_done;
     bool done_A_4;
-    function reveal_A4(bool _x, uint salt) at_step(4) public {
-        require(role[msg.sender] == Role.A);
+    function reveal_A4(bool _x, uint salt) by(Role.A) at_step(4) public {
         require(!done_A_4);
         require(keccak256(_x, salt) == bytes32(A_hidden_x));
         require(true);
@@ -122,22 +120,16 @@ contract Simple {
         lastBlock = block.timestamp;
     }
     // end 4
-    function withdraw_5_A() by(Role.A) public at_step(5) {
-        require(role[msg.sender] == Role.A);
+    function withdraw_5_A() by(Role.A) at_step(5) public {
         int amount;
         amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_5_B() by(Role.B) public at_step(5) {
-        require(role[msg.sender] == Role.B);
+    function withdraw_5_B() by(Role.B) at_step(5) public {
         int amount;
         amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
-    }
-
-    function kecccak(bool x, uint salt) constant public {
-        return keccak256(x, salt);
     }
 }

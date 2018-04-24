@@ -3,6 +3,9 @@ contract Puzzle {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -46,7 +49,7 @@ contract Puzzle {
         if (chosenRoleQ != address(0x0))
              require(timesQ[msg.sender] < timesQ[chosenRoleQ]);
         role[msg.sender] = Role.Q;
-        require(msg.value == 50);
+        require(msg.value == 50); 
         balanceOf[msg.sender] = msg.value;
         chosenRoleQ = msg.sender;
         require(true);
@@ -85,12 +88,11 @@ contract Puzzle {
 int A_q;
     bool A_p_done;
 bool A_q_done;
-    function join_A(int _p, int _q, uint salt) at_step(1) public payable {
+    function join_A(int _p, int _q, uint salt) at_step(1) public {
         require(keccak256(_p, _q, salt) == bytes32(commitsA[msg.sender]));
         if (chosenRoleA != address(0x0))
              require(timesA[msg.sender] < timesA[chosenRoleA]);
         role[msg.sender] = Role.A;
-        require(msg.value == 0);
         balanceOf[msg.sender] = msg.value;
         chosenRoleA = msg.sender;
         require(((((A_p * A_q) == Q_x) && (A_p != int(1))) && (A_q != int(1))));
@@ -108,15 +110,13 @@ bool A_q_done;
         lastBlock = block.timestamp;
     }
     // end 1
-    function withdraw_2_Q() by(Role.Q) public at_step(2) {
-        require(role[msg.sender] == Role.Q);
+    function withdraw_2_Q() by(Role.Q) at_step(2) public {
         int amount;
         amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_2_A() by(Role.A) public at_step(2) {
-        require(role[msg.sender] == Role.A);
+    function withdraw_2_A() by(Role.A) at_step(2) public {
         int amount;
         amount = int(50);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));

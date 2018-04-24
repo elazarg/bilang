@@ -77,6 +77,8 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val doneRole = "done_${role}_$step"
 
     val deposit = q.deposit.n
+    val payable = if (deposit != 0) "payable " else ""
+    val requirePayment = if (deposit != 0) "require(msg.value == $deposit); " else ""
 
     return when (kind) {
         Kind.JOIN -> {
@@ -108,12 +110,12 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |    $decls
             |    $declsDone
             |
-            |    function join_$role($revealArgs) at_step($step) public payable {
+            |    function join_$role($revealArgs) at_step($step) public $payable{
             |        require(keccak256($reveals) == bytes32(commits$role[msg.sender]));
             |        if (chosenRole$role != address(0x0))
             |             require(times$role[msg.sender] < times$role[chosenRole$role]);
             |        role[msg.sender] = Role.$role;
-            |        require(msg.value == $deposit);
+            |        $requirePayment
             |        balanceOf[msg.sender] = msg.value;
             |        chosenRole$role = msg.sender;
             |        $typeWheres
@@ -125,9 +127,9 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             } else {
                 """
             |    bool done$role;
-            |    function join_$role() at_step($step) public payable {
+            |    function join_$role() at_step($step) public by(Role.None) $payable{
             |        role[msg.sender] = Role.$role;
-            |        require(msg.value == $deposit);
+            |        $requirePayment
             |        require(!done$role);
             |        balanceOf[msg.sender] = msg.value;
             |        require($where);
@@ -274,7 +276,7 @@ fun genPayoff(switch: Payoff.Value, step: Int): String {
     // so this is a "switch" expression...
     return switch.ts.entries.map { (role: String, money: Exp) ->
         """
-    |    function withdraw_${step}_$role() by(Role.$role) public at_step($step) {
+    |    function withdraw_${step}_$role() by(Role.$role) at_step($step) public {
     |        int amount;
     |        ${exp(money, "amount", "int").statements()}
     |        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));

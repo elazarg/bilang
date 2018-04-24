@@ -3,6 +3,9 @@ contract OddsEvensShort {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -46,7 +49,7 @@ contract OddsEvensShort {
         if (chosenRoleOdd != address(0x0))
              require(timesOdd[msg.sender] < timesOdd[chosenRoleOdd]);
         role[msg.sender] = Role.Odd;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         balanceOf[msg.sender] = msg.value;
         chosenRoleOdd = msg.sender;
         require(true);
@@ -78,7 +81,7 @@ contract OddsEvensShort {
         if (chosenRoleEven != address(0x0))
              require(timesEven[msg.sender] < timesEven[chosenRoleEven]);
         role[msg.sender] = Role.Even;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         balanceOf[msg.sender] = msg.value;
         chosenRoleEven = msg.sender;
         require(true);
@@ -94,8 +97,7 @@ contract OddsEvensShort {
         lastBlock = block.timestamp;
     }
     // end 0
-    function withdraw_1_Even() by(Role.Even) public at_step(1) {
-        require(role[msg.sender] == Role.Even);
+    function withdraw_1_Even() by(Role.Even) at_step(1) public {
         int amount;
         bool freshVar41;
         {
@@ -137,8 +139,7 @@ contract OddsEvensShort {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_1_Odd() by(Role.Odd) public at_step(1) {
-        require(role[msg.sender] == Role.Odd);
+    function withdraw_1_Odd() by(Role.Odd) at_step(1) public {
         int amount;
         bool freshVar50;
         {

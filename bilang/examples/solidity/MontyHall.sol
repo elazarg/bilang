@@ -3,6 +3,9 @@ contract MontyHall {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -24,7 +27,7 @@ contract MontyHall {
     bool doneHost;
     function join_Host() at_step(0) public payable {
         role[msg.sender] = Role.Host;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         require(!doneHost);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -43,7 +46,7 @@ contract MontyHall {
     bool doneGuest;
     function join_Guest() at_step(1) public payable {
         role[msg.sender] = Role.Guest;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         require(!doneGuest);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -62,8 +65,7 @@ contract MontyHall {
     uint Host_hidden_car;
     bool Host_hidden_car_done;
     bool done_Host_2;
-    function yield_Host2(uint _hidden_car) at_step(2) public {
-        require(role[msg.sender] == Role.Host);
+    function yield_Host2(uint _hidden_car) by (Role.Host) at_step(2) public {
         require(!done_Host_2);
         require(true);
         Host_hidden_car = _hidden_car;
@@ -83,8 +85,7 @@ contract MontyHall {
     int Guest_d;
     bool Guest_d_done;
     bool done_Guest_3;
-    function yield_Guest3(int _d) at_step(3) public {
-        require(role[msg.sender] == Role.Guest);
+    function yield_Guest3(int _d) by (Role.Guest) at_step(3) public {
         require(!done_Guest_3);
         require(true);
         Guest_d = _d;
@@ -104,8 +105,7 @@ contract MontyHall {
     int Host_goat;
     bool Host_goat_done;
     bool done_Host_4;
-    function yield_Host4(int _goat) at_step(4) public {
-        require(role[msg.sender] == Role.Host);
+    function yield_Host4(int _goat) by (Role.Host) at_step(4) public {
         require(!done_Host_4);
         require((Host_goat != Guest_d));
         Host_goat = _goat;
@@ -125,8 +125,7 @@ contract MontyHall {
     bool Guest_switch;
     bool Guest_switch_done;
     bool done_Guest_5;
-    function yield_Guest5(bool _switch) at_step(5) public {
-        require(role[msg.sender] == Role.Guest);
+    function yield_Guest5(bool _switch) by (Role.Guest) at_step(5) public {
         require(!done_Guest_5);
         require(true);
         Guest_switch = _switch;
@@ -146,8 +145,7 @@ contract MontyHall {
     int Host_car;
     bool Host_car_done;
     bool done_Host_6;
-    function reveal_Host6(int _car, uint salt) at_step(6) public {
-        require(role[msg.sender] == Role.Host);
+    function reveal_Host6(int _car, uint salt) by(Role.Host) at_step(6) public {
         require(!done_Host_6);
         require(keccak256(_car, salt) == bytes32(Host_hidden_car));
         require((Host_goat != Host_car));
@@ -164,8 +162,7 @@ contract MontyHall {
         lastBlock = block.timestamp;
     }
     // end 6
-    function withdraw_7_Guest() by(Role.Guest) public at_step(7) {
-        require(role[msg.sender] == Role.Guest);
+    function withdraw_7_Guest() by(Role.Guest) at_step(7) public {
         int amount;
         bool freshVar1;
         {
@@ -213,8 +210,7 @@ contract MontyHall {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_7_Host() by(Role.Host) public at_step(7) {
-        require(role[msg.sender] == Role.Host);
+    function withdraw_7_Host() by(Role.Host) at_step(7) public {
         int amount;
         bool freshVar12;
         {

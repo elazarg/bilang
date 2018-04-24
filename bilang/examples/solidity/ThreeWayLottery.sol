@@ -3,6 +3,9 @@ contract ThreeWayLottery {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -24,7 +27,7 @@ contract ThreeWayLottery {
     bool doneIssuer;
     function join_Issuer() at_step(0) public payable {
         role[msg.sender] = Role.Issuer;
-        require(msg.value == 10);
+        require(msg.value == 10); 
         require(!doneIssuer);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -43,7 +46,7 @@ contract ThreeWayLottery {
     bool doneAlice;
     function join_Alice() at_step(1) public payable {
         role[msg.sender] = Role.Alice;
-        require(msg.value == 10);
+        require(msg.value == 10); 
         require(!doneAlice);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -62,7 +65,7 @@ contract ThreeWayLottery {
     bool doneBob;
     function join_Bob() at_step(2) public payable {
         role[msg.sender] = Role.Bob;
-        require(msg.value == 10);
+        require(msg.value == 10); 
         require(!doneBob);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -81,8 +84,7 @@ contract ThreeWayLottery {
     int Issuer_c;
     bool Issuer_c_done;
     bool done_Issuer_3;
-    function yield_Issuer3(int _c) at_step(3) public {
-        require(role[msg.sender] == Role.Issuer);
+    function yield_Issuer3(int _c) by (Role.Issuer) at_step(3) public {
         require(!done_Issuer_3);
         require(true);
         Issuer_c = _c;
@@ -92,8 +94,7 @@ contract ThreeWayLottery {
     int Alice_c;
     bool Alice_c_done;
     bool done_Alice_3;
-    function yield_Alice3(int _c) at_step(3) public {
-        require(role[msg.sender] == Role.Alice);
+    function yield_Alice3(int _c) by (Role.Alice) at_step(3) public {
         require(!done_Alice_3);
         require(true);
         Alice_c = _c;
@@ -103,8 +104,7 @@ contract ThreeWayLottery {
     int Bob_c;
     bool Bob_c_done;
     bool done_Bob_3;
-    function yield_Bob3(int _c) at_step(3) public {
-        require(role[msg.sender] == Role.Bob);
+    function yield_Bob3(int _c) by (Role.Bob) at_step(3) public {
         require(!done_Bob_3);
         require(true);
         Bob_c = _c;
@@ -120,8 +120,7 @@ contract ThreeWayLottery {
         lastBlock = block.timestamp;
     }
     // end 3
-    function withdraw_4_Bob() by(Role.Bob) public at_step(4) {
-        require(role[msg.sender] == Role.Bob);
+    function withdraw_4_Bob() by(Role.Bob) at_step(4) public {
         int amount;
         bool freshVar71;
         {
@@ -145,8 +144,7 @@ contract ThreeWayLottery {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_4_Issuer() by(Role.Issuer) public at_step(4) {
-        require(role[msg.sender] == Role.Issuer);
+    function withdraw_4_Issuer() by(Role.Issuer) at_step(4) public {
         int amount;
         bool freshVar75;
         {
@@ -170,8 +168,7 @@ contract ThreeWayLottery {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_4_Alice() by(Role.Alice) public at_step(4) {
-        require(role[msg.sender] == Role.Alice);
+    function withdraw_4_Alice() by(Role.Alice) at_step(4) public {
         int amount;
         bool freshVar79;
         {

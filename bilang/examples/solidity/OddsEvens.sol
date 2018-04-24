@@ -3,6 +3,9 @@ contract OddsEvens {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -24,7 +27,7 @@ contract OddsEvens {
     bool doneOdd;
     function join_Odd() at_step(0) public payable {
         role[msg.sender] = Role.Odd;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         require(!doneOdd);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -43,7 +46,7 @@ contract OddsEvens {
     bool doneEven;
     function join_Even() at_step(1) public payable {
         role[msg.sender] = Role.Even;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         require(!doneEven);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -62,8 +65,7 @@ contract OddsEvens {
     bool Odd_c;
     bool Odd_c_done;
     bool done_Odd_2;
-    function yield_Odd2(bool _c) at_step(2) public {
-        require(role[msg.sender] == Role.Odd);
+    function yield_Odd2(bool _c) by (Role.Odd) at_step(2) public {
         require(!done_Odd_2);
         require(true);
         Odd_c = _c;
@@ -73,8 +75,7 @@ contract OddsEvens {
     bool Even_c;
     bool Even_c_done;
     bool done_Even_2;
-    function yield_Even2(bool _c) at_step(2) public {
-        require(role[msg.sender] == Role.Even);
+    function yield_Even2(bool _c) by (Role.Even) at_step(2) public {
         require(!done_Even_2);
         require(true);
         Even_c = _c;
@@ -90,8 +91,7 @@ contract OddsEvens {
         lastBlock = block.timestamp;
     }
     // end 2
-    function withdraw_3_Even() by(Role.Even) public at_step(3) {
-        require(role[msg.sender] == Role.Even);
+    function withdraw_3_Even() by(Role.Even) at_step(3) public {
         int amount;
         bool freshVar23;
         {
@@ -133,8 +133,7 @@ contract OddsEvens {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_3_Odd() by(Role.Odd) public at_step(3) {
-        require(role[msg.sender] == Role.Odd);
+    function withdraw_3_Odd() by(Role.Odd) at_step(3) public {
         int amount;
         bool freshVar32;
         {

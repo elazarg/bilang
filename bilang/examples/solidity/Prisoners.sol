@@ -3,6 +3,9 @@ contract Prisoners {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -24,7 +27,7 @@ contract Prisoners {
     bool doneA;
     function join_A() at_step(0) public payable {
         role[msg.sender] = Role.A;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         require(!doneA);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -43,7 +46,7 @@ contract Prisoners {
     bool doneB;
     function join_B() at_step(1) public payable {
         role[msg.sender] = Role.B;
-        require(msg.value == 100);
+        require(msg.value == 100); 
         require(!doneB);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -62,8 +65,7 @@ contract Prisoners {
     bool A_c;
     bool A_c_done;
     bool done_A_2;
-    function yield_A2(bool _c) at_step(2) public {
-        require(role[msg.sender] == Role.A);
+    function yield_A2(bool _c) by (Role.A) at_step(2) public {
         require(!done_A_2);
         require(true);
         A_c = _c;
@@ -73,8 +75,7 @@ contract Prisoners {
     bool B_c;
     bool B_c_done;
     bool done_B_2;
-    function yield_B2(bool _c) at_step(2) public {
-        require(role[msg.sender] == Role.B);
+    function yield_B2(bool _c) by (Role.B) at_step(2) public {
         require(!done_B_2);
         require(true);
         B_c = _c;
@@ -90,8 +91,7 @@ contract Prisoners {
         lastBlock = block.timestamp;
     }
     // end 2
-    function withdraw_3_A() by(Role.A) public at_step(3) {
-        require(role[msg.sender] == Role.A);
+    function withdraw_3_A() by(Role.A) at_step(3) public {
         int amount;
         bool freshVar59;
         {
@@ -123,8 +123,7 @@ contract Prisoners {
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_3_B() by(Role.B) public at_step(3) {
-        require(role[msg.sender] == Role.B);
+    function withdraw_3_B() by(Role.B) at_step(3) public {
         int amount;
         bool freshVar65;
         {

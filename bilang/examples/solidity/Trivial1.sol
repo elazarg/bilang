@@ -3,6 +3,9 @@ contract Trivial1 {
     constructor() public {
         lastBlock = block.timestamp;
     }
+    function keccak(bool x, uint salt) pure public returns(bytes32) {
+        return keccak256(x, salt);
+    }
     // Step
     uint constant STEP_TIME = 500;
     int step;
@@ -22,9 +25,8 @@ contract Trivial1 {
     }
     // step 0
     bool doneA;
-    function join_A() at_step(0) public payable {
+    function join_A() at_step(0) public {
         role[msg.sender] = Role.A;
-        require(msg.value == 0);
         require(!doneA);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -39,8 +41,7 @@ contract Trivial1 {
         lastBlock = block.timestamp;
     }
     // end 0
-    function withdraw_1_A() by(Role.A) public at_step(1) {
-        require(role[msg.sender] == Role.A);
+    function withdraw_1_A() by(Role.A) at_step(1) public {
         int amount;
         amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
