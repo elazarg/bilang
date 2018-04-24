@@ -3,12 +3,12 @@ explicit global protocol MyProtocol(role Server, role A, role B) {
     Broadcast() from Server to B;
     connect Server to B;
     Broadcast() from Server to A;
-    Hidden_x(hidden_bool) from A to Server;
+    Hidden_c(hidden_bool) from A to Server;
     Broadcast() from Server to B;
-    Public_y(bool) from B to Server;
-    Broadcast_y(bool) from Server to A;
-    Reveal_x(bool) from A to Server;
-    Broadcast_x(bool) from Server to B;
+    Public_c(bool) from B to Server;
+    Broadcast_c(bool) from Server to A;
+    Reveal_c(bool) from A to Server;
+    Broadcast_c(bool) from Server to B;
     Withdraw() from A to Server;
     Withdraw() from B to Server;
 }
@@ -17,9 +17,9 @@ explicit global protocol MyProtocol(role Server, role A, role B) {
 explicit local protocol MyProtocol_A(role Server, role A) {
     connect Server;
     Broadcast() from Server;
-    Hidden_x(hidden_bool) to Server;
-    Broadcast_y(bool) from Server;
-    Reveal_x(bool) to Server;
+    Hidden_c(hidden_bool) to Server;
+    Broadcast_c(bool) from Server;
+    Reveal_c(bool) to Server;
     Withdraw() to Server;
 }
 
@@ -28,7 +28,7 @@ explicit local protocol MyProtocol_B(role Server, role B) {
     Broadcast() from Server;
     connect Server;
     Broadcast() from Server;
-    Public_y(bool) to Server;
-    Broadcast_x(bool) from Server;
+    Public_c(bool) to Server;
+    Broadcast_c(bool) from Server;
     Withdraw() to Server;
 }

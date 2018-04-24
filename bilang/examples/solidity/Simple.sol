@@ -25,8 +25,9 @@ contract Simple {
     }
     // step 0
     bool doneA;
-    function join_A() at_step(0) public by(Role.None) {
+    function join_A() at_step(0) public by(Role.None) payable {
         role[msg.sender] = Role.A;
+        require(msg.value == 1); 
         require(!doneA);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -43,8 +44,9 @@ contract Simple {
     // end 0
     // step 1
     bool doneB;
-    function join_B() at_step(1) public by(Role.None) {
+    function join_B() at_step(1) public by(Role.None) payable {
         role[msg.sender] = Role.B;
+        require(msg.value == 1); 
         require(!doneB);
         balanceOf[msg.sender] = msg.value;
         require(true);
@@ -60,14 +62,14 @@ contract Simple {
     }
     // end 1
     // step 2
-    uint A_hidden_x;
-    bool A_hidden_x_done;
+    uint A_hidden_c;
+    bool A_hidden_c_done;
     bool done_A_2;
-    function yield_A2(uint _hidden_x) by (Role.A) at_step(2) public {
+    function yield_A2(uint _hidden_c) by (Role.A) at_step(2) public {
         require(!done_A_2);
         require(true);
-        A_hidden_x = _hidden_x;
-        A_hidden_x_done = true;
+        A_hidden_c = _hidden_c;
+        A_hidden_c_done = true;
         done_A_2 = true;
     }
     event Broadcast2(); // TODO: add params
@@ -80,14 +82,14 @@ contract Simple {
     }
     // end 2
     // step 3
-    bool B_y;
-    bool B_y_done;
+    bool B_c;
+    bool B_c_done;
     bool done_B_3;
-    function yield_B3(bool _y) by (Role.B) at_step(3) public {
+    function yield_B3(bool _c) by (Role.B) at_step(3) public {
         require(!done_B_3);
         require(true);
-        B_y = _y;
-        B_y_done = true;
+        B_c = _c;
+        B_c_done = true;
         done_B_3 = true;
     }
     event Broadcast3(); // TODO: add params
@@ -100,15 +102,15 @@ contract Simple {
     }
     // end 3
     // step 4
-    bool A_x;
-    bool A_x_done;
+    bool A_c;
+    bool A_c_done;
     bool done_A_4;
-    function reveal_A4(bool _x, uint salt) by(Role.A) at_step(4) public {
+    function reveal_A4(bool _c, uint salt) by(Role.A) at_step(4) public {
         require(!done_A_4);
-        require(keccak256(_x, salt) == bytes32(A_hidden_x));
+        require(keccak256(_c, salt) == bytes32(A_hidden_c));
         require(true);
-        A_x = _x;
-        A_x_done = true;
+        A_c = _c;
+        A_c_done = true;
         done_A_4 = true;
     }
     event Broadcast4(); // TODO: add params
@@ -122,13 +124,13 @@ contract Simple {
     // end 4
     function withdraw_5_A() by(Role.A) at_step(5) public {
         int amount;
-        amount = int(0);
+        amount = ((((A_c != B_c) || ! B_c_done)) ? int(1) : (- int(1)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_5_B() by(Role.B) at_step(5) public {
         int amount;
-        amount = int(0);
+        amount = ((((A_c == B_c) || ! A_c_done)) ? int(1) : (- int(1)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

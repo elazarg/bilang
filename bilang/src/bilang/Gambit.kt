@@ -154,7 +154,7 @@ fun eval(exp: Exp, env: Env): Const {
 fun eval(exp: Outcome.Value, env: Env): Outcome.Value =
         Outcome.Value(exp.ts.map { (k, v) -> Pair(k, eval(v, env) as Num) }.toMap())
 
-class ExtensivePrinter {
+class ExtensivePrinter(private val outcomeToPayoff: (Role, Int) -> Int = {_, v -> v}) {
     private var outcomeNumber: Int = 0
 
     fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
@@ -167,8 +167,8 @@ class ExtensivePrinter {
             val actionNamesForInfoset: String = stringList(t.edges.map { v -> v.values.joinToString("&") { valueToName(it) } })
             val outcome = 0
             val nameOfOutcome = ""
-            val outcomes = 0
-            listOf("p ${quote(nodeName)} $owner $infoset ${quote(infosetName)} $actionNamesForInfoset $outcomes") +
+            val payoffs = 0
+            listOf("p ${quote(nodeName)} $owner $infoset ${quote(infosetName)} $actionNamesForInfoset $payoffs") +
                     t.children.flatMap { toEfg(it, roleOrder) }
         }
         is Tree.Leaf -> {
@@ -177,8 +177,8 @@ class ExtensivePrinter {
             // Seems like outcomes are "named outcomes" and should define the outcome uniquely
             outcomeNumber += 1
             val nameOfOutcome = ""
-            val outcomes = roleOrder.map { t.outcome.getValue(it).n }.joinToString(" ", "{ ", " }")
-            listOf("t ${quote(name)} $outcome ${quote(nameOfOutcome)} $outcomes")
+            val payoffs = roleOrder.map { outcomeToPayoff(it, t.outcome.getValue(it).n) }.joinToString(" ", "{ ", " }")
+            listOf("t ${quote(name)} $outcome ${quote(nameOfOutcome)} $payoffs")
         }
     }
 
