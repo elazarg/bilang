@@ -144,8 +144,7 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |    $declsDone
             |    bool $doneRole;
             |
-            |    function yield_$role$step($params) at_step($step) public {
-            |        require(role[msg.sender] == Role.$role);
+            |    function yield_$role$step($params) by (Role.$role) at_step($step) public {
             |        require(!$doneRole);
             |        $typeWheres
             |        require($where);
@@ -165,8 +164,7 @@ fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |    $declsDone
             |    bool $doneRole;
             |
-            |    function reveal_$role$step($params, uint salt) at_step($step) public {
-            |        require(role[msg.sender] == Role.$role);
+            |    function reveal_$role$step($params, uint salt) by(Role.$role) at_step($step) public {
             |        require(!$doneRole);
             |        $typeWheres
             |        $reveals
@@ -277,7 +275,6 @@ fun genPayoff(switch: Payoff.Value, step: Int): String {
     return switch.ts.entries.map { (role: String, money: Exp) ->
         """
     |    function withdraw_${step}_$role() by(Role.$role) public at_step($step) {
-    |        require(role[msg.sender] == Role.$role);
     |        int amount;
     |        ${exp(money, "amount", "int").statements()}
     |        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
