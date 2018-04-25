@@ -1,16 +1,16 @@
 EFG 2 R "OddsEvensShort" { "Odd" "Even" }
 "OddsEvensShort"
 
-p "" 1 246 "" { "true" "false" "None" } 0
-p "" 2 246 "" { "true" "false" "None" } 0
+p "" 1 244 "" { "true" "false" "None" } 0
+p "" 2 244 "" { "true" "false" "None" } 0
 t "" 0 "" { -10 10 }
 t "" 1 "" { 10 -10 }
 t "" 2 "" { 10 -100 }
-p "" 2 246 "" { "true" "false" "None" } 0
+p "" 2 244 "" { "true" "false" "None" } 0
 t "" 3 "" { 10 -10 }
 t "" 4 "" { -10 10 }
 t "" 5 "" { 10 -100 }
-p "" 2 246 "" { "true" "false" "None" } 0
+p "" 2 244 "" { "true" "false" "None" } 0
 t "" 6 "" { -100 -100 }
 t "" 7 "" { -100 -100 }
 t "" 8 "" { -100 -100 }

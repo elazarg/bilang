@@ -29,10 +29,10 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             val subExt = ext.ext
             when (ext.kind) {
                 Kind.JOIN -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role))
-                             else independent(subExt, env.addRole(q.role), listOf(q))
-                Kind.JOIN_CHANCE -> if (q.params.isNotEmpty()) fromExp(subExt, env.addRole(q.role.name, chance=true))
-                                    else independent(subExt, env.addRole(q.role.name, chance=true), listOf(q))
-                Kind.YIELD -> independent(subExt, env, listOf(q))
+                             else independent(subExt, listOf(q), env.addRole(q.role))
+                Kind.JOIN_CHANCE -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role.name, chance=true))
+                                    else independent(subExt, listOf(q), env.addRole(q.role.name, chance=true))
+                Kind.YIELD -> independent(subExt, listOf(q), env)
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
                     val revealedPacket = q.params.map { Pair(it.name, revealed.getValue(q.role, it.name.name)) }.toMap()
@@ -49,11 +49,11 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             }
         }
         is Ext.Bind -> when (ext.kind) {
-            Kind.YIELD -> independent(ext.ext, env, ext.qs)
+            Kind.YIELD -> independent(ext.ext, ext.qs, env)
             Kind.JOIN -> {
                 // Naive. Join then yield. Is this correct?
                 val newEnv = ext.qs.fold(env) { acc, t -> acc.addRole(t.role) }
-                independent(ext.ext, newEnv, ext.qs)
+                independent(ext.ext, ext.qs.filter { it.params.isNotEmpty() }, newEnv)
             }
             Kind.JOIN_CHANCE -> TODO()
             Kind.REVEAL -> TODO()
@@ -73,7 +73,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             } + undefs)
     }
 
-    private fun independent(next: Ext, origEnv: Env, qs: List<Query>): Tree {
+    private fun independent(next: Ext, qs: List<Query>, origEnv: Env): Tree {
         fun independentRec(qs: List<Query>, env: Env): Tree {
             if (qs.isEmpty())
                 return fromExp(next, env)

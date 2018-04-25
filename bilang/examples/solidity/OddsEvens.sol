@@ -33,6 +33,15 @@ contract OddsEvens {
         require(true);
         doneOdd = true;
     }
+    bool doneEven;
+    function join_Even() at_step(0) public by(Role.None) payable {
+        require(!doneEven);
+        role[msg.sender] = Role.Even;
+        require(msg.value == 100); 
+        balanceOf[msg.sender] = msg.value;
+        require(true);
+        doneEven = true;
+    }
     event Broadcast0(); // TODO: add params
     function __nextStep0() public {
         require(step == 0);
@@ -43,14 +52,25 @@ contract OddsEvens {
     }
     // end 0
     // step 1
-    bool doneEven;
-    function join_Even() at_step(1) public by(Role.None) payable {
-        require(!doneEven);
-        role[msg.sender] = Role.Even;
-        require(msg.value == 100); 
-        balanceOf[msg.sender] = msg.value;
+    bool Odd_c;
+    bool Odd_c_done;
+    bool done_Odd_1;
+    function yield_Odd1(bool _c) by (Role.Odd) at_step(1) public {
+        require(!done_Odd_1);
         require(true);
-        doneEven = true;
+        Odd_c = _c;
+        Odd_c_done = true;
+        done_Odd_1 = true;
+    }
+    bool Even_c;
+    bool Even_c_done;
+    bool done_Even_1;
+    function yield_Even1(bool _c) by (Role.Even) at_step(1) public {
+        require(!done_Even_1);
+        require(true);
+        Even_c = _c;
+        Even_c_done = true;
+        done_Even_1 = true;
     }
     event Broadcast1(); // TODO: add params
     function __nextStep1() public {
@@ -61,43 +81,13 @@ contract OddsEvens {
         lastBlock = block.timestamp;
     }
     // end 1
-    // step 2
-    bool Odd_c;
-    bool Odd_c_done;
-    bool done_Odd_2;
-    function yield_Odd2(bool _c) by (Role.Odd) at_step(2) public {
-        require(!done_Odd_2);
-        require(true);
-        Odd_c = _c;
-        Odd_c_done = true;
-        done_Odd_2 = true;
-    }
-    bool Even_c;
-    bool Even_c_done;
-    bool done_Even_2;
-    function yield_Even2(bool _c) by (Role.Even) at_step(2) public {
-        require(!done_Even_2);
-        require(true);
-        Even_c = _c;
-        Even_c_done = true;
-        done_Even_2 = true;
-    }
-    event Broadcast2(); // TODO: add params
-    function __nextStep2() public {
-        require(step == 2);
-        //require(block.timestamp >= lastBlock + STEP_TIME);
-        emit Broadcast2();
-        step = 3;
-        lastBlock = block.timestamp;
-    }
-    // end 2
-    function withdraw_3_Even() by(Role.Even) at_step(3) public {
+    function withdraw_2_Even() by(Role.Even) at_step(2) public {
         int amount;
         amount = ((((! ! Even_c_done) && (! ! Odd_c_done))) ? (((Even_c == Odd_c)) ? int(10) : (- int(10))) : (((! Even_c_done && (! ! Odd_c_done))) ? (- int(100)) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
-    function withdraw_3_Odd() by(Role.Odd) at_step(3) public {
+    function withdraw_2_Odd() by(Role.Odd) at_step(2) public {
         int amount;
         amount = ((((! ! Even_c_done) && (! ! Odd_c_done))) ? (((Even_c == Odd_c)) ? (- int(10)) : int(10)) : (((! Even_c_done && (! ! Odd_c_done))) ? int(10) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
