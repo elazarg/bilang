@@ -169,8 +169,8 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
 
     @NotNull
-    private Exp.Var var(Token target) {
-        return new Exp.Var(target.getText());
+    private String var(Token target) {
+        return target.getText();
     }
 
     @Override

@@ -67,7 +67,7 @@ $items
 }
 
 private fun makeQuery(kind: Kind, q: Query, step: Int): String {
-    val role = q.role.name
+    val role = q.role
     val where = exp(q.where)
 
     val typeWheres = q.params.map { whereof(varname(it), it.type) }.statements()
@@ -192,8 +192,8 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
 }
 
 private fun varname(it: VarDec) =
-        if (it.type is TypeExp.Hidden) "hidden_${it.name.name}"
-        else it.name.name
+        if (it.type is TypeExp.Hidden) "hidden_${it.name}"
+        else it.name
 
 private fun genOutcome(switch: Outcome.Value, step: Int): String {
     // TODO: many
@@ -263,7 +263,7 @@ private fun exp(e: Exp, outvar: String, type: String): List<String> {
         }
         is Exp.Const -> listOf("$outvar = ${exp(e)};")
         is Exp.Let -> {
-            exp(e.init, e.dec.name.name, (e.dec.type as TypeExp.TypeId).name) + exp(e.exp, outvar, type)
+            exp(e.init, e.dec.name, (e.dec.type as TypeExp.TypeId).name) + exp(e.exp, outvar, type)
         }
     }
 }

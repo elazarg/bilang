@@ -4,7 +4,7 @@ import bilang.Exp.*
 import bilang.Exp.Const.*
 
 sealed class Tree {
-    data class Node(val owner: String, val env: Env, val infoset: Int, val edges: List<Map<Var, Const>>, val children: List<Tree>) : Tree()
+    data class Node(val owner: String, val env: Env, val infoset: Int, val edges: List<Map<String, Const>>, val children: List<Tree>) : Tree()
 
     data class Leaf(val outcome: Map<String, Num>) : Tree()
 }
@@ -30,20 +30,20 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             when (ext.kind) {
                 Kind.JOIN -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role))
                              else independent(subExt, listOf(q), env.addRole(q.role))
-                Kind.JOIN_CHANCE -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role.name, chance=true))
-                                    else independent(subExt, listOf(q), env.addRole(q.role.name, chance=true))
+                Kind.JOIN_CHANCE -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role, chance=true))
+                                    else independent(subExt, listOf(q), env.addRole(q.role, chance=true))
                 Kind.YIELD -> independent(subExt, listOf(q), env)
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
-                    val revealedPacket = q.params.map { Pair(it.name, revealed.getValue(q.role, it.name.name)) }.toMap()
+                    val revealedPacket = q.params.map { Pair(it.name, revealed.getValue(q.role, it.name)) }.toMap()
                     val quit = env.mapHidden(q){UNDEFINED}
                     val quitPacket = q.params.map { Pair(it.name, UNDEFINED) }.toMap()
-                    val infoset = UniqueHash.of(env.eraseHidden(q.role.name))
-                    val (edges, children) = if (env.isChance(q.role.name))
+                    val infoset = UniqueHash.of(env.eraseHidden(q.role))
+                    val (edges, children) = if (env.isChance(q.role))
                         Pair(listOf(revealedPacket), listOf(fromExp(subExt, revealed)))
                     else
                         Pair(listOf(revealedPacket, quitPacket), listOf(fromExp(subExt, revealed), fromExp(subExt, quit)))
-                    Tree.Node(q.role.name, revealed, infoset, edges, children)
+                    Tree.Node(q.role, revealed, infoset, edges, children)
                 }
                 Kind.MANY -> TODO()
             }
@@ -51,7 +51,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
         is Ext.Bind -> when (ext.kind) {
             Kind.YIELD -> independent(ext.ext, ext.qs, env)
             Kind.JOIN -> {
-                // Naive. Join then yield. Is this correct?
+                // Join then yield. Is this correct?
                 val newEnv = ext.qs.fold(env) { acc, t -> acc.addRole(t.role) }
                 independent(ext.ext, ext.qs.filter { it.params.isNotEmpty() }, newEnv)
             }
@@ -62,11 +62,11 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
         is Ext.Value -> Tree.Leaf((eval(ext.exp, env)).ts as Map<String, Num>)
     }
 
-    private fun enumeratePackets(q: Query, env: Env): List<Map<Var, Const>> {
+    private fun enumeratePackets(q: Query, env: Env): List<Map<String, Const>> {
         fun combineValues(f: (VarDec) -> List<Const>) =
                 q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
 
-        val undefs = if (env.isChance(q.role.name)) listOf() else combineValues { listOf<Const>(UNDEFINED) }
+        val undefs = if (env.isChance(q.role)) listOf() else combineValues { listOf<Const>(UNDEFINED) }
         return if (env.quitted(q.role)) undefs
             else (combineValues { enumerateValues(it.type) }.filter {
                 value -> eval(q.where, env.updateHeap(q, value)) == Bool(true)
@@ -78,10 +78,10 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             if (qs.isEmpty())
                 return fromExp(next, env)
             val q = qs.first()
-            val infoset = UniqueHash.of(origEnv.eraseHidden(q.role.name))
+            val infoset = UniqueHash.of(origEnv.eraseHidden(q.role))
             val edges = enumeratePackets(q, origEnv)
             val children = edges.map { e -> independentRec(qs.drop(1), env.updateHeap(q, e)) }
-            return Tree.Node(q.role.name, env, infoset, edges, children)
+            return Tree.Node(q.role, env, infoset, edges, children)
         }
         return independentRec(qs, origEnv)
     }
@@ -140,7 +140,7 @@ fun eval(exp: Exp, env: Env): Const {
             }
             res
         }
-        is Var -> env.getValue(exp)
+        is Var -> env.getValue(exp.name)
         is Member -> env.getValue(exp.target, exp.field)
         is Cond -> {
             val cond = eval(exp.cond)
@@ -216,40 +216,37 @@ private fun quote(name: String) = '"' + name + '"'
 private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") { quote(it) }
 
 
-data class Env(private val g: Map<Var, Const>, private val h: Map<Pair<Var, Var>, Const>) {
+data class Env(private val g: Map<String, Const>, private val h: Map<Pair<String, String>, Const>) {
     constructor(): this(mapOf(), mapOf())
 
-    operator fun plus(p: Pair<Var, Const>) = Env(g + p, h)
+    operator fun plus(p: Pair<String, Const>) = Env(g + p, h)
 
     fun mapHidden(q: Query, f: (Hidden) -> Const) = copy(h=
         h.mapValues { (rv, k) ->
             if (k is Hidden && rv.first == q.role
-                    && q.params.map { it.name.name }.contains(rv.second.name)) f(k) else k
+                    && rv.second in q.params.map { it.name }) f(k) else k
         }
     )
 
     fun eraseHidden(role: String) = copy(h=
         h.mapValues { (rv, k) ->
-            if (k is Hidden && rv.first.name != role) Hidden(UNDEFINED) else k
+            if (k is Hidden && rv.first != role) Hidden(UNDEFINED) else k
         }
     )
 
-    fun updateHeap(q: Query, newEnv: Map<Var, Const>): Env {
+    fun updateHeap(q: Query, newEnv: Map<String, Const>): Env {
         val mh = h.toMutableMap()
         mh.putAll(newEnv.map { (v, k) -> Pair(Pair(q.role, v), k) })
         return copy(h=mh.toMap())
     }
 
-    fun addRole(role: Var, chance: Boolean = false) = if (!chance) this + Pair(role,
+    fun addRole(role: String, chance: Boolean = false) = if (!chance) this + Pair(role,
             Address(1 + (g.values.map { (it as? Address)?.n ?: 0 }.max() ?: 0))
     ) else { this + Pair(role, Address(0)) }
-    fun addRole(role: String, chance: Boolean = false) = addRole(Var(role), chance)
 
-    fun getValue(v: Var) = g.getValue(v)
-    fun getValue(v: String) = getValue(Var(v))
-    fun getValue(role: String, field: String) = h.getValue(Pair(Var(role), Var(field)))
-    fun getValue(role: Var, field: String) = h.getValue(Pair(role, Var(field)))
-    fun quitted(role: Exp.Var): Boolean = h.any { (rv, k) -> rv.first == role && k == UNDEFINED }
+    fun getValue(role: String, field: String) = h.getValue(Pair(role, field))
+    fun getValue(v: String) = g.getValue(v)
+    fun quitted(role: String): Boolean = h.any { (rv, k) -> rv.first == role && k == UNDEFINED }
 
-    fun isChance(role: String) = getValue(role) == Address(0)
+    fun isChance(role: String) = g.getValue(role) == Address(0)
 }

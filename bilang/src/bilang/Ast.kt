@@ -11,7 +11,7 @@ sealed class Ext : Ast() {
     data class BindSingle(val kind: Kind, val q: Query, val ext: Ext) : Ext(), Step
     data class Value(val exp: Outcome.Value) : Ext()
 }
-data class Query(val role: Exp.Var, val params: List<VarDec>, val deposit: Exp.Const.Num, val where: Exp) : Ast()
+data class Query(val role: String, val params: List<VarDec>, val deposit: Exp.Const.Num, val where: Exp) : Ast()
 
 sealed class Exp : Ast() {
     data class Call(val target: Var, val args: List<Exp>) : Exp()
@@ -42,7 +42,7 @@ sealed class Outcome: Ast() {
     data class Let(val dec: VarDec, val init: Exp, val outcome: Outcome) : Outcome()
 }
 
-data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()
+data class VarDec(val name: String, val type: TypeExp) : Ast()
 enum class Kind { JOIN, YIELD, REVEAL, MANY, JOIN_CHANCE }
 
 sealed class TypeExp : Ast() {
@@ -60,8 +60,8 @@ sealed class TypeExp : Ast() {
 }
 
 internal fun findRoles(ext: Ext): List<String> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role.name } else listOf()) + findRoles(ext.ext)
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role.name) else listOf()) + findRoles(ext.ext)
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role } else listOf()) + findRoles(ext.ext)
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role) else listOf()) + findRoles(ext.ext)
     is Ext.Value -> listOf()
 }
 

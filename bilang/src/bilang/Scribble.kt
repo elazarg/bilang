@@ -41,11 +41,11 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
             val args = params.joinToString(", ") { it.type.name }
             val names = params.joinToString("_") { it.name }
             var res = if (params.isEmpty()) "$label()" else "${label}_$names($args)"
-            if (role == null || to.contains(role))
+            if (role == null || role in to)
                 res += " from $from"
             if (role == null || from == role)
                 res += " to ${to.joinToString(", ")}"
-            if (res.contains(" to ") || res.contains(" from ")) res
+            if (" to " in res || " from " in res) res
             else ""
         }
         is Sast.Action.Connect ->
@@ -72,7 +72,7 @@ fun programToScribble(p: ExpProgram): Sast.Protocol {
 private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when (ext) {
     is Ext.BindSingle -> {
         val params = ext.q.params
-        val role = ext.q.role.name
+        val role = ext.q.role
         fun send(label: String, decls: List<Sast.VarDec>, to: Set<Role> = setOf("Server")) = Sast.Action.Send(label, decls, role, to)
         fun sendToServer(): List<Sast.Action.Send> {
             val (priv, pub) = params.partition { p -> p.type is TypeExp.Hidden }.map { declsOf(it) }
@@ -107,7 +107,7 @@ private fun rankOrder(it: Sast.Action): Int =
         } else 0
 
 private fun declsOf(params: List<VarDec>) = params.map {
-    Sast.VarDec(it.name.name, Sast.Type(typeOf(it.type)))
+    Sast.VarDec(it.name, Sast.Type(typeOf(it.type)))
 }
 
 private fun typeOf(t: TypeExp): String = when (t) {

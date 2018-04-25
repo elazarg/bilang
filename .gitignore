@@ -29,6 +29,7 @@ library/session/packages/
 target/
 bilang/src/generated/*
 bilang/bin/*
+bilang/gambit/*.efg
 scala.iml
 *.sbt
 
