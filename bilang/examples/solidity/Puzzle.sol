@@ -41,17 +41,13 @@ contract Puzzle {
         halfStepQ = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleQ;
     int Q_x;
     bool Q_x_done;
     function join_Q(int _x, uint salt) at_step(0) public payable {
         require(keccak256(_x, salt) == bytes32(commitsQ[msg.sender]));
-        if (chosenRoleQ != address(0x0))
-             require(timesQ[msg.sender] < timesQ[chosenRoleQ]);
         role[msg.sender] = Role.Q;
         require(msg.value == 50); 
         balanceOf[msg.sender] = msg.value;
-        chosenRoleQ = msg.sender;
         require(true);
         Q_x = _x;
         Q_x_done = true;
@@ -83,18 +79,14 @@ contract Puzzle {
         halfStepA = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleA;
     int A_p;
 int A_q;
     bool A_p_done;
 bool A_q_done;
     function join_A(int _p, int _q, uint salt) at_step(1) public {
         require(keccak256(_p, _q, salt) == bytes32(commitsA[msg.sender]));
-        if (chosenRoleA != address(0x0))
-             require(timesA[msg.sender] < timesA[chosenRoleA]);
         role[msg.sender] = Role.A;
         balanceOf[msg.sender] = msg.value;
-        chosenRoleA = msg.sender;
         require(((((A_p * A_q) == Q_x) && (A_p != int(1))) && (A_q != int(1))));
         A_p = _p;
     A_q = _q;

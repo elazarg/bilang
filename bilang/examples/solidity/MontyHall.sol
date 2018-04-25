@@ -26,9 +26,9 @@ contract MontyHall {
     // step 0
     bool doneHost;
     function join_Host() at_step(0) public by(Role.None) payable {
+        require(!doneHost);
         role[msg.sender] = Role.Host;
         require(msg.value == 100); 
-        require(!doneHost);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneHost = true;
@@ -45,9 +45,9 @@ contract MontyHall {
     // step 1
     bool doneGuest;
     function join_Guest() at_step(1) public by(Role.None) payable {
+        require(!doneGuest);
         role[msg.sender] = Role.Guest;
         require(msg.value == 100); 
-        require(!doneGuest);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneGuest = true;

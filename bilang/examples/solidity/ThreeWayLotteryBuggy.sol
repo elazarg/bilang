@@ -26,9 +26,9 @@ contract ThreeWayLotteryBuggy {
     // step 0
     bool doneIssuer;
     function join_Issuer() at_step(0) public by(Role.None) payable {
+        require(!doneIssuer);
         role[msg.sender] = Role.Issuer;
         require(msg.value == 10); 
-        require(!doneIssuer);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneIssuer = true;
@@ -45,9 +45,9 @@ contract ThreeWayLotteryBuggy {
     // step 1
     bool doneAlice;
     function join_Alice() at_step(1) public by(Role.None) payable {
+        require(!doneAlice);
         role[msg.sender] = Role.Alice;
         require(msg.value == 10); 
-        require(!doneAlice);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneAlice = true;
@@ -64,9 +64,9 @@ contract ThreeWayLotteryBuggy {
     // step 2
     bool doneBob;
     function join_Bob() at_step(2) public by(Role.None) payable {
+        require(!doneBob);
         role[msg.sender] = Role.Bob;
         require(msg.value == 10); 
-        require(!doneBob);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneBob = true;

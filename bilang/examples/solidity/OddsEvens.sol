@@ -26,9 +26,9 @@ contract OddsEvens {
     // step 0
     bool doneOdd;
     function join_Odd() at_step(0) public by(Role.None) payable {
+        require(!doneOdd);
         role[msg.sender] = Role.Odd;
         require(msg.value == 100); 
-        require(!doneOdd);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneOdd = true;
@@ -45,9 +45,9 @@ contract OddsEvens {
     // step 1
     bool doneEven;
     function join_Even() at_step(1) public by(Role.None) payable {
+        require(!doneEven);
         role[msg.sender] = Role.Even;
         require(msg.value == 100); 
-        require(!doneEven);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneEven = true;

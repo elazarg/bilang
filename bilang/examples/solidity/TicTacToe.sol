@@ -26,9 +26,9 @@ contract TicTacToe {
     // step 0
     bool doneX;
     function join_X() at_step(0) public by(Role.None) payable {
+        require(!doneX);
         role[msg.sender] = Role.X;
         require(msg.value == 100); 
-        require(!doneX);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneX = true;
@@ -45,9 +45,9 @@ contract TicTacToe {
     // step 1
     bool doneO;
     function join_O() at_step(1) public by(Role.None) payable {
+        require(!doneO);
         role[msg.sender] = Role.O;
         require(msg.value == 100); 
-        require(!doneO);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneO = true;

@@ -26,8 +26,8 @@ contract Trivial1 {
     // step 0
     bool doneA;
     function join_A() at_step(0) public by(Role.None) {
-        role[msg.sender] = Role.A;
         require(!doneA);
+        role[msg.sender] = Role.A;
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneA = true;

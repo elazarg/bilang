@@ -41,17 +41,13 @@ contract OddsEvensShort {
         halfStepOdd = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleOdd;
     bool Odd_c;
     bool Odd_c_done;
     function join_Odd(bool _c, uint salt) at_step(0) public payable {
         require(keccak256(_c, salt) == bytes32(commitsOdd[msg.sender]));
-        if (chosenRoleOdd != address(0x0))
-             require(timesOdd[msg.sender] < timesOdd[chosenRoleOdd]);
         role[msg.sender] = Role.Odd;
         require(msg.value == 100); 
         balanceOf[msg.sender] = msg.value;
-        chosenRoleOdd = msg.sender;
         require(true);
         Odd_c = _c;
         Odd_c_done = true;
@@ -73,17 +69,13 @@ contract OddsEvensShort {
         halfStepEven = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleEven;
     bool Even_c;
     bool Even_c_done;
     function join_Even(bool _c, uint salt) at_step(0) public payable {
         require(keccak256(_c, salt) == bytes32(commitsEven[msg.sender]));
-        if (chosenRoleEven != address(0x0))
-             require(timesEven[msg.sender] < timesEven[chosenRoleEven]);
         role[msg.sender] = Role.Even;
         require(msg.value == 100); 
         balanceOf[msg.sender] = msg.value;
-        chosenRoleEven = msg.sender;
         require(true);
         Even_c = _c;
         Even_c_done = true;

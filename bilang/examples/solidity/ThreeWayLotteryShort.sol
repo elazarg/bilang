@@ -41,17 +41,13 @@ contract ThreeWayLotteryShort {
         halfStepIssuer = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleIssuer;
     int Issuer_c;
     bool Issuer_c_done;
     function join_Issuer(int _c, uint salt) at_step(0) public payable {
         require(keccak256(_c, salt) == bytes32(commitsIssuer[msg.sender]));
-        if (chosenRoleIssuer != address(0x0))
-             require(timesIssuer[msg.sender] < timesIssuer[chosenRoleIssuer]);
         role[msg.sender] = Role.Issuer;
         require(msg.value == 10); 
         balanceOf[msg.sender] = msg.value;
-        chosenRoleIssuer = msg.sender;
         require(true);
         Issuer_c = _c;
         Issuer_c_done = true;
@@ -73,17 +69,13 @@ contract ThreeWayLotteryShort {
         halfStepAlice = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleAlice;
     int Alice_c;
     bool Alice_c_done;
     function join_Alice(int _c, uint salt) at_step(0) public payable {
         require(keccak256(_c, salt) == bytes32(commitsAlice[msg.sender]));
-        if (chosenRoleAlice != address(0x0))
-             require(timesAlice[msg.sender] < timesAlice[chosenRoleAlice]);
         role[msg.sender] = Role.Alice;
         require(msg.value == 10); 
         balanceOf[msg.sender] = msg.value;
-        chosenRoleAlice = msg.sender;
         require(true);
         Alice_c = _c;
         Alice_c_done = true;
@@ -105,17 +97,13 @@ contract ThreeWayLotteryShort {
         halfStepBob = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleBob;
     int Bob_c;
     bool Bob_c_done;
     function join_Bob(int _c, uint salt) at_step(0) public payable {
         require(keccak256(_c, salt) == bytes32(commitsBob[msg.sender]));
-        if (chosenRoleBob != address(0x0))
-             require(timesBob[msg.sender] < timesBob[chosenRoleBob]);
         role[msg.sender] = Role.Bob;
         require(msg.value == 10); 
         balanceOf[msg.sender] = msg.value;
-        chosenRoleBob = msg.sender;
         require(true);
         Bob_c = _c;
         Bob_c_done = true;

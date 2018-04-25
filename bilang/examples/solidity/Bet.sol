@@ -26,9 +26,9 @@ contract Bet {
     // step 0
     bool doneRace;
     function join_Race() at_step(0) public by(Role.None) payable {
+        require(!doneRace);
         role[msg.sender] = Role.Race;
         require(msg.value == 100); 
-        require(!doneRace);
         balanceOf[msg.sender] = msg.value;
         require(true);
         doneRace = true;
@@ -60,17 +60,13 @@ contract Bet {
         halfStepGambler = true;
         lastBlock = block.timestamp;
     }
-    address chosenRoleGambler;
     int Gambler_bet;
     bool Gambler_bet_done;
     function join_Gambler(int _bet, uint salt) at_step(1) public payable {
         require(keccak256(_bet, salt) == bytes32(commitsGambler[msg.sender]));
-        if (chosenRoleGambler != address(0x0))
-             require(timesGambler[msg.sender] < timesGambler[chosenRoleGambler]);
         role[msg.sender] = Role.Gambler;
         require(msg.value == 100); 
         balanceOf[msg.sender] = msg.value;
-        chosenRoleGambler = msg.sender;
         require(true);
         Gambler_bet = _bet;
         Gambler_bet_done = true;
