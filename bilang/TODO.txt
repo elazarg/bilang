@@ -1,5 +1,5 @@
 TODO:
-*
+* Add trust (e.g. for bet and montyhall)
 * Generate clients / client stubs
 * Support ERC-20 / ERC-777 tokens (code generation)
 * Support multi-token games

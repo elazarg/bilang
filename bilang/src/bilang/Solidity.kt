@@ -79,7 +79,6 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val declsDone = names.map { "bool ${role}_${it}_done;" }.declarations()
     val assignments = names.map { "${role}_$it = _$it;" }.statements()
     val inits = names.map { "${role}_${it}_done = true;" }.statements()
-    val args = names.map{ "_$it" }.join(", ")
     val doneRole = "done_${role}_$step"
 
     val deposit = q.deposit.n

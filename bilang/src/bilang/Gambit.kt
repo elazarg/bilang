@@ -28,7 +28,8 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             val q = ext.q
             val subExt = ext.ext
             when (ext.kind) {
-                Kind.JOIN -> fromExp(subExt, env.addRole(q.role)) // independent(subExt, env.addRole(q.role), listOf(q))
+                Kind.JOIN -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role))
+                             else independent(subExt, env.addRole(q.role), listOf(q))
                 Kind.YIELD -> independent(subExt, env, listOf(q))
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
@@ -87,7 +88,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
         TypeExp.BOOL -> listOf(Bool(true), Bool(false))
         is TypeExp.Hidden -> enumerateValues(t.type).map { hide(it) }
         is TypeExp.TypeId -> enumerateValues(types.getValue(t.name))
-        else -> throw AssertionError("cannot enumerate $t")
+        else -> TODO("cannot enumerate $t")
     }
 }
 
@@ -99,7 +100,10 @@ private fun hide(v: Const): Const = when (v) {
 fun eval(exp: Exp, env: Env): Const {
     fun eval(exp: Exp) = eval(exp, env)
     return when (exp) {
-        is Call -> TODO()
+        is Call -> when (exp.target.name) {
+            "alldiff" -> Bool(exp.args.map {eval(it)}.distinct().size == exp.args.size)
+            else -> TODO()
+        }
         is UnOp -> when (exp.op) {
             "-" -> Num(-(eval(exp.operand) as Num).n)
             "!" -> Bool(!(eval(exp.operand) as Bool).truth)

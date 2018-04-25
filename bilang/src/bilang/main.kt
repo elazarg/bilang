@@ -18,24 +18,31 @@ private fun run(name: String) {
     println("Analyzing $inputFilename ...")
     val program = parse(inputFilename).copy(desc=name)
     println(findRoles(program.game))
-    writeFile("examples/gambit/$name.efg", Extensive(name, program).toEfg())
-    writeFile("examples/scribble/$name.scr", programToScribble(program).prettyPrintAll())
-    writeFile("examples/solidity/$name.sol", genGame(program))
+    writeFile("examples/gambit/$name.efg") {Extensive(name, program).toEfg()}
+    writeFile("examples/scribble/$name.scr") {programToScribble(program).prettyPrintAll()}
+    writeFile("examples/solidity/$name.sol") {genGame(program)}
     println("Done")
     println()
 }
 
-private fun writeFile(filename: String, text: String) {
+private fun writeFile(filename: String, f: () -> String) {
     print("Writing file $filename... ")
-    Paths.get(filename).toFile().writeText(text)
+    try {
+        val text = f()
+        Paths.get(filename).toFile().writeText(text)
+    } catch (ex: NotImplementedError) {
+        println(ex.message)
+    }
     println("Done")
 }
 
 fun main(args: Array<String>) {
     listOf(
+            "Bet",
             "Trivial1",
             "Simple",
             "Puzzle",
+            "TicTacToe",
             "MontyHall",
             "OddsEvens", "OddsEvensShort",
             "Prisoners",
