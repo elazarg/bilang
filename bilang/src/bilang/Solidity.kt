@@ -87,10 +87,15 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
 
     return when (kind) {
         Kind.JOIN_CHANCE -> makeQuery(Kind.JOIN, q, step)
-        Kind.JOIN -> {
+        Kind.JOIN, Kind.MANY -> {
             if (q.params.isNotEmpty()) {
                 val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
                 val reveals = (vars.map { (type, name) -> "_$name" } + "salt").join(", ")
+                val (updateChosen, checkChosen) = if (kind == Kind.MANY)
+                    Pair("chosenRole$role = msg.sender;", "if (chosenRole$role != address(0x0)) require(times$role[msg.sender] < times$role[chosenRole$role]);")
+                else
+                    Pair("", "")
+                val declChosen = if (kind == Kind.MANY) "address chosenRole$role;" else ""
             """
             |    mapping(address => bytes32) commits$role;
             |    mapping(address => uint) times$role;
@@ -112,18 +117,17 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        lastBlock = block.timestamp;
             |    }
             |
-            |    address chosenRole$role;
+            |    $declChosen
             |    $decls
             |    $declsDone
             |
             |    function join_$role($revealArgs) at_step($step) public $payable{
             |        require(keccak256($reveals) == bytes32(commits$role[msg.sender]));
-            |        if (chosenRole$role != address(0x0))
-            |             require(times$role[msg.sender] < times$role[chosenRole$role]);
+            |        $checkChosen
             |        role[msg.sender] = Role.$role;
             |        $requirePayment
             |        balanceOf[msg.sender] = msg.value;
-            |        chosenRole$role = msg.sender;
+            |        $updateChosen
             |        $typeWheres
             |        require($where);
             |        $assignments
@@ -131,16 +135,17 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |    }
             |""".trimIndent()
             } else {
+                val (checkDone, makeDone) = if (kind == Kind.JOIN) Pair("require(!done$role);", "done$role = true;") else Pair("", "")
                 """
             |    bool done$role;
             |    function join_$role() at_step($step) public by(Role.None) $payable{
+            |        $checkDone
             |        role[msg.sender] = Role.$role;
             |        $requirePayment
-            |        require(!done$role);
             |        balanceOf[msg.sender] = msg.value;
             |        require($where);
             |        $inits
-            |        done$role = true;
+            |        $makeDone
             |    }
             |""".trimIndent()
             }
@@ -183,8 +188,6 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |    }
             |""".trimIndent()
         }
-
-        Kind.MANY -> TODO()
     }.trimMargin()
 }
 
@@ -193,9 +196,7 @@ private fun varname(it: VarDec) =
         else it.name.name
 
 private fun genOutcome(switch: Outcome.Value, step: Int): String {
-    // idea: evaluate keys one by one; when the value equals to the value of the sender
-    // evaluate the value and withdraw
-    // so this is a "switch" expression...
+    // TODO: many
     return switch.ts.entries.map { (role: String, money: Exp) ->
         """
         |    function withdraw_${step}_$role() by(Role.$role) at_step($step) public {

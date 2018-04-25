@@ -222,17 +222,17 @@ In our language, this game can be implemented this way:
 
 \lstinputlisting{../bilang/examples/Simple.bi}
 
-Since in our model there is an infinite number of players, we should pick two of them for the actual game. This is accomplished in the first two lines. A \texttt{join} command waits for some arbitrary user to send a join request; of all these users, the server picks one arbitrarily. This command is racy, and implemented in a way that encourages users to respond quickly, in order to somewhat mitigate look-into-messages attacks. After this command is executed, the name $A$ is bound to an address of some user that sent an appropriate join request, and from this point forward we call this user `player A'. The syntax \texttt{\$ 1} means that valid join requests must be accompanied with an amount of 1 unit of token (\texttt{wei}, in Ethereum) which will be owned by the contract.
+Since in our model there is an infinite number of players, we should pick two of them for the actual game. This is accomplished in the first two lines. A \texttt{join} command waits for some arbitrary user to send a join request; of all these users, the server picks one arbitrarily. This command is racy, and implemented in a way that encourages users to respond quickly, in order to somewhat mitigate look-into-messages attacks. After this command is executed, the name $A$ is bound to an address of some user that sent an appropriate join request, and from this point forward we call this user `player A'. The syntax `\texttt{\$ 1}' means that valid join requests must be accompanied with an amount of 1 unit of token (\texttt{wei}, in Ethereum) which will be owned by the contract.
 
-The second command is identical in execution. However, there's a subtle point here: while the second command is waiting, the game cannot be continued and player $A$'s money is locked. There's no perfect solution here, but as long as $A$ is the only player, it makes sense to let her leave the game without penalty. She can also (in this game) can try to become player $B$, in which the only payment will be that of execution cost -- gas, on the Ethereum platform (note that we cannot in general know whether the same user plays two different roles, due the pseudonimity of the blockchain). We chose to implement a timer, after which player $B$ becomes the null player, and all its values will be \texttt{null}.
+The second \texttt{join} command is identical in execution. However, there is a subtle point here: while the second command is waiting, the game cannot be continued and player $A$'s money is locked. As long as $A$ is the only player, it makes sense to let her leave the game without penalty. She can also (in this game) can try to become player $B$, in which the only payment will be that of execution cost -- gas, on the Ethereum platform (note that we cannot in general know whether the same user plays two different roles, due the pseudonimity of the blockchain). We chose to implement a timer, after which player $B$ becomes the null player, and all its values will be \texttt{null}.
 
 Next is a \texttt{yield} command. At this point we know who player $A$ is, we can wait for it to send the appropriate message, so there's no race here. If player $A$'s message is received within the time limit, the value is bound to the field \texttt{A.x}. However, this value is \texttt{hidden} from other players (implemented in a commitment scheme) so no checks can be performed on it. It can only be passed around.
 
-The next \texttt{yield} command is similar and simpler, since there's no hiding involved.
+The next \texttt{yield} command is similar and simpler, since there is no hiding involved.
 
 The last \texttt{yield} command requires player $A$ to publish her hidden value (reveal the commitment and the salt value). If the player fails to give the right value, it is as if she quit the game, and the value becomes \texttt{null}.
 
-Games end with a description of payoff - how much money each of the players get.
+Games ends with a description of payoff - how much money each of the players get.
 
 \subsubsection{Odds and Evens: Simultaneous Two-Player Game}
 $\\$
