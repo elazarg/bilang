@@ -76,7 +76,7 @@
   frame=single,	                   % adds a frame around the code
   keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
   keywordstyle=\textbf,       % keyword style
-  morekeywords={join,yield,reveal,null,many,return,hidden,;},            % if you want to add more keywords to the set
+  morekeywords={join,yield,reveal,null,many,return,hidden,;,withdraw,random,foreach,fold},            % if you want to add more keywords to the set
   numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
   numbersep=5pt,                   % how far the line-numbers are from the code
   rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
@@ -232,9 +232,14 @@ The next \texttt{yield} command is similar and simpler, since there is no hiding
 
 The last \texttt{yield} command requires player $A$ to publish her hidden value (reveal the commitment and the salt value). If the player fails to give the right value, it is as if she quit the game, and the value becomes \texttt{null}.
 
-Games ends with a description of payoff - how much money each of the players get.
+Games ends with a description of an outcome - how much money each of the players get.
 
-\subsubsection{Odds and Evens: Simultaneous Two-Player Game}
+This game is very similar to a famous game - odds and Evens. The only difference in the descriptions of the games is that we've just described a sequential game, whereas in Odds and Evens, player reveal their choices simultaneously. It is possible to define such games too:
+
+\lstinputlisting{../bilang/examples/OddsEvens.bi}
+
+Here, instead of a `hide, guess, reveal' sequence, we have a parallel, independent action. However, it is virtually impossible to enforce this independence on a distributed settings without a trusted third party, since one of the players will have to reveal her choices first, and the other player can decide whether or not he will continue playing based on whether or not his choice is winning -- just like the case for player A in the previous example, except in our case we can make the attack somewhat less dependable, since it will require careful timing and luck. In the previous example, this possibility is visible and is part of the protocol. 
+
 $\\$
 
 \lstinputlisting{../bilang/examples/MontyHall.bi}
@@ -475,7 +480,7 @@ When translating to extensive form, it is important to take into account one imp
 
 We address this problem in the way we translate the game to external form. Each move consists of two levels in the tree: the first is whether we play at all (or choose \texttt{undefined} value), and the second corresponds to the actual value chosen. only the second level is hidden from the next player --- i.e. the first choice leads to two nodes, each on its own information set. This analysis is sensitive to the order of playing, so in order to have complete analysis we should go over every permutation of players at every node. We believe it is reasonable to simply assume that one of the players is honest, which significantly reduce the number of possible permutations, but this point remains a problem in scaling the analysis.
 
-As a simple example, take the following game:
+As a simple example, take the game `Simple' from:
 \lstinputlisting{../bilang/examples/Simple.bi}
 
 This game is translated to the following extensive form representation:
