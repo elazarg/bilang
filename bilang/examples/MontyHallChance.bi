@@ -1,0 +1,14 @@
+type door = {0, 1, 2}
+
+random Host() $ 100;
+join Guest() $ 100;
+yield Host(car: hidden door);
+yield Guest(d: door);
+yield Host(goat: door) where Host.goat != Guest.d;
+yield Guest(switch: bool);
+reveal Host(car: door) where Host.goat != Host.car;
+withdraw (Host.car != null && Host.goat != null && Guest.switch != null)
+     ? { Guest -> ((Guest.d <-!-> Host.car) <-> Guest.switch) ? 20 : -20;  Host -> 0 }
+     : (Host.car == null || Host.goat == null)
+     ? { Guest -> 20;   Host -> -100 }
+     : { Guest -> -100; Host -> 0 }

@@ -10,7 +10,7 @@ typeExp
     ;
 
 // only sensible combination is independent yield + many
-ext : kind=('join'|'yield'| 'reveal'|'many') query+ ';' ext  # ReceiveExt
+ext : kind=('join' | 'yield' | 'reveal' | 'many' | 'random') query+ ';' ext  # ReceiveExt
     | 'let' 'fold' varDec '=' query 'from' from=ID exp ';' ext  # FoldExt
     | 'withdraw' outcome # WithdrawExt
     ;
