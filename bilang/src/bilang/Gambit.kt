@@ -40,8 +40,8 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                     val quitPacket = q.params.map { Pair(it.name, UNDEFINED) }.toMap()
                     val infoset = UniqueHash.of(env.eraseHidden(q.role.name))
                     Tree.Node(q.role.name, revealed, infoset,
-                            listOf(revealedPacket, quitPacket),
-                            listOf(fromExp(subExt, revealed), fromExp(subExt, quit))
+                            (if (env.isChance(q.role.name)) listOf(revealedPacket) else listOf(revealedPacket, quitPacket)),
+                            (if (env.isChance(q.role.name)) listOf(fromExp(subExt, revealed)) else listOf(fromExp(subExt, revealed), fromExp(subExt, quit)))
                         )
                 }
                 Kind.MANY -> TODO()
@@ -65,12 +65,11 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
         fun combineValues(f: (VarDec) -> List<Const>) =
                 q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
 
-        return combineValues { listOf<Const>(UNDEFINED) }.let { undefs ->
-            if (env.quitted(q.role)) undefs
+        val undefs = if (env.isChance(q.role.name)) listOf() else combineValues { listOf<Const>(UNDEFINED) }
+        return if (env.quitted(q.role)) undefs
             else (combineValues { enumerateValues(it.type) }.filter {
                 value -> eval(q.where, env.updateHeap(q, value)) == Bool(true)
             } + undefs)
-        }
     }
 
     private fun independent(next: Ext, origEnv: Env, qs: List<Query>): Tree {
@@ -166,7 +165,7 @@ class ExtensivePrinter(private val outcomeToPayoff: (Role, Int) -> Int = {_, v -
 
     fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
         is Tree.Node -> {
-            if (t.env.getValue(t.owner) == Address(0)) {
+            if (t.env.isChance(t.owner)) { // FIX: this should be known statically, not by env
                 val nodeName = ""
                 val infoset: Int = t.infoset
                 val infosetName = ""
@@ -250,4 +249,6 @@ data class Env(private val g: Map<Var, Const>, private val h: Map<Pair<Var, Var>
     fun getValue(role: String, field: String) = h.getValue(Pair(Var(role), Var(field)))
     fun getValue(role: Var, field: String) = h.getValue(Pair(role, Var(field)))
     fun quitted(role: Exp.Var): Boolean = h.any { (rv, k) -> rv.first == role && k == UNDEFINED }
+
+    fun isChance(role: String) = getValue(role) == Address(0)
 }
