@@ -30,6 +30,8 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             when (ext.kind) {
                 Kind.JOIN -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role))
                              else independent(subExt, env.addRole(q.role), listOf(q))
+                Kind.JOIN_CHANCE -> if (q.params.isNotEmpty()) fromExp(subExt, env.addRole(q.role.name, chance=true))
+                                    else independent(subExt, env.addRole(q.role.name, chance=true), listOf(q))
                 Kind.YIELD -> independent(subExt, env, listOf(q))
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
@@ -52,6 +54,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                 val newEnv = ext.qs.fold(env) { acc, t -> acc.addRole(t.role) }
                 independent(ext.ext, newEnv, ext.qs)
             }
+            Kind.JOIN_CHANCE -> TODO()
             Kind.REVEAL -> TODO()
             Kind.MANY -> TODO()
         }
@@ -163,17 +166,30 @@ class ExtensivePrinter(private val outcomeToPayoff: (Role, Int) -> Int = {_, v -
 
     fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
         is Tree.Node -> {
-            val nodeName = ""
-            val owner: Int = roleOrder.indexOf(t.owner) + 1
-            // TODO: remove last assignment
-            val infoset: Int = t.infoset
-            val infosetName = ""
-            val actionNamesForInfoset: String = stringList(t.edges.map { v -> v.values.joinToString("&") { valueToName(it) } })
-            val outcome = 0
-            val nameOfOutcome = ""
-            val payoffs = 0
-            listOf("p ${quote(nodeName)} $owner $infoset ${quote(infosetName)} $actionNamesForInfoset $payoffs") +
-                    t.children.flatMap { toEfg(it, roleOrder) }
+            if (t.env.getValue(t.owner) == Address(0)) {
+                val nodeName = ""
+                val infoset: Int = t.infoset
+                val infosetName = ""
+                val actionsAndProbabilities = ""  // e.g. '{ "true" 1/2 "false" 1/2 }'
+                val actionNamesForInfoset: String = t.edges.joinToString(" ", "{ ", " }") {
+                    v -> quote(v.values.joinToString("&") { valueToName(it) }) + " 1/" + t.edges.size
+                }
+                val payoffs = 0
+                listOf("c ${quote(nodeName)} $infoset ${quote(infosetName)} $actionsAndProbabilities $actionNamesForInfoset $payoffs") +
+                        t.children.flatMap { toEfg(it, roleOrder) }
+            } else {
+                val nodeName = ""
+                val owner: Int = roleOrder.indexOf(t.owner) + 1 // TODO: why not env.getValue(t.owner).n?
+                // TODO: remove last assignment
+                val infoset: Int = t.infoset
+                val infosetName = ""
+                val actionNamesForInfoset: String = stringList(t.edges.map { v -> v.values.joinToString("&") { valueToName(it) } })
+                val outcome = 0
+                val nameOfOutcome = ""
+                val payoffs = 0
+                listOf("p ${quote(nodeName)} $owner $infoset ${quote(infosetName)} $actionNamesForInfoset $payoffs") +
+                        t.children.flatMap { toEfg(it, roleOrder) }
+            }
         }
         is Tree.Leaf -> {
             val name = ""
@@ -224,11 +240,13 @@ data class Env(private val g: Map<Var, Const>, private val h: Map<Pair<Var, Var>
         return copy(h=mh.toMap())
     }
 
-    fun addRole(role: Var) = this + Pair(role,
+    fun addRole(role: Var, chance: Boolean = false) = if (!chance) this + Pair(role,
             Address(1 + (g.values.map { (it as? Address)?.n ?: 0 }.max() ?: 0))
-    )
+    ) else { this + Pair(role, Address(0)) }
+    fun addRole(role: String, chance: Boolean = false) = addRole(Var(role), chance)
 
     fun getValue(v: Var) = g.getValue(v)
+    fun getValue(v: String) = getValue(Var(v))
     fun getValue(role: String, field: String) = h.getValue(Pair(Var(role), Var(field)))
     fun getValue(role: Var, field: String) = h.getValue(Pair(role, Var(field)))
     fun quitted(role: Exp.Var): Boolean = h.any { (rv, k) -> rv.first == role && k == UNDEFINED }

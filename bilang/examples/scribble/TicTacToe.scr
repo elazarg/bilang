@@ -1,0 +1,54 @@
+explicit global protocol MyProtocol(role Server, role X, role O) {
+    connect Server to X;
+    Broadcast() from Server to O;
+    connect Server to O;
+    Broadcast() from Server to X;
+    Public_c1(d1) from X to Server;
+    Broadcast_c1(d1) from Server to O;
+    Public_c1(d2) from O to Server;
+    Broadcast_c1(d2) from Server to X;
+    Public_c2(d) from X to Server;
+    Broadcast_c2(d) from Server to O;
+    Public_c2(d) from O to Server;
+    Broadcast_c2(d) from Server to X;
+    Public_c3(d) from X to Server;
+    Broadcast_c3(d) from Server to O;
+    Public_c3(d) from O to Server;
+    Broadcast_c3(d) from Server to X;
+    Public_c4(d) from X to Server;
+    Broadcast_c4(d) from Server to O;
+    Public_c4(d) from O to Server;
+    Broadcast_c4(d) from Server to X;
+    Withdraw() from X to Server;
+    Withdraw() from O to Server;
+}
+
+
+explicit local protocol MyProtocol_X(role Server, role X) {
+    connect Server;
+    Broadcast() from Server;
+    Public_c1(d1) to Server;
+    Broadcast_c1(d2) from Server;
+    Public_c2(d) to Server;
+    Broadcast_c2(d) from Server;
+    Public_c3(d) to Server;
+    Broadcast_c3(d) from Server;
+    Public_c4(d) to Server;
+    Broadcast_c4(d) from Server;
+    Withdraw() to Server;
+}
+
+
+explicit local protocol MyProtocol_O(role Server, role O) {
+    Broadcast() from Server;
+    connect Server;
+    Broadcast_c1(d1) from Server;
+    Public_c1(d2) to Server;
+    Broadcast_c2(d) from Server;
+    Public_c2(d) to Server;
+    Broadcast_c3(d) from Server;
+    Public_c3(d) to Server;
+    Broadcast_c4(d) from Server;
+    Public_c4(d) to Server;
+    Withdraw() to Server;
+}

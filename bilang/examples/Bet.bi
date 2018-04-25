@@ -1,6 +1,6 @@
 type options = {1, 2, 3}
 
-join Race() $ 100 where Race == 0x225325;
+random Race() $ 100;
 join Gambler(bet: options) $ 100;
 yield Race(winner: options);
 withdraw (Race.winner == null || Race.winner == Gambler.bet)

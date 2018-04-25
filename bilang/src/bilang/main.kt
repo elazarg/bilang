@@ -42,10 +42,10 @@ fun main(args: Array<String>) {
             "Trivial1",
             "Simple",
             "Puzzle",
-            "TicTacToe",
-            "MontyHall",
+            "MontyHall", "MontyHallChance",
             "OddsEvens", "OddsEvensShort",
             "Prisoners",
-            "ThreeWayLottery", "ThreeWayLotteryBuggy", "ThreeWayLotteryShort"
+            "ThreeWayLottery", "ThreeWayLotteryBuggy", "ThreeWayLotteryShort",
+            "TicTacToe"
     ).forEach { run(it) }
 }

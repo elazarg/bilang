@@ -1,0 +1,20 @@
+explicit global protocol MyProtocol(role Server, role Gambler) {
+    connect Server to Race;
+    Broadcast() from Server to Gambler;
+    connect Server to Gambler;
+    Public_bet(options) from Gambler to Server;
+    Broadcast_bet(options) from Server to ;
+    Public_winner(options) from Race to Server;
+    Broadcast_winner(options) from Server to Gambler;
+    Withdraw() from Gambler to Server;
+    Withdraw() from Race to Server;
+}
+
+
+explicit local protocol MyProtocol_Gambler(role Server, role Gambler) {
+    Broadcast() from Server;
+    connect Server;
+    Public_bet(options) to Server;
+    Broadcast_winner(options) from Server;
+    Withdraw() to Server;
+}

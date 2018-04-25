@@ -86,6 +86,7 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val requirePayment = if (deposit != 0) "require(msg.value == $deposit); " else ""
 
     return when (kind) {
+        Kind.JOIN_CHANCE -> makeQuery(Kind.JOIN, q, step)
         Kind.JOIN -> {
             if (q.params.isNotEmpty()) {
                 val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")

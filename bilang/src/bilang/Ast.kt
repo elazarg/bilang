@@ -43,7 +43,7 @@ sealed class Outcome: Ast() {
 }
 
 data class VarDec(val name: Exp.Var, val type: TypeExp) : Ast()
-enum class Kind { JOIN, YIELD, REVEAL, MANY }
+enum class Kind { JOIN, YIELD, REVEAL, MANY, JOIN_CHANCE }
 
 sealed class TypeExp : Ast() {
     object INT : TypeExp(), IntClass

@@ -84,6 +84,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
 
         (when (ext.kind) {
             Kind.JOIN -> listOf(Sast.Action.Connect(role)) + sendToServer()
+            Kind.JOIN_CHANCE -> listOf(Sast.Action.Connect(role)) + sendToServer()
             Kind.YIELD -> sendToServer()
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
             Kind.MANY -> TODO()
