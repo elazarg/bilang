@@ -1,2 +1,2 @@
 join A();
-return { A -> 0}
+withdraw { A -> 0}

@@ -12,7 +12,7 @@ typeExp
 // only sensible combination is independent yield + many
 ext : kind=('join'|'yield'| 'reveal'|'many') query+ ';' ext  # ReceiveExt
     | 'let' 'fold' varDec '=' query 'from' from=ID exp ';' ext  # FoldExt
-    | 'return' outcome # WithdrawExt // TODO: call it 'withdraw'
+    | 'withdraw' outcome # WithdrawExt
     ;
 
 query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('$' deposit=INT)? ('where' cond=exp)? ;
