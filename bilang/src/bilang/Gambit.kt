@@ -3,10 +3,12 @@ package bilang
 import bilang.Exp.*
 import bilang.Exp.Const.*
 
+typealias OutcomeType = Num
+
 sealed class Tree {
     data class Node(val owner: String, val env: Env, val infoset: Int, val edges: List<Map<String, Const>>, val children: List<Tree>) : Tree()
 
-    data class Leaf(val outcome: Map<String, Num>) : Tree()
+    data class Leaf(val outcome: Map<String, OutcomeType>) : Tree()
 }
 
 class Extensive(private val name: String, private val desc: String, private val players: List<String>, private val game: Tree) {
@@ -35,9 +37,10 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                 Kind.YIELD -> independent(subExt, listOf(q), env)
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
-                    val revealedPacket = q.params.names().map { name -> Pair(name, revealed.getValue(q.role, name)) }.toMap()
+                    val names = q.params.names()
+                    val revealedPacket = names.map { Pair(it, revealed.getValue(q.role, it)) }.toMap()
                     val quit = env.mapHidden(q){UNDEFINED}
-                    val quitPacket = q.params.names().map { name -> Pair(name, UNDEFINED) }.toMap()
+                    val quitPacket = names.map { Pair(it, UNDEFINED) }.toMap()
                     val infoset = UniqueHash.of(env.eraseHidden(q.role))
                     val (edges, children) = if (env.isChance(q.role))
                         Pair(listOf(revealedPacket), listOf(fromExp(subExt, revealed)))
@@ -59,7 +62,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             Kind.REVEAL -> TODO()
             Kind.MANY -> TODO()
         }
-        is Ext.Value -> Tree.Leaf((eval(ext.exp, env)).ts as Map<String, Num>)
+        is Ext.Value -> Tree.Leaf(ext.exp.ts.mapValues { (_, exp) -> eval(exp, env) as OutcomeType })
     }
 
     private fun enumeratePackets(q: Query, env: Env): List<Map<String, Const>> {
@@ -158,10 +161,7 @@ fun eval(exp: Exp, env: Env): Const {
     }
 }
 
-fun eval(exp: Outcome.Value, env: Env): Outcome.Value =
-        Outcome.Value(exp.ts.mapValues { (_, exp) -> eval(exp, env) as Num }.toMap())
-
-class ExtensivePrinter(private val outcomeToPayoff: (Role, Int) -> Int = {_, v -> v}) {
+class ExtensivePrinter(private val outcomeToPayoff: (Role, OutcomeType) -> Int = {_, v -> v.n}) {
     private var outcomeNumber: Int = 0
 
     fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
@@ -197,7 +197,7 @@ class ExtensivePrinter(private val outcomeToPayoff: (Role, Int) -> Int = {_, v -
             // Seems like outcomes are "named outcomes" and should define the outcome uniquely
             outcomeNumber += 1
             val nameOfOutcome = ""
-            val payoffs = roleOrder.map { outcomeToPayoff(it, t.outcome.getValue(it).n) }.joinToString(" ", "{ ", " }")
+            val payoffs = roleOrder.map { outcomeToPayoff(it, t.outcome.getValue(it)) }.joinToString(" ", "{ ", " }")
             listOf("t ${quote(name)} $outcome ${quote(nameOfOutcome)} $payoffs")
         }
     }
@@ -235,9 +235,7 @@ data class Env(private val g: Map<String, Const>, private val h: Map<Pair<String
     )
 
     fun updateHeap(q: Query, newEnv: Map<String, Const>): Env {
-        val mh = h.toMutableMap()
-        mh.putAll(newEnv.map { (v, k) -> Pair(Pair(q.role, v), k) })
-        return copy(h=mh.toMap())
+        return copy(h=h + newEnv.map { (v, k) -> Pair(Pair(q.role, v), k) })
     }
 
     fun addRole(role: String, chance: Boolean = false) = if (!chance) this + Pair(role,
