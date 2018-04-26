@@ -188,7 +188,7 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |    }
             |""".trimIndent()
         }
-    }.trimMargin()
+    }
 }
 
 private fun varname(it: VarDec) =

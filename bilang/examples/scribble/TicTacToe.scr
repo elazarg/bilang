@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol(role Server, role X, role O) {
+explicit global protocol TicTacToe(role Server, role X, role O) {
     connect Server to X;
     Broadcast() from Server to O;
     connect Server to O;
@@ -24,7 +24,7 @@ explicit global protocol MyProtocol(role Server, role X, role O) {
 }
 
 
-explicit local protocol MyProtocol_X(role Server, role X) {
+explicit local protocol TicTacToe_X(role Server, role X) {
     connect Server;
     Broadcast() from Server;
     Public_c1(d1) to Server;
@@ -39,7 +39,7 @@ explicit local protocol MyProtocol_X(role Server, role X) {
 }
 
 
-explicit local protocol MyProtocol_O(role Server, role O) {
+explicit local protocol TicTacToe_O(role Server, role O) {
     Broadcast() from Server;
     connect Server;
     Broadcast_c1(d1) from Server;

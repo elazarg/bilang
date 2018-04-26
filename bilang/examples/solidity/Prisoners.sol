@@ -24,15 +24,17 @@ contract Prisoners {
         _;
     }
     // step 0
-    bool doneA;
-    function join_A() at_step(0) public by(Role.None) payable {
-        require(!doneA);
-        role[msg.sender] = Role.A;
-        require(msg.value == 100); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
-        doneA = true;
-    }
+|    bool doneA;
+|    function join_A() at_step(0) public by(Role.None) payable {
+|        require(!doneA);
+|        role[msg.sender] = Role.A;
+|        require(msg.value == 100); 
+|        balanceOf[msg.sender] = msg.value;
+|        require(true);
+|        
+|        doneA = true;
+|    }
+|
     event Broadcast0(); // TODO: add params
     function __nextStep0() public {
         require(step == 0);
@@ -43,15 +45,17 @@ contract Prisoners {
     }
     // end 0
     // step 1
-    bool doneB;
-    function join_B() at_step(1) public by(Role.None) payable {
-        require(!doneB);
-        role[msg.sender] = Role.B;
-        require(msg.value == 100); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
-        doneB = true;
-    }
+|    bool doneB;
+|    function join_B() at_step(1) public by(Role.None) payable {
+|        require(!doneB);
+|        role[msg.sender] = Role.B;
+|        require(msg.value == 100); 
+|        balanceOf[msg.sender] = msg.value;
+|        require(true);
+|        
+|        doneB = true;
+|    }
+|
     event Broadcast1(); // TODO: add params
     function __nextStep1() public {
         require(step == 1);
@@ -62,26 +66,32 @@ contract Prisoners {
     }
     // end 1
     // step 2
-    bool A_c;
-    bool A_c_done;
-    bool done_A_2;
-    function yield_A2(bool _c) by (Role.A) at_step(2) public {
-        require(!done_A_2);
-        require(true);
-        A_c = _c;
-        A_c_done = true;
-        done_A_2 = true;
-    }
-    bool B_c;
-    bool B_c_done;
-    bool done_B_2;
-    function yield_B2(bool _c) by (Role.B) at_step(2) public {
-        require(!done_B_2);
-        require(true);
-        B_c = _c;
-        B_c_done = true;
-        done_B_2 = true;
-    }
+|    bool A_c;
+|    bool A_c_done;
+|    bool done_A_2;
+|
+|    function yield_A2(bool _c) by (Role.A) at_step(2) public {
+|        require(!done_A_2);
+|        
+|        require(true);
+|        A_c = _c;
+|        A_c_done = true;
+|        done_A_2 = true;
+|    }
+|
+|    bool B_c;
+|    bool B_c_done;
+|    bool done_B_2;
+|
+|    function yield_B2(bool _c) by (Role.B) at_step(2) public {
+|        require(!done_B_2);
+|        
+|        require(true);
+|        B_c = _c;
+|        B_c_done = true;
+|        done_B_2 = true;
+|    }
+|
     event Broadcast2(); // TODO: add params
     function __nextStep2() public {
         require(step == 2);

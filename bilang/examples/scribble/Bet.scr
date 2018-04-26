@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol(role Server, role Gambler) {
+explicit global protocol Bet(role Server, role Gambler) {
     connect Server to Race;
     Broadcast() from Server to Gambler;
     connect Server to Gambler;
@@ -11,7 +11,7 @@ explicit global protocol MyProtocol(role Server, role Gambler) {
 }
 
 
-explicit local protocol MyProtocol_Gambler(role Server, role Gambler) {
+explicit local protocol Bet_Gambler(role Server, role Gambler) {
     Broadcast() from Server;
     connect Server;
     Public_bet(options) to Server;

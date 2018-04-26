@@ -15,7 +15,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public ExpProgram visitProgram(ProgramContext ctx) {
-        return new ExpProgram("", map(ctx.typeDec()), ext(ctx.ext()));
+        return new ExpProgram("", "", map(ctx.typeDec()), ext(ctx.ext()));
     }
 
     private Map<String, TypeExp> map(List<TypeDecContext> ctxs) {

@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol(role Server, role Guest) {
+explicit global protocol MontyHallChance(role Server, role Guest) {
     connect Server to Host;
     Broadcast() from Server to Guest;
     connect Server to Guest;
@@ -18,7 +18,7 @@ explicit global protocol MyProtocol(role Server, role Guest) {
 }
 
 
-explicit local protocol MyProtocol_Guest(role Server, role Guest) {
+explicit local protocol MontyHallChance_Guest(role Server, role Guest) {
     Broadcast() from Server;
     connect Server;
     Broadcast() from Server;

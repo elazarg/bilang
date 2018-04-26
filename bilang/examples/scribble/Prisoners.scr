@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol(role Server, role A, role B) {
+explicit global protocol Prisoners(role Server, role A, role B) {
     connect Server to A;
     Broadcast() from Server to B;
     connect Server to B;
@@ -12,7 +12,7 @@ explicit global protocol MyProtocol(role Server, role A, role B) {
 }
 
 
-explicit local protocol MyProtocol_A(role Server, role A) {
+explicit local protocol Prisoners_A(role Server, role A) {
     connect Server;
     Broadcast() from Server;
     Public_c(bool) to Server;
@@ -21,7 +21,7 @@ explicit local protocol MyProtocol_A(role Server, role A) {
 }
 
 
-explicit local protocol MyProtocol_B(role Server, role B) {
+explicit local protocol Prisoners_B(role Server, role B) {
     Broadcast() from Server;
     connect Server;
     Broadcast_c(bool) from Server;

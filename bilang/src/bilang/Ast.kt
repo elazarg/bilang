@@ -2,7 +2,7 @@ package bilang
 
 sealed class Ast
 
-data class ExpProgram(val desc: String, val types: Map<String, TypeExp>, val game: Ext) : Ast()
+data class ExpProgram(val name: String, val desc: String, val types: Map<String, TypeExp>, val game: Ext) : Ast()
 
 interface Step
 

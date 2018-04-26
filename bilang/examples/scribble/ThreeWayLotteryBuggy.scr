@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol(role Server, role Issuer, role Alice, role Bob) {
+explicit global protocol ThreeWayLotteryBuggy(role Server, role Issuer, role Alice, role Bob) {
     connect Server to Issuer;
     Broadcast() from Server to Alice, Bob;
     connect Server to Alice;
@@ -17,7 +17,7 @@ explicit global protocol MyProtocol(role Server, role Issuer, role Alice, role B
 }
 
 
-explicit local protocol MyProtocol_Issuer(role Server, role Issuer) {
+explicit local protocol ThreeWayLotteryBuggy_Issuer(role Server, role Issuer) {
     connect Server;
     Broadcast() from Server;
     Broadcast() from Server;
@@ -28,7 +28,7 @@ explicit local protocol MyProtocol_Issuer(role Server, role Issuer) {
 }
 
 
-explicit local protocol MyProtocol_Alice(role Server, role Alice) {
+explicit local protocol ThreeWayLotteryBuggy_Alice(role Server, role Alice) {
     Broadcast() from Server;
     connect Server;
     Broadcast() from Server;
@@ -39,7 +39,7 @@ explicit local protocol MyProtocol_Alice(role Server, role Alice) {
 }
 
 
-explicit local protocol MyProtocol_Bob(role Server, role Bob) {
+explicit local protocol ThreeWayLotteryBuggy_Bob(role Server, role Bob) {
     Broadcast() from Server;
     Broadcast() from Server;
     connect Server;

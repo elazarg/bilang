@@ -1,4 +1,4 @@
-explicit global protocol MyProtocol(role Server, role Q, role A) {
+explicit global protocol Puzzle(role Server, role Q, role A) {
     connect Server to Q;
     Public_x(int) from Q to Server;
     Broadcast_x(int) from Server to A;
@@ -10,7 +10,7 @@ explicit global protocol MyProtocol(role Server, role Q, role A) {
 }
 
 
-explicit local protocol MyProtocol_Q(role Server, role Q) {
+explicit local protocol Puzzle_Q(role Server, role Q) {
     connect Server;
     Public_x(int) to Server;
     Broadcast_p_q(int, int) from Server;
@@ -18,7 +18,7 @@ explicit local protocol MyProtocol_Q(role Server, role Q) {
 }
 
 
-explicit local protocol MyProtocol_A(role Server, role A) {
+explicit local protocol Puzzle_A(role Server, role A) {
     Broadcast_x(int) from Server;
     connect Server;
     Public_p_q(int, int) to Server;

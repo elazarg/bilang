@@ -24,15 +24,17 @@ contract ThreeWayLotteryBuggy {
         _;
     }
     // step 0
-    bool doneIssuer;
-    function join_Issuer() at_step(0) public by(Role.None) payable {
-        require(!doneIssuer);
-        role[msg.sender] = Role.Issuer;
-        require(msg.value == 10); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
-        doneIssuer = true;
-    }
+|    bool doneIssuer;
+|    function join_Issuer() at_step(0) public by(Role.None) payable {
+|        require(!doneIssuer);
+|        role[msg.sender] = Role.Issuer;
+|        require(msg.value == 10); 
+|        balanceOf[msg.sender] = msg.value;
+|        require(true);
+|        
+|        doneIssuer = true;
+|    }
+|
     event Broadcast0(); // TODO: add params
     function __nextStep0() public {
         require(step == 0);
@@ -43,15 +45,17 @@ contract ThreeWayLotteryBuggy {
     }
     // end 0
     // step 1
-    bool doneAlice;
-    function join_Alice() at_step(1) public by(Role.None) payable {
-        require(!doneAlice);
-        role[msg.sender] = Role.Alice;
-        require(msg.value == 10); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
-        doneAlice = true;
-    }
+|    bool doneAlice;
+|    function join_Alice() at_step(1) public by(Role.None) payable {
+|        require(!doneAlice);
+|        role[msg.sender] = Role.Alice;
+|        require(msg.value == 10); 
+|        balanceOf[msg.sender] = msg.value;
+|        require(true);
+|        
+|        doneAlice = true;
+|    }
+|
     event Broadcast1(); // TODO: add params
     function __nextStep1() public {
         require(step == 1);
@@ -62,15 +66,17 @@ contract ThreeWayLotteryBuggy {
     }
     // end 1
     // step 2
-    bool doneBob;
-    function join_Bob() at_step(2) public by(Role.None) payable {
-        require(!doneBob);
-        role[msg.sender] = Role.Bob;
-        require(msg.value == 10); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
-        doneBob = true;
-    }
+|    bool doneBob;
+|    function join_Bob() at_step(2) public by(Role.None) payable {
+|        require(!doneBob);
+|        role[msg.sender] = Role.Bob;
+|        require(msg.value == 10); 
+|        balanceOf[msg.sender] = msg.value;
+|        require(true);
+|        
+|        doneBob = true;
+|    }
+|
     event Broadcast2(); // TODO: add params
     function __nextStep2() public {
         require(step == 2);
@@ -81,36 +87,45 @@ contract ThreeWayLotteryBuggy {
     }
     // end 2
     // step 3
-    int Issuer_c;
-    bool Issuer_c_done;
-    bool done_Issuer_3;
-    function yield_Issuer3(int _c) by (Role.Issuer) at_step(3) public {
-        require(!done_Issuer_3);
-        require(true);
-        Issuer_c = _c;
-        Issuer_c_done = true;
-        done_Issuer_3 = true;
-    }
-    int Alice_c;
-    bool Alice_c_done;
-    bool done_Alice_3;
-    function yield_Alice3(int _c) by (Role.Alice) at_step(3) public {
-        require(!done_Alice_3);
-        require(true);
-        Alice_c = _c;
-        Alice_c_done = true;
-        done_Alice_3 = true;
-    }
-    int Bob_c;
-    bool Bob_c_done;
-    bool done_Bob_3;
-    function yield_Bob3(int _c) by (Role.Bob) at_step(3) public {
-        require(!done_Bob_3);
-        require(true);
-        Bob_c = _c;
-        Bob_c_done = true;
-        done_Bob_3 = true;
-    }
+|    int Issuer_c;
+|    bool Issuer_c_done;
+|    bool done_Issuer_3;
+|
+|    function yield_Issuer3(int _c) by (Role.Issuer) at_step(3) public {
+|        require(!done_Issuer_3);
+|        
+|        require(true);
+|        Issuer_c = _c;
+|        Issuer_c_done = true;
+|        done_Issuer_3 = true;
+|    }
+|
+|    int Alice_c;
+|    bool Alice_c_done;
+|    bool done_Alice_3;
+|
+|    function yield_Alice3(int _c) by (Role.Alice) at_step(3) public {
+|        require(!done_Alice_3);
+|        
+|        require(true);
+|        Alice_c = _c;
+|        Alice_c_done = true;
+|        done_Alice_3 = true;
+|    }
+|
+|    int Bob_c;
+|    bool Bob_c_done;
+|    bool done_Bob_3;
+|
+|    function yield_Bob3(int _c) by (Role.Bob) at_step(3) public {
+|        require(!done_Bob_3);
+|        
+|        require(true);
+|        Bob_c = _c;
+|        Bob_c_done = true;
+|        done_Bob_3 = true;
+|    }
+|
     event Broadcast3(); // TODO: add params
     function __nextStep3() public {
         require(step == 3);

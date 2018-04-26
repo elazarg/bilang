@@ -16,9 +16,9 @@ fun parse(inputFilename: String): ExpProgram {
 private fun run(name: String) {
     val inputFilename = "examples/$name.bi"
     println("Analyzing $inputFilename ...")
-    val program = parse(inputFilename).copy(desc=name)
+    val program = parse(inputFilename).copy(name=name, desc=name)
     println(findRoles(program.game))
-    writeFile("examples/gambit/$name.efg") {Extensive(name, program).toEfg()}
+    writeFile("examples/gambit/$name.efg") {Extensive(program).toEfg()}
     writeFile("examples/scribble/$name.scr") {programToScribble(program).prettyPrintAll()}
     writeFile("examples/solidity/$name.sol") {genGame(program)}
     println("Done")

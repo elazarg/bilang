@@ -24,14 +24,17 @@ contract Trivial1 {
         _;
     }
     // step 0
-    bool doneA;
-    function join_A() at_step(0) public by(Role.None) {
-        require(!doneA);
-        role[msg.sender] = Role.A;
-        balanceOf[msg.sender] = msg.value;
-        require(true);
-        doneA = true;
-    }
+|    bool doneA;
+|    function join_A() at_step(0) public by(Role.None) {
+|        require(!doneA);
+|        role[msg.sender] = Role.A;
+|        
+|        balanceOf[msg.sender] = msg.value;
+|        require(true);
+|        
+|        doneA = true;
+|    }
+|
     event Broadcast0(); // TODO: add params
     function __nextStep0() public {
         require(step == 0);

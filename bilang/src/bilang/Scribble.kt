@@ -3,7 +3,7 @@ package bilang
 typealias Role = String
 sealed class Sast {
 
-    data class Protocol(val roles: Set<Role>, val block: Block) : Sast()
+    data class Protocol(val name: String, val roles: Set<Role>, val block: Block) : Sast()
 
     data class Block(val stmts: List<Action>) : Sast()
 
@@ -31,7 +31,7 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
             val ps = ", " + relevantRoles.joinToString(", ") { "role $it" }
             val scope = if (role == null) "global" else "local"
             val roletext = if (role == null) "" else "_$role"
-            "explicit $scope protocol MyProtocol$roletext(role Server$ps) " + pretty(block)
+            "explicit $scope protocol $name$roletext(role Server$ps) " + pretty(block)
         }
         is Sast.Block -> stmts
                 .map { it.prettyPrint(role, indent + 1) }
@@ -66,7 +66,7 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
 
 fun programToScribble(p: ExpProgram): Sast.Protocol {
     val roles = findRoles(p.game).toSet()
-    return Sast.Protocol(roles, Sast.Block(gameToScribble(p.game, roles)))
+    return Sast.Protocol(p.name, roles, Sast.Block(gameToScribble(p.game, roles)))
 }
 
 private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when (ext) {

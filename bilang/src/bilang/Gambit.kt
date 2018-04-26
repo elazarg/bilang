@@ -10,8 +10,8 @@ sealed class Tree {
 }
 
 class Extensive(private val name: String, private val desc: String, private val players: List<String>, private val game: Tree) {
-    constructor(name: String, prog: ExpProgram) :
-            this(name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game))
+    constructor(prog: ExpProgram) :
+            this(prog.name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game))
 
     fun toEfg(): String = (
         listOf("EFG 2 R ${quote(name)} ${stringList(players)}", quote(desc), "")
