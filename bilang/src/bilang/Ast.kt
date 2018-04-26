@@ -42,7 +42,7 @@ sealed class Outcome: Ast() {
     data class Let(val dec: VarDec, val init: Exp, val outcome: Outcome) : Outcome()
 }
 
-data class VarDec(val name: String, val type: TypeExp) : Ast()
+typealias VarDec = Pair<String, TypeExp>
 enum class Kind { JOIN, YIELD, REVEAL, MANY, JOIN_CHANCE }
 
 sealed class TypeExp : Ast() {

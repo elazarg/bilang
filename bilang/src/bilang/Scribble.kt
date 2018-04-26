@@ -1,6 +1,7 @@
 package bilang
 
 typealias Role = String
+
 sealed class Sast {
 
     data class Protocol(val name: String, val types: Map<String, String>, val roles: Set<Role>, val block: Block) : Sast()
@@ -8,21 +9,19 @@ sealed class Sast {
     data class Block(val stmts: List<Action>) : Sast()
 
     sealed class Action : Sast() {
-        data class Send(val label: String, val params: List<VarDec>, val from: Role, val to: Set<Role>?) : Action()
+        data class Send(val label: String, val params: List<Pair<String, String>>, val from: Role, val to: Set<Role>?) : Action()
         data class Connect(val to: Role) : Action()
         data class Choice(val at: Role, val choices: List<Block>) : Action()
         data class Rec(val label: String, val actions: Block) : Action()
         data class Continue(val label: String) : Action()
     }
 
-    data class Type(val name: String)
-    data class VarDec(val name: String, val type: Type)
 }
 
 fun Sast.Protocol.prettyPrintAll(): String {
-    val typedecls = types.map {"""type <java> "java.lang.${it.value}" from "rt.jar" as ${it.key};"""}.joinToString("\n")
+    val typedecls = types.map {"""type <java> "java.lang.${it.value}" from "rt.jar" as ${it.key};"""}.join("\n")
     val items = listOf("module Game;", typedecls, prettyPrint()) + (roles + "Server").map { prettyPrint(it) }
-    return items.joinToString("\n\n")
+    return items.join("\n\n")
 }
 
 fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role> = setOf()): String {
@@ -30,7 +29,7 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role>
     val code = when (this) {
         is Sast.Protocol -> {
             assert(indent == 0)
-            val ps = roles.joinToString(", ") { "role $it" }
+            val ps = roles.join(", ") { "role $it" }
             when (role) {
                 null -> "explicit global protocol $name(role Server, $ps)"
                 "Server" -> "local protocol ${name}_Server(role Server, $ps)"
@@ -38,17 +37,15 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role>
             } + pretty(block)
         }
         is Sast.Block -> stmts
-                .map { it.prettyPrint(role, indent + 1, if (it is Sast.Action.Connect) connected+it.to else connected) }
+                .map { it.prettyPrint(role, indent + 1, if (it is Sast.Action.Connect) connected + it.to else connected) }
                 .filter { it.isNotBlank() }
                 .joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
         is Sast.Action.Send -> {
-            val args = params.joinToString(", ") { it.type.name }
-            val names = params.joinToString("_") { it.name }
-            var res = if (params.isEmpty()) "$label()" else "${label}_$names($args)"
+            var res = if (params.isEmpty()) "$label()" else "${label}_${params.names().join("_")}(${params.types().join(", ")})"
             if (role == null || to == null || role in to)
                 res += " from $from"
             if (to != null && (role == null || from == role))
-                res += " to ${to.joinToString(", ")}"
+                res += " to ${to.join(", ")}"
             if (" to " in res || " from " in res) res
             else ""
         }
@@ -59,7 +56,7 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role>
                 else -> ""
             }
         is Sast.Action.Choice -> {
-            val blocks = choices.joinToString(" or ") { pretty(it) }
+            val blocks = choices.join(" or ") { pretty(it) }
             "choice at $at $blocks"
         }
         is Sast.Action.Rec -> "rec " + pretty(actions)
@@ -79,9 +76,10 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
     is Ext.BindSingle -> {
         val params = ext.q.params
         val role = ext.q.role
-        fun send(label: String, decls: List<Sast.VarDec>, to: Set<Role> = setOf("Server")) = Sast.Action.Send(label, decls, role, to)
+        fun send(label: String, decls: List<Pair<String, String>>, to: Set<Role> = setOf("Server")) =
+                Sast.Action.Send(label, decls, role, to)
         fun sendToServer(): List<Sast.Action.Send> {
-            val (priv, pub) = params.partition { p -> p.type is TypeExp.Hidden }.map { declsOf(it) }
+            val (priv, pub) = params.partition { (_, type) -> type is TypeExp.Hidden }.map { declsOf(it) }
             return listOfNotNull(
                     send("Hidden", priv).takeUnless { priv.isEmpty() },
                     send("Public", pub).takeUnless { pub.isEmpty() }
@@ -94,7 +92,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
             Kind.YIELD -> sendToServer()
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
             Kind.MANY -> TODO()
-        } + Sast.Action.Send("Broadcast", declsOf(params.filterNot { it.type is TypeExp.Hidden }), "Server", roles - role)
+        } + Sast.Action.Send("Broadcast", declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }), "Server", roles - role)
         + gameToScribble(ext.ext, roles))
     }
 
@@ -112,9 +110,7 @@ private fun rankOrder(it: Sast.Action): Int =
             else -> 3
         } else 0
 
-private fun declsOf(params: List<VarDec>) = params.map {
-    Sast.VarDec(it.name, Sast.Type(typeOf(it.type)))
-}
+private fun declsOf(params: List<VarDec>) = params.mapValues { (_, type) -> typeOf(type) }
 
 private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "int"
@@ -124,7 +120,7 @@ private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.ADDRESS -> "address"
     is TypeExp.Hidden -> "hidden_${typeOf(t.type)}"
     is TypeExp.TypeId -> t.name
-    is TypeExp.Subset -> "subset_${t.values.joinToString("_")}"
+    is TypeExp.Subset -> "subset_${t.values.join("_")}"
     is TypeExp.Range -> "range_${t.min}_${t.max}"
     is TypeExp.Opt -> "opt_${t.type}"
 }

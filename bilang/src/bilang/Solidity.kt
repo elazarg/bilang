@@ -70,12 +70,12 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val role = q.role
     val where = exp(q.where)
 
-    val typeWheres = q.params.map { whereof(varname(it), it.type) }.statements()
-    val vars = q.params.map { Pair(typeOf(it.type), varname(it)) }
-    val params = vars.map { (type, name) -> "$type _$name" }.join(", ")
-    val decls = vars.map { (type, name) -> "$type ${role}_$name;" }.declarations()
+    val typeWheres = q.params.map { (name, type) -> whereof(varname(name, type), type) }.statements()
+    val vars = q.params.map { (name, type) -> Pair(varname(name, type), typeOf(type)) }
+    val params = vars.map { (name, type) -> "$type _$name" }.join(", ")
+    val decls = vars.map { (name, type) -> "$type ${role}_$name;" }.declarations()
 
-    val names = vars.map { (_, name) -> name }
+    val names = vars.names()
     val declsDone = names.map { "bool ${role}_${it}_done;" }.declarations()
     val assignments = names.map { "${role}_$it = _$it;" }.statements()
     val inits = names.map { "${role}_${it}_done = true;" }.statements()
@@ -89,8 +89,8 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
         Kind.JOIN_CHANCE -> makeQuery(Kind.JOIN, q, step)
         Kind.JOIN, Kind.MANY -> {
             if (q.params.isNotEmpty()) {
-                val revealArgs = (vars.map { (type, name) -> "$type _$name" } + "uint salt").join(", ")
-                val reveals = (vars.map { (type, name) -> "_$name" } + "salt").join(", ")
+                val revealArgs = (vars.map { (name, type) -> "$type _$name" } + "uint salt").join(", ")
+                val reveals = (names.map { "_$it" } + "salt").join(", ")
                 val (updateChosen, checkChosen) = if (kind == Kind.MANY)
                     Pair("chosenRole$role = msg.sender;", "if (chosenRole$role != address(0x0)) require(times$role[msg.sender] < times$role[chosenRole$role]);")
                 else
@@ -169,8 +169,8 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
         }
 
         Kind.REVEAL -> {
-            val reveals = vars.map {
-                (_, name) -> "require(keccak256(_$name, salt) == bytes32(${role}_hidden_$name));"
+            val reveals = vars.names().map {
+                name -> "require(keccak256(_$name, salt) == bytes32(${role}_hidden_$name));"
             }.statements()
             """
             |    $decls
@@ -191,9 +191,9 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
     }
 }
 
-private fun varname(it: VarDec) =
-        if (it.type is TypeExp.Hidden) "hidden_${it.name}"
-        else it.name
+private fun varname(name: String, type: TypeExp) =
+        if (type is TypeExp.Hidden) "hidden_$name"
+        else name
 
 private fun genOutcome(switch: Outcome.Value, step: Int): String {
     // TODO: many
@@ -263,7 +263,8 @@ private fun exp(e: Exp, outvar: String, type: String): List<String> {
         }
         is Exp.Const -> listOf("$outvar = ${exp(e)};")
         is Exp.Let -> {
-            exp(e.init, e.dec.name, (e.dec.type as TypeExp.TypeId).name) + exp(e.exp, outvar, type)
+            val (name, vtype) = e.dec
+            exp(e.init, name, (vtype as TypeExp.TypeId).name) + exp(e.exp, outvar, type)
         }
     }
 }
@@ -319,7 +320,6 @@ private fun whereof(v: String, t: TypeExp): String = when (t) {
 
 private fun Iterable<String>.declarations() = join("\n    ")
 private fun Iterable<String>.statements() = join("\n        ")
-private fun Iterable<String>.join(sep: String) = joinToString(sep)
 
 private object Fresh {
     private var v = 0

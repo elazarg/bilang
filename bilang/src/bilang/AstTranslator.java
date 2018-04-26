@@ -2,6 +2,7 @@ package bilang;
 
 import generated.BiLangBaseVisitor;
 import generated.BiLangParser.*;
+import kotlin.Pair;
 import org.antlr.v4.runtime.Token;
 import org.jetbrains.annotations.NotNull;
 
@@ -60,7 +61,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     private Query query(QueryContext ctx) {
-        return new Query(var(ctx.role), list(ctx.decls, this::visitVarDec), num(ctx.deposit), where(ctx.cond));
+        return new Query(var(ctx.role), list(ctx.decls, this::vardec), num(ctx.deposit), where(ctx.cond));
     }
 
     private Exp where(ExpContext cond) {
@@ -116,7 +117,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Exp.Let visitLetExp(LetExpContext ctx) {
-        return new Exp.Let(visitVarDec(ctx.dec), exp(ctx.init), exp(ctx.body));
+        return new Exp.Let(vardec(ctx.dec), exp(ctx.init), exp(ctx.body));
     }
 
     @Override
@@ -186,7 +187,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Outcome visitLetOutcome(LetOutcomeContext ctx) {
-        return new Outcome.Let(visitVarDec(ctx.dec), exp(ctx.init), outcome(ctx.outcome()));
+        return new Outcome.Let(vardec(ctx.dec), exp(ctx.init), outcome(ctx.outcome()));
     }
 
     private Outcome outcome(OutcomeContext ctx) {
@@ -215,10 +216,9 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         throw new AssertionError();
     }
 
-    @Override
-    public VarDec visitVarDec(VarDecContext ctx) {
+    private Pair<String, TypeExp> vardec(VarDecContext ctx) {
         TypeExp type = type(ctx);
-        return new VarDec(var(ctx.name), (ctx.hidden != null) ? new TypeExp.Hidden(type) : type);
+        return new Pair(var(ctx.name), (ctx.hidden != null) ? new TypeExp.Hidden(type) : type);
     }
 
     @NotNull

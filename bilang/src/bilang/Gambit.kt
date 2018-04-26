@@ -35,9 +35,9 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                 Kind.YIELD -> independent(subExt, listOf(q), env)
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
-                    val revealedPacket = q.params.map { Pair(it.name, revealed.getValue(q.role, it.name)) }.toMap()
+                    val revealedPacket = q.params.names().map { name -> Pair(name, revealed.getValue(q.role, name)) }.toMap()
                     val quit = env.mapHidden(q){UNDEFINED}
-                    val quitPacket = q.params.map { Pair(it.name, UNDEFINED) }.toMap()
+                    val quitPacket = q.params.names().map { name -> Pair(name, UNDEFINED) }.toMap()
                     val infoset = UniqueHash.of(env.eraseHidden(q.role))
                     val (edges, children) = if (env.isChance(q.role))
                         Pair(listOf(revealedPacket), listOf(fromExp(subExt, revealed)))
@@ -63,12 +63,12 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
     }
 
     private fun enumeratePackets(q: Query, env: Env): List<Map<String, Const>> {
-        fun combineValues(f: (VarDec) -> List<Const>) =
-                q.params.map { d -> Pair(d.name, f(d)) }.toMap().product()
+        fun combineValues(f: (TypeExp) -> List<Const>) =
+                q.params.mapValues { (_, type) -> f(type) }.toMap().product()
 
         val undefs = if (env.isChance(q.role)) listOf() else combineValues { listOf<Const>(UNDEFINED) }
         return if (env.quitted(q.role)) undefs
-            else (combineValues { enumerateValues(it.type) }.filter {
+            else (combineValues { enumerateValues(it) }.filter {
                 value -> eval(q.where, env.updateHeap(q, value)) == Bool(true)
             } + undefs)
     }
@@ -154,12 +154,12 @@ fun eval(exp: Exp, env: Env): Const {
         is Num -> exp
         is Bool -> exp
         is Hidden -> exp
-        is Let -> eval(exp.exp, env + Pair(exp.dec.name, eval(exp.init)))
+        is Let -> eval(exp.exp, env + Pair(exp.dec.first, eval(exp.init)))
     }
 }
 
 fun eval(exp: Outcome.Value, env: Env): Outcome.Value =
-        Outcome.Value(exp.ts.map { (k, v) -> Pair(k, eval(v, env) as Num) }.toMap())
+        Outcome.Value(exp.ts.mapValues { (_, exp) -> eval(exp, env) as Num }.toMap())
 
 class ExtensivePrinter(private val outcomeToPayoff: (Role, Int) -> Int = {_, v -> v}) {
     private var outcomeNumber: Int = 0
@@ -224,7 +224,7 @@ data class Env(private val g: Map<String, Const>, private val h: Map<Pair<String
     fun mapHidden(q: Query, f: (Hidden) -> Const) = copy(h=
         h.mapValues { (rv, k) ->
             if (k is Hidden && rv.first == q.role
-                    && rv.second in q.params.map { it.name }) f(k) else k
+                    && rv.second in q.params.map { (name, _) -> name }) f(k) else k
         }
     )
 
