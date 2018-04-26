@@ -1,4 +1,9 @@
-explicit global protocol OddsEvensShort(role Server, role Odd, role Even) {
+module Game;
+
+type <java> "java.lang.Integer" from "rt.jar" as int;
+type <java> "java.lang.Boolean" from "rt.jar" as bool;
+
+explicit global protocol OddsEvensShort(role Server, role Odd, role Even){
     connect Server to Odd;
     connect Server to Even;
     Public_c(bool) from Odd to Server;
@@ -10,7 +15,7 @@ explicit global protocol OddsEvensShort(role Server, role Odd, role Even) {
 }
 
 
-explicit local protocol OddsEvensShort_Odd(role Server, role Odd) {
+local protocol OddsEvensShort_Odd(role Server, role Odd){
     connect Server;
     Public_c(bool) to Server;
     Broadcast_c(bool) from Server;
@@ -18,9 +23,19 @@ explicit local protocol OddsEvensShort_Odd(role Server, role Odd) {
 }
 
 
-explicit local protocol OddsEvensShort_Even(role Server, role Even) {
+local protocol OddsEvensShort_Even(role Server, role Even){
     connect Server;
     Broadcast_c(bool) from Server;
     Public_c(bool) to Server;
     Withdraw() to Server;
+}
+
+
+local protocol OddsEvensShort_Server(role Server, role Odd, role Even){
+    Public_c(bool) from Odd;
+    Broadcast_c(bool) to Even;
+    Public_c(bool) from Even;
+    Broadcast_c(bool) to Odd;
+    Withdraw() from Even;
+    Withdraw() from Odd;
 }

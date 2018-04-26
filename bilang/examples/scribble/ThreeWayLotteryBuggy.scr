@@ -1,4 +1,10 @@
-explicit global protocol ThreeWayLotteryBuggy(role Server, role Issuer, role Alice, role Bob) {
+module Game;
+
+type <java> "java.lang.Integer" from "rt.jar" as choice;
+type <java> "java.lang.Integer" from "rt.jar" as int;
+type <java> "java.lang.Boolean" from "rt.jar" as bool;
+
+explicit global protocol ThreeWayLotteryBuggy(role Server, role Issuer, role Alice, role Bob){
     connect Server to Issuer;
     Broadcast() from Server to Alice, Bob;
     connect Server to Alice;
@@ -17,7 +23,7 @@ explicit global protocol ThreeWayLotteryBuggy(role Server, role Issuer, role Ali
 }
 
 
-explicit local protocol ThreeWayLotteryBuggy_Issuer(role Server, role Issuer) {
+local protocol ThreeWayLotteryBuggy_Issuer(role Server, role Issuer){
     connect Server;
     Broadcast() from Server;
     Broadcast() from Server;
@@ -28,7 +34,7 @@ explicit local protocol ThreeWayLotteryBuggy_Issuer(role Server, role Issuer) {
 }
 
 
-explicit local protocol ThreeWayLotteryBuggy_Alice(role Server, role Alice) {
+local protocol ThreeWayLotteryBuggy_Alice(role Server, role Alice){
     Broadcast() from Server;
     connect Server;
     Broadcast() from Server;
@@ -39,7 +45,7 @@ explicit local protocol ThreeWayLotteryBuggy_Alice(role Server, role Alice) {
 }
 
 
-explicit local protocol ThreeWayLotteryBuggy_Bob(role Server, role Bob) {
+local protocol ThreeWayLotteryBuggy_Bob(role Server, role Bob){
     Broadcast() from Server;
     Broadcast() from Server;
     connect Server;
@@ -47,4 +53,20 @@ explicit local protocol ThreeWayLotteryBuggy_Bob(role Server, role Bob) {
     Broadcast_c(choice) from Server;
     Public_c(choice) to Server;
     Withdraw() to Server;
+}
+
+
+local protocol ThreeWayLotteryBuggy_Server(role Server, role Issuer, role Alice, role Bob){
+    Broadcast() to Alice, Bob;
+    Broadcast() to Issuer, Bob;
+    Broadcast() to Issuer, Alice;
+    Public_c(choice) from Issuer;
+    Broadcast_c(choice) to Alice, Bob;
+    Public_c(choice) from Alice;
+    Broadcast_c(choice) to Issuer, Bob;
+    Public_c(choice) from Bob;
+    Broadcast_c(choice) to Issuer, Alice;
+    Withdraw() from Bob;
+    Withdraw() from Issuer;
+    Withdraw() from Alice;
 }

@@ -1,11 +1,22 @@
-explicit global protocol Trivial1(role Server, role A) {
+module Game;
+
+type <java> "java.lang.Integer" from "rt.jar" as int;
+type <java> "java.lang.Boolean" from "rt.jar" as bool;
+
+explicit global protocol Trivial1(role Server, role A){
     connect Server to A;
     Broadcast() from Server to ;
     Withdraw() from A to Server;
 }
 
 
-explicit local protocol Trivial1_A(role Server, role A) {
+local protocol Trivial1_A(role Server, role A){
     connect Server;
     Withdraw() to Server;
+}
+
+
+local protocol Trivial1_Server(role Server, role A){
+    Broadcast() to ;
+    Withdraw() from A;
 }

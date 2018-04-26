@@ -1,4 +1,12 @@
-explicit global protocol TicTacToe(role Server, role X, role O) {
+module Game;
+
+type <java> "java.lang.Integer" from "rt.jar" as d;
+type <java> "java.lang.Integer" from "rt.jar" as d1;
+type <java> "java.lang.Integer" from "rt.jar" as d2;
+type <java> "java.lang.Integer" from "rt.jar" as int;
+type <java> "java.lang.Boolean" from "rt.jar" as bool;
+
+explicit global protocol TicTacToe(role Server, role X, role O){
     connect Server to X;
     Broadcast() from Server to O;
     connect Server to O;
@@ -24,7 +32,7 @@ explicit global protocol TicTacToe(role Server, role X, role O) {
 }
 
 
-explicit local protocol TicTacToe_X(role Server, role X) {
+local protocol TicTacToe_X(role Server, role X){
     connect Server;
     Broadcast() from Server;
     Public_c1(d1) to Server;
@@ -39,7 +47,7 @@ explicit local protocol TicTacToe_X(role Server, role X) {
 }
 
 
-explicit local protocol TicTacToe_O(role Server, role O) {
+local protocol TicTacToe_O(role Server, role O){
     Broadcast() from Server;
     connect Server;
     Broadcast_c1(d1) from Server;
@@ -51,4 +59,28 @@ explicit local protocol TicTacToe_O(role Server, role O) {
     Broadcast_c4(d) from Server;
     Public_c4(d) to Server;
     Withdraw() to Server;
+}
+
+
+local protocol TicTacToe_Server(role Server, role X, role O){
+    Broadcast() to O;
+    Broadcast() to X;
+    Public_c1(d1) from X;
+    Broadcast_c1(d1) to O;
+    Public_c1(d2) from O;
+    Broadcast_c1(d2) to X;
+    Public_c2(d) from X;
+    Broadcast_c2(d) to O;
+    Public_c2(d) from O;
+    Broadcast_c2(d) to X;
+    Public_c3(d) from X;
+    Broadcast_c3(d) to O;
+    Public_c3(d) from O;
+    Broadcast_c3(d) to X;
+    Public_c4(d) from X;
+    Broadcast_c4(d) to O;
+    Public_c4(d) from O;
+    Broadcast_c4(d) to X;
+    Withdraw() from X;
+    Withdraw() from O;
 }

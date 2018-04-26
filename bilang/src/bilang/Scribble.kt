@@ -3,12 +3,12 @@ package bilang
 typealias Role = String
 sealed class Sast {
 
-    data class Protocol(val name: String, val roles: Set<Role>, val block: Block) : Sast()
+    data class Protocol(val name: String, val types: Map<String, String>, val roles: Set<Role>, val block: Block) : Sast()
 
     data class Block(val stmts: List<Action>) : Sast()
 
     sealed class Action : Sast() {
-        data class Send(val label: String, val params: List<VarDec>, val from: Role, val to: Set<Role>) : Action()
+        data class Send(val label: String, val params: List<VarDec>, val from: Role, val to: Set<Role>?) : Action()
         data class Connect(val to: Role) : Action()
         data class Choice(val at: Role, val choices: List<Block>) : Action()
         data class Rec(val label: String, val actions: Block) : Action()
@@ -19,31 +19,35 @@ sealed class Sast {
     data class VarDec(val name: String, val type: Type)
 }
 
-fun Sast.Protocol.prettyPrintAll(): String =
-        (listOf(prettyPrint()) + roles.map { prettyPrint(it) }).joinToString("\n\n")
+fun Sast.Protocol.prettyPrintAll(): String {
+    val typedecls = types.map {"""type <java> "java.lang.${it.value}" from "rt.jar" as ${it.key};"""}.joinToString("\n")
+    val items = listOf("module Game;", typedecls, prettyPrint()) + (roles + "Server").map { prettyPrint(it) }
+    return items.joinToString("\n\n")
+}
 
-fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
-    fun pretty(x: Sast) = x.prettyPrint(role, indent)
+fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role> = setOf()): String {
+    fun pretty(x: Sast) = x.prettyPrint(role, indent, connected)
     val code = when (this) {
         is Sast.Protocol -> {
             assert(indent == 0)
-            val relevantRoles = if (role == null) roles else setOf(role)
-            val ps = ", " + relevantRoles.joinToString(", ") { "role $it" }
-            val scope = if (role == null) "global" else "local"
-            val roletext = if (role == null) "" else "_$role"
-            "explicit $scope protocol $name$roletext(role Server$ps) " + pretty(block)
+            val ps = roles.joinToString(", ") { "role $it" }
+            when (role) {
+                null -> "explicit global protocol $name(role Server, $ps)"
+                "Server" -> "local protocol ${name}_Server(role Server, $ps)"
+                else -> "local protocol ${name}_$role(role Server, role $role)"
+            } + pretty(block)
         }
         is Sast.Block -> stmts
-                .map { it.prettyPrint(role, indent + 1) }
+                .map { it.prettyPrint(role, indent + 1, if (it is Sast.Action.Connect) connected+it.to else connected) }
                 .filter { it.isNotBlank() }
                 .joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
         is Sast.Action.Send -> {
             val args = params.joinToString(", ") { it.type.name }
             val names = params.joinToString("_") { it.name }
             var res = if (params.isEmpty()) "$label()" else "${label}_$names($args)"
-            if (role == null || role in to)
+            if (role == null || to == null || role in to)
                 res += " from $from"
-            if (role == null || from == role)
+            if (to != null && (role == null || from == role))
                 res += " to ${to.joinToString(", ")}"
             if (" to " in res || " from " in res) res
             else ""
@@ -66,7 +70,9 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0): String {
 
 fun programToScribble(p: ExpProgram): Sast.Protocol {
     val roles = findRoles(p.game).toSet()
-    return Sast.Protocol(p.name, roles, Sast.Block(gameToScribble(p.game, roles)))
+    val types = p.types.mapValues { (_, v) -> javaTypeOf(v) } + Pair("int", "Integer") + Pair("bool", "Boolean")
+
+    return Sast.Protocol(p.name, types, roles, Sast.Block(gameToScribble(p.game, roles)))
 }
 
 private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when (ext) {
@@ -121,4 +127,17 @@ private fun typeOf(t: TypeExp): String = when (t) {
     is TypeExp.Subset -> "subset_${t.values.joinToString("_")}"
     is TypeExp.Range -> "range_${t.min}_${t.max}"
     is TypeExp.Opt -> "opt_${t.type}"
+}
+
+private fun javaTypeOf(t: TypeExp): String = when (t) {
+    TypeExp.INT -> "Integer"
+    TypeExp.BOOL -> "Boolean"
+    TypeExp.ROLE -> TODO()
+    TypeExp.ROLESET -> TODO()
+    TypeExp.ADDRESS -> "Integer"
+    is TypeExp.Hidden -> "Integer"
+    is TypeExp.TypeId -> t.name
+    is TypeExp.Subset -> "Integer"
+    is TypeExp.Range -> "Integer"
+    is TypeExp.Opt -> "Object"
 }

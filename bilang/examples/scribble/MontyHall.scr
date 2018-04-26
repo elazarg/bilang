@@ -1,4 +1,10 @@
-explicit global protocol MontyHall(role Server, role Host, role Guest) {
+module Game;
+
+type <java> "java.lang.Integer" from "rt.jar" as door;
+type <java> "java.lang.Integer" from "rt.jar" as int;
+type <java> "java.lang.Boolean" from "rt.jar" as bool;
+
+explicit global protocol MontyHall(role Server, role Host, role Guest){
     connect Server to Host;
     Broadcast() from Server to Guest;
     connect Server to Guest;
@@ -18,7 +24,7 @@ explicit global protocol MontyHall(role Server, role Host, role Guest) {
 }
 
 
-explicit local protocol MontyHall_Host(role Server, role Host) {
+local protocol MontyHall_Host(role Server, role Host){
     connect Server;
     Broadcast() from Server;
     Hidden_car(hidden_door) to Server;
@@ -30,7 +36,7 @@ explicit local protocol MontyHall_Host(role Server, role Host) {
 }
 
 
-explicit local protocol MontyHall_Guest(role Server, role Guest) {
+local protocol MontyHall_Guest(role Server, role Guest){
     Broadcast() from Server;
     connect Server;
     Broadcast() from Server;
@@ -39,4 +45,22 @@ explicit local protocol MontyHall_Guest(role Server, role Guest) {
     Public_switch(bool) to Server;
     Broadcast_car(door) from Server;
     Withdraw() to Server;
+}
+
+
+local protocol MontyHall_Server(role Server, role Host, role Guest){
+    Broadcast() to Guest;
+    Broadcast() to Host;
+    Hidden_car(hidden_door) from Host;
+    Broadcast() to Guest;
+    Public_d(door) from Guest;
+    Broadcast_d(door) to Host;
+    Public_goat(door) from Host;
+    Broadcast_goat(door) to Guest;
+    Public_switch(bool) from Guest;
+    Broadcast_switch(bool) to Host;
+    Reveal_car(door) from Host;
+    Broadcast_car(door) to Guest;
+    Withdraw() from Guest;
+    Withdraw() from Host;
 }
