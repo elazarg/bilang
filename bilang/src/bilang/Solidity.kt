@@ -133,7 +133,7 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        $assignments
             |        $inits
             |    }
-            |""".trimIndent()
+            |""".trimMargin()
             } else {
                 val (checkDone, makeDone) = if (kind == Kind.JOIN) Pair("require(!done$role);", "done$role = true;") else Pair("", "")
                 """
@@ -147,7 +147,7 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        $inits
             |        $makeDone
             |    }
-            |""".trimIndent()
+            |""".trimMargin()
             }
         }
 
@@ -165,7 +165,7 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        $inits
             |        $doneRole = true;
             |    }
-            |""".trimIndent()
+            |""".trimMargin()
         }
 
         Kind.REVEAL -> {
@@ -186,7 +186,7 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        $inits
             |        $doneRole = true;
             |    }
-            |""".trimIndent()
+            |""".trimMargin()
         }
     }
 }
@@ -200,82 +200,12 @@ private fun genOutcome(switch: Outcome.Value, step: Int): String {
     return switch.ts.entries.map { (role: String, money: Exp) ->
         """
         |    function withdraw_${step}_$role() by(Role.$role) at_step($step) public {
-        |        int amount;
-        |        ${exp(money, "amount", "int").statements()}
+        |        int amount = ${exp(money)};
         |        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         |        delete balanceOf[msg.sender];
         |    }
         """.trimMargin()
         }.join("\n")
-}
-
-private fun exp(e: Exp, outvar: String, type: String): List<String> {
-    try {
-        return listOf("$outvar = ${exp(e)};")
-    } catch (ex: StaticError) {}
-    return when (e) {
-        is Exp.Call -> TODO("${exp(e.target)}(${e.args.map { exp(it) }.join(",")})")
-        is Exp.UnOp -> {
-            if (e.op == "isUndefined") {
-                val member = exp(e.operand)
-                listOf("$outvar = ${member}_done;")
-            } else {
-                if (trivial(e.operand))
-                    listOf("$outvar = ${e.op} ${exp(e.operand)};")
-                else {
-                    val fresh = Fresh.vvar()
-                    val freshType = if (e.op == "!") "bool" else "int"
-                    val prev = exp(e.operand, fresh, freshType)
-                    listOf("{", "$freshType $fresh;") + prev + listOf("$outvar = ${e.op} $fresh;", "}")
-                }
-            }
-        }
-        is Exp.BinOp -> {
-            val freshType = when (e.op) {
-                "+", "-", "*", "/" -> "int"
-                ">", ">=", "<", "<=" -> "int"
-                "||", "&&" -> "bool"
-                "==", "!=" -> "int"
-                "<->", "<-!->" -> "bool"
-                else -> throw IllegalArgumentException(e.op)
-            }
-
-            val (left, leftInit) = if (trivial(e.left)) Pair(exp(e.left), listOf())
-            else {
-                val v = Fresh.vvar()
-                Pair(v, listOf("$freshType $v;") + exp(e.left, v, freshType))
-            }
-            val (right, rightInit) = if (trivial(e.right)) Pair(exp(e.right), listOf())
-            else {
-                val v = Fresh.vvar()
-                Pair(v, listOf("$freshType $v;") + exp(e.right, v, freshType))
-            }
-
-            val op = if (e.op == "<->") "==" else if (e.op == "<-!->") "!=" else e.op
-            listOf("{") + leftInit + rightInit + listOf("$outvar = $left $op $right;", "}")
-        }
-        is Exp.Var -> listOf("$outvar = ${e.name};")
-        is Exp.Member -> listOf("$outvar = ${e.target}_${e.field};")
-        is Exp.Cond -> {
-            val condVar = Fresh.vvar()
-            listOf("bool $condVar;") + exp(e.cond, condVar, "bool") +
-                    "if ($condVar) { " + exp(e.ifTrue, outvar, type) + "} else {" + exp(e.ifFalse, outvar, type) + "}"
-        }
-        is Exp.Const -> listOf("$outvar = ${exp(e)};")
-        is Exp.Let -> {
-            val (name, vtype) = e.dec
-            exp(e.init, name, (vtype as TypeExp.TypeId).name) + exp(e.exp, outvar, type)
-        }
-    }
-}
-
-private fun trivial(e: Exp): Boolean {
-    try {
-        exp(e)
-    } catch (ex: StaticError) {
-        return false
-    }
-    return true
 }
 
 private fun exp(e: Exp): String = when (e) {
@@ -320,11 +250,3 @@ private fun whereof(v: String, t: TypeExp): String = when (t) {
 
 private fun Iterable<String>.declarations() = join("\n    ")
 private fun Iterable<String>.statements() = join("\n        ")
-
-private object Fresh {
-    private var v = 0
-    fun vvar(): String {
-        v += 1
-        return "freshVar$v"
-    }
-}

@@ -24,17 +24,14 @@ contract Trivial1 {
         _;
     }
     // step 0
-|    bool doneA;
-|    function join_A() at_step(0) public by(Role.None) {
-|        require(!doneA);
-|        role[msg.sender] = Role.A;
-|        
-|        balanceOf[msg.sender] = msg.value;
-|        require(true);
-|        
-|        doneA = true;
-|    }
-|
+    bool doneA;
+    function join_A() at_step(0) public by(Role.None) {
+        require(!doneA);
+        role[msg.sender] = Role.A;
+        balanceOf[msg.sender] = msg.value;
+        require(true);
+        doneA = true;
+    }
     event Broadcast0(); // TODO: add params
     function __nextStep0() public {
         require(step == 0);
@@ -45,8 +42,7 @@ contract Trivial1 {
     }
     // end 0
     function withdraw_1_A() by(Role.A) at_step(1) public {
-        int amount;
-        amount = int(0);
+        int amount = int(0)
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
