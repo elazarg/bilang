@@ -26,7 +26,7 @@ explicit global protocol MontyHallChance(role Server, role Guest){
 
 local protocol MontyHallChance_Guest(role Server, role Guest){
     Broadcast() from Server;
-    connect Server;
+    accept Server;
     Broadcast() from Server;
     Public_d(door) to Server;
     Broadcast_goat(door) from Server;

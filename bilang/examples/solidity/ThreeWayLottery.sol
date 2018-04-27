@@ -121,17 +121,17 @@ contract ThreeWayLottery {
     }
     // end 3
     function withdraw_4_Bob() by(Role.Bob) at_step(4) public {
-        int amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? int(20) : (- int(10))))))
+        int amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? int(20) : (- int(10))))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_4_Issuer() by(Role.Issuer) at_step(4) public {
-        int amount = (((! Alice_c_done || ! Bob_c_done)) ? int(20) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : int(20)))))
+        int amount = (((! Alice_c_done || ! Bob_c_done)) ? int(20) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : int(20)))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_4_Alice() by(Role.Alice) at_step(4) public {
-        int amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : (- int(10))))))
+        int amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : (- int(10))))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

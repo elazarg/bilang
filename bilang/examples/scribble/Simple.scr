@@ -20,7 +20,7 @@ explicit global protocol Simple(role Server, role A, role B){
 
 
 local protocol Simple_A(role Server, role A){
-    connect Server;
+    accept Server;
     Broadcast() from Server;
     Hidden_c(hidden_bool) to Server;
     Broadcast_c(bool) from Server;
@@ -31,7 +31,7 @@ local protocol Simple_A(role Server, role A){
 
 local protocol Simple_B(role Server, role B){
     Broadcast() from Server;
-    connect Server;
+    accept Server;
     Broadcast() from Server;
     Public_c(bool) to Server;
     Broadcast_c(bool) from Server;

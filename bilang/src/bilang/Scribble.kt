@@ -52,7 +52,7 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role>
         is Sast.Action.Connect ->
             when (role) {
                 null -> "connect Server to $to"
-                to -> "connect Server"
+                to -> "accept Server"
                 else -> ""
             }
         is Sast.Action.Choice -> {

@@ -123,12 +123,12 @@ contract Simple {
     }
     // end 4
     function withdraw_5_A() by(Role.A) at_step(5) public {
-        int amount = ((((A_c != B_c) || ! B_c_done)) ? int(1) : (- int(1)))
+        int amount = ((((A_c != B_c) || ! B_c_done)) ? int(1) : (- int(1)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_5_B() by(Role.B) at_step(5) public {
-        int amount = ((((A_c == B_c) || ! A_c_done)) ? int(1) : (- int(1)))
+        int amount = ((((A_c == B_c) || ! A_c_done)) ? int(1) : (- int(1)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

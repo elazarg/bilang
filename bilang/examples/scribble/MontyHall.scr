@@ -25,7 +25,7 @@ explicit global protocol MontyHall(role Server, role Host, role Guest){
 
 
 local protocol MontyHall_Host(role Server, role Host){
-    connect Server;
+    accept Server;
     Broadcast() from Server;
     Hidden_car(hidden_door) to Server;
     Broadcast_d(door) from Server;
@@ -38,7 +38,7 @@ local protocol MontyHall_Host(role Server, role Host){
 
 local protocol MontyHall_Guest(role Server, role Guest){
     Broadcast() from Server;
-    connect Server;
+    accept Server;
     Broadcast() from Server;
     Public_d(door) to Server;
     Broadcast_goat(door) from Server;

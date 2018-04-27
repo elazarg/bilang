@@ -18,7 +18,7 @@ explicit global protocol Prisoners(role Server, role A, role B){
 
 
 local protocol Prisoners_A(role Server, role A){
-    connect Server;
+    accept Server;
     Broadcast() from Server;
     Public_c(bool) to Server;
     Broadcast_c(bool) from Server;
@@ -28,7 +28,7 @@ local protocol Prisoners_A(role Server, role A){
 
 local protocol Prisoners_B(role Server, role B){
     Broadcast() from Server;
-    connect Server;
+    accept Server;
     Broadcast_c(bool) from Server;
     Public_c(bool) to Server;
     Withdraw() to Server;

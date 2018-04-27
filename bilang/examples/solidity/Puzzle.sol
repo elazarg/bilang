@@ -103,12 +103,12 @@ contract Puzzle {
     }
     // end 1
     function withdraw_2_Q() by(Role.Q) at_step(2) public {
-        int amount = int(0)
+        int amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_2_A() by(Role.A) at_step(2) public {
-        int amount = int(50)
+        int amount = int(50);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

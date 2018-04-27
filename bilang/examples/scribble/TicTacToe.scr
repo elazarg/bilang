@@ -33,7 +33,7 @@ explicit global protocol TicTacToe(role Server, role X, role O){
 
 
 local protocol TicTacToe_X(role Server, role X){
-    connect Server;
+    accept Server;
     Broadcast() from Server;
     Public_c1(d1) to Server;
     Broadcast_c1(d2) from Server;
@@ -49,7 +49,7 @@ local protocol TicTacToe_X(role Server, role X){
 
 local protocol TicTacToe_O(role Server, role O){
     Broadcast() from Server;
-    connect Server;
+    accept Server;
     Broadcast_c1(d1) from Server;
     Public_c1(d2) to Server;
     Broadcast_c2(d) from Server;

@@ -29,24 +29,25 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
         is Ext.BindSingle -> {
             val q = ext.q
             val subExt = ext.ext
+            val role = q.role
             when (ext.kind) {
-                Kind.JOIN -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role))
-                             else independent(subExt, listOf(q), env.addRole(q.role))
-                Kind.JOIN_CHANCE -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(q.role, chance=true))
-                                    else independent(subExt, listOf(q), env.addRole(q.role, chance=true))
+                Kind.JOIN -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(role))
+                             else independent(subExt, listOf(q), env.addRole(role))
+                Kind.JOIN_CHANCE -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(role, chance=true))
+                                    else independent(subExt, listOf(q), env.addRole(role, chance=true))
                 Kind.YIELD -> independent(subExt, listOf(q), env)
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
                     val names = q.params.names()
-                    val revealedPacket = names.map { Pair(it, revealed.getValue(q.role, it)) }.toMap()
+                    val revealedPacket = names.map { Pair(it, revealed.getValue(role, it)) }.toMap()
                     val quit = env.mapHidden(q){UNDEFINED}
                     val quitPacket = names.map { Pair(it, UNDEFINED) }.toMap()
-                    val infoset = UniqueHash.of(env.eraseHidden(q.role))
-                    val (edges, children) = if (env.isChance(q.role))
+                    val infoset = UniqueHash.of(env.eraseHidden(role))
+                    val (edges, children) = if (env.isChance(role))
                         Pair(listOf(revealedPacket), listOf(fromExp(subExt, revealed)))
                     else
                         Pair(listOf(revealedPacket, quitPacket), listOf(fromExp(subExt, revealed), fromExp(subExt, quit)))
-                    Tree.Node(q.role, revealed, infoset, edges, children)
+                    Tree.Node(role, revealed, infoset, edges, children)
                 }
                 Kind.MANY -> TODO()
             }

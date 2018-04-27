@@ -222,12 +222,12 @@ contract TicTacToe {
     }
     // end 9
     function withdraw_10_X() by(Role.X) at_step(10) public {
-        int amount = int(0)
+        int amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_10_O() by(Role.O) at_step(10) public {
-        int amount = int(0)
+        int amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

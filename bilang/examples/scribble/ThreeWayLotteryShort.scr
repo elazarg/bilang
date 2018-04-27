@@ -21,7 +21,7 @@ explicit global protocol ThreeWayLotteryShort(role Server, role Issuer, role Ali
 
 
 local protocol ThreeWayLotteryShort_Issuer(role Server, role Issuer){
-    connect Server;
+    accept Server;
     Public_c(choice) to Server;
     Broadcast_c(choice) from Server;
     Broadcast_c(choice) from Server;
@@ -30,7 +30,7 @@ local protocol ThreeWayLotteryShort_Issuer(role Server, role Issuer){
 
 
 local protocol ThreeWayLotteryShort_Alice(role Server, role Alice){
-    connect Server;
+    accept Server;
     Broadcast_c(choice) from Server;
     Public_c(choice) to Server;
     Broadcast_c(choice) from Server;
@@ -39,7 +39,7 @@ local protocol ThreeWayLotteryShort_Alice(role Server, role Alice){
 
 
 local protocol ThreeWayLotteryShort_Bob(role Server, role Bob){
-    connect Server;
+    accept Server;
     Broadcast_c(choice) from Server;
     Broadcast_c(choice) from Server;
     Public_c(choice) to Server;

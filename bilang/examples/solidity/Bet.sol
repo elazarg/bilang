@@ -101,12 +101,12 @@ contract Bet {
     }
     // end 2
     function withdraw_3_Gambler() by(Role.Gambler) at_step(3) public {
-        int amount = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int(100) : int(0))
+        int amount = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int(100) : int(0));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_3_Race() by(Role.Race) at_step(3) public {
-        int amount = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int(0) : int(100))
+        int amount = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int(0) : int(100));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

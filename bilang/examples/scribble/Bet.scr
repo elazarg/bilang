@@ -19,7 +19,7 @@ explicit global protocol Bet(role Server, role Gambler){
 
 local protocol Bet_Gambler(role Server, role Gambler){
     Broadcast() from Server;
-    connect Server;
+    accept Server;
     Public_bet(options) to Server;
     Broadcast_winner(options) from Server;
     Withdraw() to Server;

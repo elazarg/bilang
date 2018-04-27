@@ -11,7 +11,7 @@ explicit global protocol Trivial1(role Server, role A){
 
 
 local protocol Trivial1_A(role Server, role A){
-    connect Server;
+    accept Server;
     Withdraw() to Server;
 }
 

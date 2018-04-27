@@ -42,7 +42,7 @@ contract Trivial1 {
     }
     // end 0
     function withdraw_1_A() by(Role.A) at_step(1) public {
-        int amount = int(0)
+        int amount = int(0);
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

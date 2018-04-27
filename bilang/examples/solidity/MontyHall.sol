@@ -163,12 +163,12 @@ contract MontyHall {
     }
     // end 6
     function withdraw_7_Guest() by(Role.Guest) at_step(7) public {
-        int amount = (((((! ! Host_car_done) && (! ! Host_goat_done)) && (! ! Guest_switch_done))) ? ((((Guest_d != Host_car) == Guest_switch)) ? int(20) : (- int(20))) : (((! Host_car_done || ! Host_goat_done)) ? int(20) : (- int(100))))
+        int amount = (((((! ! Host_car_done) && (! ! Host_goat_done)) && (! ! Guest_switch_done))) ? ((((Guest_d != Host_car) == Guest_switch)) ? int(20) : (- int(20))) : (((! Host_car_done || ! Host_goat_done)) ? int(20) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_7_Host() by(Role.Host) at_step(7) public {
-        int amount = (((((! ! Host_car_done) && (! ! Host_goat_done)) && (! ! Guest_switch_done))) ? int(0) : (((! Host_car_done || ! Host_goat_done)) ? (- int(100)) : int(0)))
+        int amount = (((((! ! Host_car_done) && (! ! Host_goat_done)) && (! ! Guest_switch_done))) ? int(0) : (((! Host_car_done || ! Host_goat_done)) ? (- int(100)) : int(0)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
