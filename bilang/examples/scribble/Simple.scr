@@ -2,13 +2,14 @@ module Game;
 
 type <java> "java.lang.Integer" from "rt.jar" as int;
 type <java> "java.lang.Boolean" from "rt.jar" as bool;
+type <java> "java.lang.Integer" from "rt.jar" as hidden;
 
 explicit global protocol Simple(role Server, role A, role B){
     connect Server to A;
     Broadcast() from Server to B;
     connect Server to B;
     Broadcast() from Server to A;
-    Hidden_c(hidden_bool) from A to Server;
+    Hidden_c(hidden) from A to Server;
     Broadcast() from Server to B;
     Public_c(bool) from B to Server;
     Broadcast_c(bool) from Server to A;
@@ -22,7 +23,7 @@ explicit global protocol Simple(role Server, role A, role B){
 local protocol Simple_A(role Server, role A){
     accept Server;
     Broadcast() from Server;
-    Hidden_c(hidden_bool) to Server;
+    Hidden_c(hidden) to Server;
     Broadcast_c(bool) from Server;
     Reveal_c(bool) to Server;
     Withdraw() to Server;
@@ -42,7 +43,7 @@ local protocol Simple_B(role Server, role B){
 local protocol Simple_Server(role Server, role A, role B){
     Broadcast() to B;
     Broadcast() to A;
-    Hidden_c(hidden_bool) from A;
+    Hidden_c(hidden) from A;
     Broadcast() to B;
     Public_c(bool) from B;
     Broadcast_c(bool) to A;

@@ -67,7 +67,7 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role>
 
 fun programToScribble(p: ExpProgram): Sast.Protocol {
     val roles = findRoles(p.game).toSet()
-    val types = p.types.mapValues { (_, v) -> javaTypeOf(v) } + Pair("int", "Integer") + Pair("bool", "Boolean")
+    val types = p.types.mapValues { (_, v) -> javaTypeOf(v) } + ("int" to "Integer") + ("bool" to "Boolean") + ("hidden" to "Integer")
 
     return Sast.Protocol(p.name, types, roles, Sast.Block(gameToScribble(p.game, roles)))
 }
@@ -118,7 +118,7 @@ private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.ROLE -> "role"
     TypeExp.ROLESET -> "roleset"
     TypeExp.ADDRESS -> "address"
-    is TypeExp.Hidden -> "hidden_${typeOf(t.type)}"
+    is TypeExp.Hidden -> "hidden" //_${typeOf(t.type)}"
     is TypeExp.TypeId -> t.name
     is TypeExp.Subset -> "subset_${t.values.join("_")}"
     is TypeExp.Range -> "range_${t.min}_${t.max}"

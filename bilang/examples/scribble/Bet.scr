@@ -3,6 +3,7 @@ module Game;
 type <java> "java.lang.Integer" from "rt.jar" as options;
 type <java> "java.lang.Integer" from "rt.jar" as int;
 type <java> "java.lang.Boolean" from "rt.jar" as bool;
+type <java> "java.lang.Integer" from "rt.jar" as hidden;
 
 explicit global protocol Bet(role Server, role Gambler){
     connect Server to Race;

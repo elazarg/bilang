@@ -5,6 +5,7 @@ type <java> "java.lang.Integer" from "rt.jar" as d1;
 type <java> "java.lang.Integer" from "rt.jar" as d2;
 type <java> "java.lang.Integer" from "rt.jar" as int;
 type <java> "java.lang.Boolean" from "rt.jar" as bool;
+type <java> "java.lang.Integer" from "rt.jar" as hidden;
 
 explicit global protocol TicTacToe(role Server, role X, role O){
     connect Server to X;

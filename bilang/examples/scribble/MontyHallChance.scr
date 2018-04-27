@@ -3,13 +3,14 @@ module Game;
 type <java> "java.lang.Integer" from "rt.jar" as door;
 type <java> "java.lang.Integer" from "rt.jar" as int;
 type <java> "java.lang.Boolean" from "rt.jar" as bool;
+type <java> "java.lang.Integer" from "rt.jar" as hidden;
 
 explicit global protocol MontyHallChance(role Server, role Guest){
     connect Server to Host;
     Broadcast() from Server to Guest;
     connect Server to Guest;
     Broadcast() from Server to ;
-    Hidden_car(hidden_door) from Host to Server;
+    Hidden_car(hidden) from Host to Server;
     Broadcast() from Server to Guest;
     Public_d(door) from Guest to Server;
     Broadcast_d(door) from Server to ;
@@ -39,7 +40,7 @@ local protocol MontyHallChance_Guest(role Server, role Guest){
 local protocol MontyHallChance_Server(role Server, role Guest){
     Broadcast() to Guest;
     Broadcast() to ;
-    Hidden_car(hidden_door) from Host;
+    Hidden_car(hidden) from Host;
     Broadcast() to Guest;
     Public_d(door) from Guest;
     Broadcast_d(door) to ;
