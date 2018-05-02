@@ -18,12 +18,24 @@ private fun run(name: String) {
     println("Analyzing $inputFilename ...")
     val program = parse(inputFilename).copy(name=name, desc=name)
     println("roles: " + findRoles(program.game))
-    writeFile("examples/types/$name.txt") { typeCheck(program); "OK" }
-    writeFile("examples/gambit/$name.efg") {Extensive(program).toEfg()}
-    writeFile("examples/scribble/$name.scr") {programToScribble(program).prettyPrintAll()}
-    writeFile("examples/solidity/$name.sol") {genGame(program)}
+    doTypecheck(program)
+    writeFile("examples/gambit/$name.efg") { Extensive(program).toEfg() }
+    writeFile("examples/scribble/$name.scr") { programToScribble(program).prettyPrintAll() }
+    writeFile("examples/solidity/$name.sol") { genGame(program) }
     println("Done")
     println()
+}
+
+private fun doTypecheck(program: ExpProgram) {
+    print("Type checking file ... ")
+    try {
+        typeCheck(program)
+        println("done")
+    } catch (ex: NotImplementedError) {
+        println(ex.message)
+    } catch (ex: StaticError) {
+        println("Type error: " + ex.message)
+    }
 }
 
 private fun writeFile(filename: String, f: () -> String) {
@@ -33,8 +45,6 @@ private fun writeFile(filename: String, f: () -> String) {
         Paths.get(filename).toFile().writeText(text)
     } catch (ex: NotImplementedError) {
         println(ex.message)
-    } catch (ex: StaticError) {
-        println("Type error: " + ex.message)
     }
     println("Done")
 }
