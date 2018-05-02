@@ -82,12 +82,12 @@ contract OddsEvens {
     }
     // end 1
     function withdraw_2_Even() by(Role.Even) at_step(2) public {
-        int amount = ((((! ! Even_c_done) && (! ! Odd_c_done))) ? (((Even_c == Odd_c)) ? int(10) : (- int(10))) : (((! Even_c_done && (! ! Odd_c_done))) ? (- int(100)) : (- int(100))));
+        int amount = (((Even_c_done && Odd_c_done)) ? (((Even_c == Odd_c)) ? int(10) : (- int(10))) : (((! Even_c_done && Odd_c_done)) ? (- int(100)) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_2_Odd() by(Role.Odd) at_step(2) public {
-        int amount = ((((! ! Even_c_done) && (! ! Odd_c_done))) ? (((Even_c == Odd_c)) ? (- int(10)) : int(10)) : (((! Even_c_done && (! ! Odd_c_done))) ? int(10) : (- int(100))));
+        int amount = (((Even_c_done && Odd_c_done)) ? (((Even_c == Odd_c)) ? (- int(10)) : int(10)) : (((! Even_c_done && Odd_c_done)) ? int(10) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

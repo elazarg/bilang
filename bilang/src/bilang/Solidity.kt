@@ -213,6 +213,9 @@ private fun exp(e: Exp): String = when (e) {
     is Exp.UnOp -> if (e.op == "isUndefined") {
         val operand = e.operand as Exp.Member
         "! ${operand.target}_${operand.field}_done"
+    } else if (e.op == "isDefined") {
+        val operand = e.operand as Exp.Member
+        "${operand.target}_${operand.field}_done"
     } else "(${e.op} ${exp(e.operand)})"
     is Exp.BinOp -> {
         val op = if (e.op == "<->") "==" else if (e.op == "<-!->") "!=" else e.op

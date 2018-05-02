@@ -104,7 +104,7 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
             "!" -> {
                 checkOp(BOOL, type(exp.operand)); BOOL
             }
-            "isUndefined" -> {
+            "isUndefined", "isDefined" -> {
                 // We'll need flow-sensitivity to check this
                 // requireStatic(type(exp.operand) is Opt, "isUndefined arg must be Opt")
                 BOOL

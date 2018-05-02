@@ -92,12 +92,12 @@ contract Prisoners {
     }
     // end 2
     function withdraw_3_A() by(Role.A) at_step(3) public {
-        int amount = ((((! ! A_c_done) && (! ! B_c_done))) ? (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? int(0) : ((((! A_c) && B_c)) ? (- int(3)) : (- int(1))))) : ((! A_c_done) ? (- int(100)) : int(10)));
+        int amount = (((A_c_done && B_c_done)) ? (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? int(0) : ((((! A_c) && B_c)) ? (- int(3)) : (- int(1))))) : ((! A_c_done) ? (- int(100)) : int(10)));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }
     function withdraw_3_B() by(Role.B) at_step(3) public {
-        int amount = ((((! ! A_c_done) && (! ! B_c_done))) ? (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? (- int(3)) : ((((! A_c) && B_c)) ? int(0) : (- int(1))))) : ((! A_c_done) ? int(10) : (- int(100))));
+        int amount = (((A_c_done && B_c_done)) ? (((A_c && B_c)) ? (- int(2)) : (((A_c && (! B_c))) ? (- int(3)) : ((((! A_c) && B_c)) ? int(0) : (- int(1))))) : ((! A_c_done) ? int(10) : (- int(100))));
         msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
         delete balanceOf[msg.sender];
     }

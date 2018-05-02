@@ -3,50 +3,66 @@ package bilang
 import bilang.Exp.*
 import bilang.Exp.Const.*
 
-fun smt(g: ExpProgram) = ext(g.game)
+fun smt(g: ExpProgram) = """
+    |${defineTypes(g.types)}
+    |
+    |${ext(g.game)}
+    |
+    |(check-sat)
+    |(get-model)
+    """.trimMargin()
+
+private fun defineTypes(types: Map<String, TypeExp>) =
+        types.map { (name, type) -> "(define-sort $name () Int)" }.join("\n")
 
 private fun ext(e: Ext): String = when (e) {
-    is Ext.Bind -> TODO()
-    is Ext.BindSingle -> {
-        val vars = e.q.params.map { (name, type) -> Pair(Member(e.q.role, name), type) }
-        val decls = vars.map { (m, type) -> "(declare-const ${exp(m)} ${smtTypeOf(type)})" }.join("\n")
-        val dones = vars.map { (m, _) -> "(declare-const ${exp(m)}_done Bool)" }.join("\n")
-        val where = exp(e.q.where)
-        """
-        |$decls
-        |$dones
-        |
-        |(assert $where)
-        |
-        |${ext(e.ext)}
-        """.trimMargin()
-    }
+    is Ext.Bind -> e.qs.map { bind(it) }.join("\n") + ext(e.ext)
+    is Ext.BindSingle -> bind(e.q) + ext(e.ext)
     is Ext.Value -> {
         e.exp.ts.map { (a, b) ->
-            "(assert ${exp(BinOp("=", Member(a, "outcome"), b))})"
+            val m = Member(a, "outcome")
+            // TODO: define-fun? declare-fun?
+            "(declare-const ${exp(m)} Int)\n" +
+            "(assert ${exp(BinOp("=", m, b))})"
         }.join("\n")
     }
+}
+
+private fun bind(q: Query) = if (q.params.isEmpty()) "" else {
+    val vars = q.params.filter { it.type !is TypeExp.Hidden }.map { (name, type) -> Pair(Member(q.role, name), type) }
+    val decls = vars.map { (m, type) -> "(declare-const ${exp(m)} ${smtTypeOf(type)})" }.join("\n")
+    val dones = vars.map { (m, _) -> "(declare-const ${exp(m)}_done Bool)" }.join("\n")
+    //val doneQuit = vars.map { (m, _) -> "(assert (=> ${exp(m)}_done last_var_done))" }.join("\n")
+    val where = if (q.where != Bool(true)) "(assert ${exp(q.where)})" else ""
+    """
+    |$decls
+    |$dones
+    |
+    |$where
+    |
+    """.trimMargin()
 }
 
 
 private fun exp(e: Exp): String = when (e) {
     is Call -> TODO()
-    is UnOp -> if (e.op == "isUndefined") {
-        val operand = e.operand as Member
-        "(not ${operand.target}_${operand.field}_done)"
-    } else "(${e.op} ${exp(e.operand)})"
-    is BinOp -> {
-        val op = when (e.op) {
-            "<->" -> "iff"
-            "<-!->" -> "!="
-            "==" -> "="
-            "!=" -> "<>"
-            "&&" -> "and"
-            "||" -> "or"
-            else -> e.op
+
+    is UnOp -> when (e.op) {
+        "isUndefined" -> {
+            val m = e.operand as Member
+            "(not ${m.target}_${m.field}_done)"
         }
-        "($op ${exp(e.left)} ${exp(e.right)})"
+        "isDefined" -> {
+            val m = e.operand as Member
+            "${m.target}_${m.field}_done"
+        }
+        else -> "(${unop(e.op)} ${exp(e.operand)})"
     }
+
+    is BinOp ->
+        if (e.op == "!=") exp(UnOp("!", e.copy(op = "==")))
+        else "(${binop(e.op)} ${exp(e.left)} ${exp(e.right)})"
+
     is Var -> e.name
     is Member -> "${e.target}_${e.field}"
     is Cond -> "(ite ${exp(e.cond)} ${exp(e.ifTrue)} ${exp(e.ifFalse)})"
@@ -54,10 +70,25 @@ private fun exp(e: Exp): String = when (e) {
     is Bool -> "${e.truth}"
     is Address -> TODO()
     is Hidden -> exp(e.value as Exp)
-    is Let -> TODO()
+    is Let -> "(let ${e.dec.name} ${exp(e.init)} ${exp(e.exp)})"
     UNDEFINED -> throw StaticError("Undefined")
 }
 
+private fun binop(op: String) = when (op) {
+    "<->" -> "iff"
+    "<-!->" -> "xor"
+    "==" -> "="
+    "!=" -> throw AssertionError()
+    "&&" -> "and"
+    "||" -> "or"
+    else -> op
+}
+
+private fun unop(op: String) = when (op) {
+    "!" -> "not"
+    "-" -> "-"
+    else -> op
+}
 
 private fun smtTypeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "Int"
