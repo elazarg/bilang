@@ -19,6 +19,7 @@ private fun run(name: String) {
     val program = parse(inputFilename).copy(name=name, desc=name)
     println("roles: " + findRoles(program.game))
     doTypecheck(program)
+    writeFile("examples/smt/$name.z3") { smt(program) }
     writeFile("examples/gambit/$name.efg") { Extensive(program).toEfg() }
     writeFile("examples/scribble/$name.scr") { programToScribble(program).prettyPrintAll() }
     writeFile("examples/solidity/$name.sol") { genGame(program) }

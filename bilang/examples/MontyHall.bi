@@ -7,8 +7,8 @@ yield Guest(d: door);
 yield Host(goat: door) where Host.goat != Guest.d;
 yield Guest(switch: bool);
 reveal Host(car: door) where Host.goat != Host.car;
-withdraw (Host.car != null && Host.goat != null && Guest.switch != null)
+withdraw (Host.car != null && Guest.switch != null)
      ? { Guest -> ((Guest.d != Host.car) <-> Guest.switch) ? 20 : -20;  Host -> 0 }
-     : (Host.car == null || Host.goat == null)
+     : (Host.car == null)
      ? { Guest -> 20;   Host -> -100 }
      : { Guest -> -100; Host -> 0 }
