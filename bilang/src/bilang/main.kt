@@ -34,7 +34,7 @@ private fun writeFile(filename: String, f: () -> String) {
     } catch (ex: NotImplementedError) {
         println(ex.message)
     } catch (ex: StaticError) {
-        println("Type error:" + ex.message)
+        println("Type error: " + ex.message)
     }
     println("Done")
 }

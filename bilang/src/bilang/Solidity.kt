@@ -235,6 +235,7 @@ private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.ROLE -> "Role"
     TypeExp.ROLESET -> "mapping(address => bool)"
     TypeExp.ADDRESS -> "address"
+    TypeExp.EMPTY -> throw AssertionError()
     is TypeExp.Hidden -> "uint"
     is TypeExp.TypeId -> "int" // FIX: either inline or declare types
     is TypeExp.Subset -> "int"

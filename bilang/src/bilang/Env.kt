@@ -9,7 +9,8 @@ data class Env<T>(val g: Map<String, T>, val h: Map<Pair<String, String>, T>) {
     infix fun with(p: Map<Pair<String, String>, T>) = Env(g, h + p)
     infix fun with(p: Pair<Pair<String, String>, T>) = Env(g, h + p)
 
-    fun getValue(role: String, field: String) = h.getValue(Pair(role, field))
+    fun getValue(role: String, field: String) = getValue(Pair(role, field))
+    fun getValue(m: Pair<String, String>) = h.getValue(m)
 
     fun getValue(v: String) = g.getValue(v)
 

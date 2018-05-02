@@ -4,17 +4,15 @@ import bilang.TypeExp.*
 
 data class IncompatibleTypeError(val s: String) : Exception()
 
-
 internal class StaticError(reason: String) : RuntimeException(reason)
 
-fun requireStatic(b: Boolean, s: String = "") {
+fun requireStatic(b: Boolean, s: String) {
     if (!b) throw StaticError(s)
 }
 
 fun typeCheck(program: ExpProgram) {
     Checker(
-            Env(),
-            mapOf(
+            program.types + mapOf(
                     Pair("bool", BOOL),
                     Pair("role", TypeExp.ROLE),
                     Pair("int", INT)
@@ -22,15 +20,13 @@ fun typeCheck(program: ExpProgram) {
     ).type(program.game)
 }
 
-private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, TypeExp>) {
-
-    private val role = TypeId("role")
+private class Checker(private val typeMap: Map<String, TypeExp>, private val env: Env<TypeExp> = Env()) {
 
     fun type(ext: Ext) {
         when (ext) {
             is Ext.Bind -> {
                 val (ns, ms) = ext.qs.map { q ->
-                    val m = q.params.map{ (k, v) -> Pair(q.role, k) to v }.toMap()
+                    val m = q.params.map { (k, v) -> Pair(q.role, k) to v }.toMap()
                     when (ext.kind) {
                         Kind.JOIN -> {
                             val n = mapOf(q.role to ROLE)
@@ -38,17 +34,30 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
                             Pair(n, m)
                         }
                         Kind.YIELD -> {
+                            requireStatic(type(Exp.Var(q.role)) == ROLE, "${q.role} is not a role")
                             val n = mapOf<String, TypeExp>()
                             checkWhere(n, m, q)
-                            requireStatic(type(Exp.Var(q.role)) == ROLE)
                             Pair(n, m)
                         }
-                        Kind.REVEAL -> TODO()
+                        Kind.REVEAL -> {
+                            requireStatic(type(Exp.Var(q.role)) == ROLE, "${q.role} is not a role")
+                            m.keys.forEach { (role, field) ->
+                                requireStatic(env.getValue(role, field) is Hidden,
+                                        "Parameter '$role.$field' must be hidden")
+                            }
+                            val n = mapOf<String, TypeExp>()
+                            checkWhere(n, m, q)
+                            Pair(n, m)
+                        }
                         Kind.MANY -> TODO()
-                        Kind.JOIN_CHANCE -> TODO()
+                        Kind.JOIN_CHANCE -> {
+                            val n = mapOf(q.role to ROLE)
+                            checkWhere(n, m, q)
+                            Pair(n, m)
+                        }
                     }
                 }.unzip()
-                Checker(env + ns.flatten() with ms.flatten(), typeMap).type(ext.ext)
+                Checker(typeMap, env + ns.union() with ms.union()).type(ext.ext)
             }
 
             is Ext.BindSingle -> type(Ext.Bind(ext.kind, listOf(ext.q), ext.ext))
@@ -57,27 +66,25 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
         }
     }
 
-    private fun <K> List<Map<K, TypeExp>>.flatten() = flatMap { it.entries.map { it.toPair() } }.toMap()
-
     private fun checkWhere(n: Map<String, TypeExp>, m: Map<Pair<String, String>, TypeExp>, q: Query) {
-        requireStatic(Checker(env + n with m, typeMap).type(q.where) == BOOL, "Where clause failed")
+        requireStatic(Checker(typeMap, env + n with m).type(q.where) == BOOL, "Where clause failed")
     }
 
     private fun type(outcome: Outcome) {
         when (outcome) {
             is Outcome.Cond -> {
-                requireStatic(type(outcome.cond) == BOOL)
+                requireStatic(type(outcome.cond) == BOOL, "outcome condition must be boolean")
                 type(outcome.ifTrue)
                 type(outcome.ifFalse)
             }
             is Outcome.Value -> {
                 outcome.ts.forEach { (_, v) ->
-                    requireStatic(type(v) == TypeExp.INT)
+                    requireStatic(type(v) == TypeExp.INT, "outcome value must be an int")
                 }
             }
             is Outcome.Let -> {
-                requireStatic(type(outcome.init) == outcome.dec.type)
-                Checker(env + outcome.dec, typeMap).type(outcome.outcome)
+                requireStatic(type(outcome.init) == outcome.dec.type, "Bad initialization of let ext")
+                Checker(typeMap, env + outcome.dec).type(outcome.outcome)
             }
         }
     }
@@ -85,7 +92,8 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
     private fun type(exp: Exp): TypeExp = when (exp) {
         is Exp.Call -> when (exp.target.name) {
             "abs" -> {
-                checkOp(INT, exp.args.map { type(it) }); INT
+                checkOp(INT, exp.args.map { type(it) })
+                INT
             }
             else -> throw IllegalArgumentException(exp.target.name)
         }
@@ -96,7 +104,11 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
             "!" -> {
                 checkOp(BOOL, type(exp.operand)); BOOL
             }
-            "isUndefined" -> { requireStatic(type(exp.operand) is Opt); BOOL }
+            "isUndefined" -> {
+                // We'll need flow-sensitivity to check this
+                // requireStatic(type(exp.operand) is Opt, "isUndefined arg must be Opt")
+                BOOL
+            }
             else -> throw IllegalArgumentException(exp.op)
         }
         is Exp.BinOp -> {
@@ -116,11 +128,11 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
                     BOOL
                 }
                 "==", "!=" -> {
-                    requireStatic(compatible(left, right) || compatible(right, left), "$left <> $right")
+                    requireStatic(compatible(left, right) || compatible(right, left), "$left <> $right (1)")
                     BOOL
                 }
                 "<->", "<-!->" -> {
-                    requireStatic(compatible(left, BOOL) || compatible(right, BOOL), "$left <> $right")
+                    requireStatic(compatible(left, BOOL) || compatible(right, BOOL), "either $left or $right are incompatible with bool")
                     BOOL
                 }
                 else -> throw IllegalArgumentException(exp.op)
@@ -132,22 +144,25 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
         is Exp.Const.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
         is Exp.Var -> env.getValue(exp.name)
         is Exp.Member -> {
-            checkOp(role, type(Exp.Var(exp.target)))
-            INT // FIX
+            checkOp(ROLE, type(Exp.Var(exp.target)))
+            env.getValue(exp.target, exp.field)
         }
         is Exp.Cond -> {
             checkOp(BOOL, type(exp.cond))
             join(type(exp.ifTrue), type(exp.ifFalse))
         }
 
-        is Exp.Let -> TODO()
-        Exp.Const.UNDEFINED -> TODO() // We shouldn't really get here
+        is Exp.Let -> {
+            requireStatic(type(exp.init) == exp.dec.type, "Bad initialization of let exp")
+            Checker(typeMap, env + exp.dec).type(exp.exp)
+        }
+        Exp.Const.UNDEFINED -> throw AssertionError()
     }
 
     private fun checkOp(expected: TypeExp, args: Collection<TypeExp>) = checkOp(expected, *args.toTypedArray())
     private fun checkOp(expected: TypeExp, vararg args: TypeExp) {
         for (arg in args)
-            requireStatic(compatible(arg, expected))
+            requireStatic(compatible(arg, expected), "Incompatible operator argument: Expected $expected, actual $arg")
     }
 
     private fun compatible(t1: TypeExp, t2: TypeExp): Boolean {
@@ -170,11 +185,12 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
             join(t1, typeMap.getValue(t2.name))
         }
 
-        t1 === role && t2 === role -> role
+        t1 === TypeId("role") && t2 === TypeId("role") -> TypeId("role")
         t1 === ROLESET && t2 === ROLESET -> ROLESET
         t1 === ADDRESS && t2 === ADDRESS -> ADDRESS
         t1 === BOOL && t2 === BOOL -> BOOL
         t1 === INT && t2 is IntClass -> INT
+        t1 === EMPTY || t2 === EMPTY -> EMPTY // TODO: is it not meet?
         t1 is IntClass && t2 === INT -> INT
         t1 is Subset && t2 is Subset -> Subset(t1.values union t2.values)
         t1 is Range && t2 is Range -> Range(Exp.Const.Num(minOf(t1.min.n, t2.min.n)), Exp.Const.Num(maxOf(t1.max.n, t2.max.n)))
@@ -186,7 +202,7 @@ private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, Ty
             if (t2.values.size == max - min) t2
             else Range(Exp.Const.Num(min), Exp.Const.Num(max))
         }
-        else -> throw IncompatibleTypeError("$t1 !< $t2")
+        else -> EMPTY
     }
 
 }

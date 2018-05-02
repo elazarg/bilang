@@ -123,6 +123,7 @@ private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.ROLE -> "role"
     TypeExp.ROLESET -> "roleset"
     TypeExp.ADDRESS -> "address"
+    TypeExp.EMPTY -> throw AssertionError()
     is TypeExp.Hidden -> "hidden" //_${typeOf(t.type)}"
     is TypeExp.TypeId -> t.name
     is TypeExp.Subset -> "subset_${t.values.join("_")}"
@@ -136,6 +137,7 @@ private fun javaTypeOf(t: TypeExp): String = when (t) {
     TypeExp.ROLE -> TODO()
     TypeExp.ROLESET -> TODO()
     TypeExp.ADDRESS -> "Integer"
+    TypeExp.EMPTY -> throw AssertionError()
     is TypeExp.Hidden -> "Integer"
     is TypeExp.TypeId -> t.name
     is TypeExp.Subset -> "Integer"
