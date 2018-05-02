@@ -17,7 +17,8 @@ private fun run(name: String) {
     val inputFilename = "examples/$name.bi"
     println("Analyzing $inputFilename ...")
     val program = parse(inputFilename).copy(name=name, desc=name)
-    println(findRoles(program.game))
+    println("roles: " + findRoles(program.game))
+    writeFile("examples/types/$name.txt") { typeCheck(program); "OK" }
     writeFile("examples/gambit/$name.efg") {Extensive(program).toEfg()}
     writeFile("examples/scribble/$name.scr") {programToScribble(program).prettyPrintAll()}
     writeFile("examples/solidity/$name.sol") {genGame(program)}
@@ -32,6 +33,8 @@ private fun writeFile(filename: String, f: () -> String) {
         Paths.get(filename).toFile().writeText(text)
     } catch (ex: NotImplementedError) {
         println(ex.message)
+    } catch (ex: StaticError) {
+        println("Type error:" + ex.message)
     }
     println("Done")
 }
@@ -45,7 +48,7 @@ fun main(args: Array<String>) {
             "MontyHall", "MontyHallChance",
             "OddsEvens", "OddsEvensShort",
             "Prisoners",
-            "ThreeWayLottery", "ThreeWayLotteryBuggy", "ThreeWayLotteryShort",
-            "TicTacToe"
+            "ThreeWayLottery", "ThreeWayLotteryBuggy", "ThreeWayLotteryShort"
+            // ,"TicTacToe"
     ).forEach { run(it) }
 }

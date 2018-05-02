@@ -76,8 +76,10 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
     is Ext.BindSingle -> {
         val params = ext.q.params
         val role = ext.q.role
+
         fun send(label: String, decls: List<Pair<String, String>>, to: Set<Role> = setOf("Server")) =
                 Sast.Action.Send(label, decls, role, to)
+
         fun sendToServer(): List<Sast.Action.Send> {
             val (priv, pub) = params.partition { (_, type) -> type is TypeExp.Hidden }.map { declsOf(it) }
             return listOfNotNull(
@@ -86,14 +88,17 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
             )
         }
 
-        (when (ext.kind) {
+        val send = when (ext.kind) {
             Kind.JOIN -> listOf(Sast.Action.Connect(role)) + sendToServer()
             Kind.JOIN_CHANCE -> listOf(Sast.Action.Connect(role)) + sendToServer()
             Kind.YIELD -> sendToServer()
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
             Kind.MANY -> TODO()
-        } + Sast.Action.Send("Broadcast", declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }), "Server", roles - role)
-        + gameToScribble(ext.ext, roles))
+        }
+
+        val broadcast = Sast.Action.Send("Broadcast", declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }), "Server", roles - role)
+
+        send + broadcast + gameToScribble(ext.ext, roles)
     }
 
     is Ext.Bind -> ext.qs.flatMap { query ->

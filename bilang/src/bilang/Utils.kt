@@ -30,3 +30,6 @@ fun <K, V, V1> Iterable<Pair<K, V>>.mapValues(f: (Pair<K, V>) -> V1) : List<Pair
 
 fun <T> Iterable<Pair<String, T>>.names() = map { (name, _) -> name }
 fun <T> Iterable<Pair<String, T>>.types() = map { (_, type) -> type }
+
+val Pair<String, TypeExp>.name: String get() = first
+val Pair<String, TypeExp>.type: TypeExp get() = second

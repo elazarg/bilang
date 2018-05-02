@@ -226,7 +226,7 @@ private fun exp(e: Exp): String = when (e) {
     is Exp.Const.Address -> "address(${e.n.toString(16)})" // todo hex
     is Exp.Const.Hidden -> exp(e.value as Exp)
     is Exp.Let -> TODO()
-    Exp.Const.UNDEFINED -> throw StaticError(0, "Undefined")
+    Exp.Const.UNDEFINED -> throw StaticError("Undefined")
 }
 
 private fun typeOf(t: TypeExp): String = when (t) {

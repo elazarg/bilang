@@ -5,34 +5,80 @@ import bilang.TypeExp.*
 data class IncompatibleTypeError(val s: String) : Exception()
 
 
-internal class StaticError(val line: Int, reason: String) : RuntimeException(reason)
+internal class StaticError(reason: String) : RuntimeException(reason)
 
-class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, TypeExp>) {
-    val env = _env.toMutableMap()
+fun requireStatic(b: Boolean, s: String = "") {
+    if (!b) throw StaticError(s)
+}
 
-    private val ROLE = TypeId("role")
+fun typeCheck(program: ExpProgram) {
+    Checker(
+            Env(),
+            mapOf(
+                    Pair("bool", BOOL),
+                    Pair("role", TypeExp.ROLE),
+                    Pair("int", INT)
+            )
+    ).type(program.game)
+}
 
-    companion object {
-        fun typeCheck(program: ExpProgram) {
-            Checker(
-                    mapOf(
-                            Pair(Exp.Var("true"), BOOL),
-                            Pair(Exp.Var("false"), BOOL)),
-                    mapOf(
-                            Pair("bool", BOOL),
-                            Pair("role", TypeExp.ROLE),
-                            Pair("int", INT)
-                    )
-            ).type(program.game)
+private class Checker(val env: Env<TypeExp>, private val typeMap: Map<String, TypeExp>) {
+
+    private val role = TypeId("role")
+
+    fun type(ext: Ext) {
+        when (ext) {
+            is Ext.Bind -> {
+                val (ns, ms) = ext.qs.map { q ->
+                    val m = q.params.map{ (k, v) -> Pair(q.role, k) to v }.toMap()
+                    when (ext.kind) {
+                        Kind.JOIN -> {
+                            val n = mapOf(q.role to ROLE)
+                            checkWhere(n, m, q)
+                            Pair(n, m)
+                        }
+                        Kind.YIELD -> {
+                            val n = mapOf<String, TypeExp>()
+                            checkWhere(n, m, q)
+                            requireStatic(type(Exp.Var(q.role)) == ROLE)
+                            Pair(n, m)
+                        }
+                        Kind.REVEAL -> TODO()
+                        Kind.MANY -> TODO()
+                        Kind.JOIN_CHANCE -> TODO()
+                    }
+                }.unzip()
+                Checker(env + ns.flatten() with ms.flatten(), typeMap).type(ext.ext)
+            }
+
+            is Ext.BindSingle -> type(Ext.Bind(ext.kind, listOf(ext.q), ext.ext))
+
+            is Ext.Value -> type(ext.exp)
         }
     }
-    private fun type(outcome: Outcome): Nothing = TODO()
 
-    private fun type(ext: Ext) {
-        when (ext) {
-            is Ext.Bind -> TODO()
-            is Ext.BindSingle -> TODO()
-            is Ext.Value -> type(ext.exp)
+    private fun <K> List<Map<K, TypeExp>>.flatten() = flatMap { it.entries.map { it.toPair() } }.toMap()
+
+    private fun checkWhere(n: Map<String, TypeExp>, m: Map<Pair<String, String>, TypeExp>, q: Query) {
+        requireStatic(Checker(env + n with m, typeMap).type(q.where) == BOOL, "Where clause failed")
+    }
+
+    private fun type(outcome: Outcome) {
+        when (outcome) {
+            is Outcome.Cond -> {
+                requireStatic(type(outcome.cond) == BOOL)
+                type(outcome.ifTrue)
+                type(outcome.ifFalse)
+            }
+            is Outcome.Value -> {
+                outcome.ts.forEach { (_, v) ->
+                    requireStatic(type(v) == TypeExp.INT)
+                }
+            }
+            is Outcome.Let -> {
+                requireStatic(type(outcome.init) == outcome.dec.type)
+                Checker(env + outcome.dec, typeMap).type(outcome.outcome)
+            }
         }
     }
 
@@ -50,7 +96,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
             "!" -> {
                 checkOp(BOOL, type(exp.operand)); BOOL
             }
-            "isUndefined" -> { require(type(exp.operand) is Opt); BOOL }
+            "isUndefined" -> { requireStatic(type(exp.operand) is Opt); BOOL }
             else -> throw IllegalArgumentException(exp.op)
         }
         is Exp.BinOp -> {
@@ -70,11 +116,11 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
                     BOOL
                 }
                 "==", "!=" -> {
-                    require(compatible(left, right) || compatible(right, left), { "$left <> $right" })
+                    requireStatic(compatible(left, right) || compatible(right, left), "$left <> $right")
                     BOOL
                 }
                 "<->", "<-!->" -> {
-                    require(compatible(left, BOOL) || compatible(right, BOOL), { "$left <> $right" })
+                    requireStatic(compatible(left, BOOL) || compatible(right, BOOL), "$left <> $right")
                     BOOL
                 }
                 else -> throw IllegalArgumentException(exp.op)
@@ -84,9 +130,9 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         is Exp.Const.Address -> ADDRESS
         is Exp.Const.Bool -> BOOL
         is Exp.Const.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
-        is Exp.Var -> env.getValue(exp)
+        is Exp.Var -> env.getValue(exp.name)
         is Exp.Member -> {
-            checkOp(ROLE, type(Exp.Var(exp.target)))
+            checkOp(role, type(Exp.Var(exp.target)))
             INT // FIX
         }
         is Exp.Cond -> {
@@ -101,7 +147,7 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
     private fun checkOp(expected: TypeExp, args: Collection<TypeExp>) = checkOp(expected, *args.toTypedArray())
     private fun checkOp(expected: TypeExp, vararg args: TypeExp) {
         for (arg in args)
-            require(compatible(arg, expected))
+            requireStatic(compatible(arg, expected))
     }
 
     private fun compatible(t1: TypeExp, t2: TypeExp): Boolean {
@@ -116,15 +162,15 @@ class Checker(_env: Map<Exp.Var, TypeExp>, private val typeMap: Map<String, Type
         t2 is Opt -> Opt(join(t1, t2.type))
         t1 == t2 -> t1
         t1 is TypeId -> {
-            require(typeMap.containsKey(t1.name), { "$t1 not in type map" })
+            requireStatic(typeMap.containsKey(t1.name), "$t1 not in type map")
             join(typeMap.getValue(t1.name), t2)
         }
         t2 is TypeId -> {
-            require(typeMap.containsKey(t2.name), { "$t2 not in type map" })
+            requireStatic(typeMap.containsKey(t2.name), "$t2 not in type map")
             join(t1, typeMap.getValue(t2.name))
         }
 
-        t1 === ROLE && t2 === ROLE -> ROLE
+        t1 === role && t2 === role -> role
         t1 === ROLESET && t2 === ROLESET -> ROLESET
         t1 === ADDRESS && t2 === ADDRESS -> ADDRESS
         t1 === BOOL && t2 === BOOL -> BOOL
