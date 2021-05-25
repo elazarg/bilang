@@ -77,7 +77,7 @@ private fun desugar(outcome: Outcome, names: List<Pair<VarDec, Exp>>): Outcome.V
     is Outcome.Cond -> {
         val ifTrue = desugar(outcome.ifTrue).ts
         val ifFalse = desugar(outcome.ifFalse).ts
-        val ts = ifTrue.keys.map { Pair(it, Exp.Cond(outcome.cond, ifTrue.getValue(it), ifFalse.getValue(it))) }.toMap()
+        val ts = ifTrue.keys.associateWith { Exp.Cond(outcome.cond, ifTrue.getValue(it), ifFalse.getValue(it)) }
         Outcome.Value(ts)
     }
     is Outcome.Let -> desugar(outcome.outcome, names + Pair(outcome.dec, outcome.init))

@@ -197,8 +197,8 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
         t1 is Subset && t2 is Range -> join(t2, t2)
         t1 is Range && t2 is Subset -> {
             val values = t2.values.map { it.n }
-            val min = minOf(t1.min.n, values.min()!!)
-            val max = minOf(t1.max.n, values.max()!!)
+            val min = minOf(t1.min.n, values.minOrNull()!!)
+            val max = minOf(t1.max.n, values.maxOrNull()!!)
             if (t2.values.size == max - min) t2
             else Range(Exp.Const.Num(min), Exp.Const.Num(max))
         }

@@ -210,13 +210,17 @@ private fun genOutcome(switch: Outcome.Value, step: Int): String {
 
 private fun exp(e: Exp): String = when (e) {
     is Exp.Call -> "${exp(e.target)}(${e.args.map { exp(it) }.join(",")})"
-    is Exp.UnOp -> if (e.op == "isUndefined") {
-        val operand = e.operand as Exp.Member
-        "! ${operand.target}_${operand.field}_done"
-    } else if (e.op == "isDefined") {
-        val operand = e.operand as Exp.Member
-        "${operand.target}_${operand.field}_done"
-    } else "(${e.op} ${exp(e.operand)})"
+    is Exp.UnOp -> when (e.op) {
+        "isUndefined" -> {
+            val operand = e.operand as Exp.Member
+            "! ${operand.target}_${operand.field}_done"
+        }
+        "isDefined" -> {
+            val operand = e.operand as Exp.Member
+            "${operand.target}_${operand.field}_done"
+        }
+        else -> "(${e.op} ${exp(e.operand)})"
+    }
     is Exp.BinOp -> {
         val op = if (e.op == "<->") "==" else if (e.op == "<-!->") "!=" else e.op
         "(${exp(e.left)} $op ${exp(e.right)})"

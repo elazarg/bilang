@@ -242,7 +242,7 @@ private fun Env<Const>.updateHeap(q: Query, newEnv: Map<String, Const>): Env<Con
 
 private fun Env<Const>.addRole(role: String, chance: Boolean = false): Env<Const> {
     val address = if (chance) 0 else
-        (1 + (g.values.map { (it as? Address)?.n ?: 0 }.max() ?: 0))
+        (1 + (g.values.map { (it as? Address)?.n ?: 0 }.maxOrNull() ?: 0))
     return this + Pair(role, Address(address))
 }
 

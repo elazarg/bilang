@@ -4,7 +4,6 @@ import generated.BiLangBaseVisitor;
 import generated.BiLangParser.*;
 import kotlin.Pair;
 import org.antlr.v4.runtime.Token;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
@@ -170,8 +169,6 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return num(ctx.INT().getSymbol());
     }
 
-
-    @NotNull
     private String var(Token target) {
         return target.getText();
     }
@@ -200,8 +197,6 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         return iterable.stream().map(f).collect(toList());
     }
 
-
-    @NotNull
     private Kind toKind(Token kind) {
         switch (kind.getText()) {
             case "join":
@@ -220,17 +215,14 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     private Pair<String, TypeExp> vardec(VarDecContext ctx) {
         TypeExp type = type(ctx);
-        return new Pair(var(ctx.name), (ctx.hidden != null) ? new TypeExp.Hidden(type) : type);
+        return new Pair<>(var(ctx.name), (ctx.hidden != null) ? new TypeExp.Hidden(type) : type);
     }
 
-    @NotNull
     private TypeExp type(VarDecContext ctx) {
-        switch (ctx.type.getText()) {
-            case "bool":
-                return TypeExp.BOOL.INSTANCE;
-            case "int":
-                return TypeExp.INT.INSTANCE;
-        }
-        return new TypeExp.TypeId(ctx.type.getText());
+        return switch (ctx.type.getText()) {
+            case "bool" -> TypeExp.BOOL.INSTANCE;
+            case "int" -> TypeExp.INT.INSTANCE;
+            default -> new TypeExp.TypeId(ctx.type.getText());
+        };
     }
 }
