@@ -42,9 +42,9 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
                     val names = q.params.names()
-                    val revealedPacket = names.map { Pair(it, revealed.getValue(role, it)) }.toMap()
+                    val revealedPacket = names.associateWith { revealed.getValue(role, it) }
                     val quit = env.mapHidden(q) { UNDEFINED }
-                    val quitPacket = names.map { Pair(it, UNDEFINED) }.toMap()
+                    val quitPacket = names.associateWith { UNDEFINED }
                     val infoset = UniqueHash.of(env.eraseHidden(role))
                     val (edges, children) = if (env.isChance(role))
                         Pair(listOf(revealedPacket), listOf(fromExp(subExt, revealed)))
@@ -152,8 +152,7 @@ fun eval(exp: Exp, env: Env<Const>): Const {
         is Var -> env.getValue(exp.name)
         is Member -> env.getValue(exp.target, exp.field)
         is Cond -> {
-            val cond = eval(exp.cond)
-            when (cond) {
+            when (val cond = eval(exp.cond)) {
                 is Bool -> if (cond.truth) eval(exp.ifTrue) else eval(exp.ifFalse)
                 else -> throw AssertionError()
             }

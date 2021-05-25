@@ -14,7 +14,7 @@ fun typeCheck(program: ExpProgram) {
     Checker(
             program.types + mapOf(
                     Pair("bool", BOOL),
-                    Pair("role", TypeExp.ROLE),
+                    Pair("role", ROLE),
                     Pair("int", INT)
             )
     ).type(program.game)
@@ -26,7 +26,7 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
         when (ext) {
             is Ext.Bind -> {
                 val (ns, ms) = ext.qs.map { q ->
-                    val m = q.params.map { (k, v) -> Pair(q.role, k) to v }.toMap()
+                    val m = q.params.associate { (k, v) -> Pair(q.role, k) to v }
                     when (ext.kind) {
                         Kind.JOIN -> {
                             val n = mapOf(q.role to ROLE)
@@ -79,7 +79,7 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
             }
             is Outcome.Value -> {
                 outcome.ts.forEach { (_, v) ->
-                    requireStatic(type(v) == TypeExp.INT, "outcome value must be an int")
+                    requireStatic(type(v) == INT, "outcome value must be an int")
                 }
             }
             is Outcome.Let -> {
@@ -141,7 +141,7 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
         is Exp.Const.Num -> INT
         is Exp.Const.Address -> ADDRESS
         is Exp.Const.Bool -> BOOL
-        is Exp.Const.Hidden -> TypeExp.Hidden(type(exp.value as Exp))
+        is Exp.Const.Hidden -> Hidden(type(exp.value as Exp))
         is Exp.Var -> env.getValue(exp.name)
         is Exp.Member -> {
             checkOp(ROLE, type(Exp.Var(exp.target)))

@@ -5,7 +5,7 @@ fun <K, V> Map<K, List<V>>.product(): List<Map<K, V>> =
         entries.map { (key, value) -> value.map { Pair(key, it) } }.product().map { it.toMap() }
 
 fun <T> Iterable<List<T>>.product(): List<List<T>> =
-        fold(listOf(listOf()), { acc, y -> y.flatMap { t -> acc.map { tup -> tup + t } } })
+        fold(listOf(listOf())) { acc, y -> y.flatMap { t -> acc.map { tup -> tup + t } } }
 
 object UniqueHash {
     private var n = 0
