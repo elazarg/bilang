@@ -29,7 +29,7 @@ fun <T> Iterable<T>.join(sep: String, f: (T) -> String) = joinToString(sep) { f(
 
 fun <K, V, V1> Iterable<Pair<K, V>>.mapValues(f: (Pair<K, V>) -> V1) : List<Pair<K, V1>> = map { (k, v) -> Pair(k, f(Pair(k, v))) }
 
-fun <K, V> Iterable<Map<K, V>>.union(): Map<K, V> = flatMap { it.entries.map { it.toPair() } }.toMap()
+fun <K, V> Iterable<Map<K, V>>.union(): Map<K, V> = flatMap { xs -> xs.entries.map { it.toPair() } }.toMap()
 
 // type-specific
 

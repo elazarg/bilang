@@ -13,7 +13,7 @@ fun smt(g: ExpProgram) = """
     """.trimMargin()
 
 private fun defineTypes(types: Map<String, TypeExp>) =
-        types.map { (name, type) -> "(define-sort $name () Int)" }.join("\n")
+        types.map { (name, _) -> "(define-sort $name () Int)" }.join("\n")
 
 private fun ext(e: Ext): String = when (e) {
     is Ext.Bind -> e.qs.map { bind(it) }.join("\n") + ext(e.ext)

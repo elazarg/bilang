@@ -54,7 +54,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
         Ext ext = ext(ctx.ext());
         Kind kind = toKind(ctx.kind);
         if (ctx.query().size() == 1)
-            return new Ext.BindSingle(kind, query(ctx.query().get(0)), ext);
+            return new Ext.BindSingle(kind, query(ctx.query().getFirst()), ext);
         else
             return new Ext.Bind(kind, list(ctx.query(), this::query), ext);
     }
@@ -198,19 +198,14 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
     }
 
     private Kind toKind(Token kind) {
-        switch (kind.getText()) {
-            case "join":
-                return Kind.JOIN;
-            case "yield":
-                return Kind.YIELD;
-            case "reveal":
-                return Kind.REVEAL;
-            case "many":
-                return Kind.MANY;
-            case "random":
-                return Kind.JOIN_CHANCE;
-        }
-        throw new AssertionError();
+        return switch (kind.getText()) {
+            case "join" -> Kind.JOIN;
+            case "yield" -> Kind.YIELD;
+            case "reveal" -> Kind.REVEAL;
+            case "many" -> Kind.MANY;
+            case "random" -> Kind.JOIN_CHANCE;
+            default -> throw new AssertionError();
+        };
     }
 
     private Pair<String, TypeExp> vardec(VarDecContext ctx) {
