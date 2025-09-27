@@ -89,18 +89,6 @@ public class BiLangBaseListener implements BiLangListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterFoldExt(BiLangParser.FoldExtContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitFoldExt(BiLangParser.FoldExtContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
 	@Override public void enterWithdrawExt(BiLangParser.WithdrawExtContext ctx) { }
 	/**
 	 * {@inheritDoc}

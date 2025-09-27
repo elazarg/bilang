@@ -76,18 +76,6 @@ public interface BiLangListener extends ParseTreeListener {
 	 */
 	void exitReceiveExt(BiLangParser.ReceiveExtContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code FoldExt}
-	 * labeled alternative in {@link BiLangParser#ext}.
-	 * @param ctx the parse tree
-	 */
-	void enterFoldExt(BiLangParser.FoldExtContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code FoldExt}
-	 * labeled alternative in {@link BiLangParser#ext}.
-	 * @param ctx the parse tree
-	 */
-	void exitFoldExt(BiLangParser.FoldExtContext ctx);
-	/**
 	 * Enter a parse tree produced by the {@code WithdrawExt}
 	 * labeled alternative in {@link BiLangParser#ext}.
 	 * @param ctx the parse tree

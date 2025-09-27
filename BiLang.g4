@@ -14,6 +14,8 @@ ext : kind=('join' | 'yield' | 'reveal' | 'many' | 'random') query+ ';' ext  # R
     | 'withdraw' outcome # WithdrawExt
     ;
 
+query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('$' deposit=INT)? ('where' cond=exp)? ;
+
 outcome
     : <assoc=right> cond=exp '?' ifTrue=outcome ':' ifFalse=outcome # IfOutcome
     | 'let' dec=varDec '=' init=exp 'in' body=outcome  # LetOutcome

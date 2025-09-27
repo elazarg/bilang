@@ -51,13 +51,6 @@ public interface BiLangVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitReceiveExt(BiLangParser.ReceiveExtContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code FoldExt}
-	 * labeled alternative in {@link BiLangParser#ext}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitFoldExt(BiLangParser.FoldExtContext ctx);
-	/**
 	 * Visit a parse tree produced by the {@code WithdrawExt}
 	 * labeled alternative in {@link BiLangParser#ext}.
 	 * @param ctx the parse tree
