@@ -49,7 +49,7 @@ withdraw (Host.car != null && Guest.switch != null)
 
 ```bash
 # Generate ANTLR parser (assumes ANTLR is configured)
-antlr4 BiLang.g4 -package bilangGen
+antlr4 -o ./generated/bilangGen -package bilangGen -listener -visitor -lib . ./BiLang.g4
 
 # Compile Kotlin code
 kotlinc src/bilang/*.kt -cp antlr-runtime.jar
