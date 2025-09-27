@@ -46,10 +46,14 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                     val quit = env.mapHidden(q) { UNDEFINED }
                     val quitPacket = names.associateWith { UNDEFINED }
                     val infoset = UniqueHash.of(env.eraseHidden(role))
-                    val (edges, children) = if (env.isChance(role))
-                        Pair(listOf(revealedPacket), listOf(fromExp(subExt, revealed)))
+                    val edges = if (env.isChance(role))
+                        listOf(revealedPacket)
                     else
-                        Pair(listOf(revealedPacket, quitPacket), listOf(fromExp(subExt, revealed), fromExp(subExt, quit)))
+                        listOf(revealedPacket, quitPacket)
+                    val children = if (env.isChance(role))
+                        listOf(fromExp(subExt, revealed))
+                    else
+                        listOf(fromExp(subExt, revealed), fromExp(subExt, quit))
                     Tree.Node(role, revealed, infoset, edges, children)
                 }
 

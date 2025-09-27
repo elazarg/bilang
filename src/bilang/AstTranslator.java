@@ -1,7 +1,7 @@
 package bilang;
 
-import generated.BiLangBaseVisitor;
-import generated.BiLangParser.*;
+import bilangGen.BiLangBaseVisitor;
+import bilangGen.BiLangParser.*;
 import kotlin.Pair;
 import org.antlr.v4.runtime.Token;
 
