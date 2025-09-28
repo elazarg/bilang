@@ -19,44 +19,38 @@ jobs:
       with:
         java-version: '11'
         distribution: 'temurin'
-        cache: 'maven' # Caches Maven dependencies if you add them later
 
     - name: Cache ANTLR
       id: cache-antlr
       uses: actions/cache@v4
       with:
-        path: lib/antlr-4.13.2-complete.jar
+        path: antlr-4.13.2-complete.jar
         key: ${{ runner.os }}-antlr-4.13.2
+
+    - name: Download ANTLR if not cached
+      if: steps.cache-antlr.outputs.cache-hit != 'true'
+      run: wget https://www.antlr.org/download/antlr-4.13.2-complete.jar
 
     - name: Generate ANTLR Parser
       run: |
-        java -jar lib/antlr-4.13.2-complete.jar -o ./generated/bilangGen \
+        java -jar antlr-4.13.2-complete.jar -o ./generated/bilangGen \
           -package bilangGen -listener -visitor -lib . ./BiLang.g4
 
-    - name: Set up Kotlin
-      uses: setup-kotlin/setup-kotlin@v2
-      with:
-        kotlin-version: '1.9.22'
-
-    - name: Compile BiLang
+    - name: Compile and Run Tests
       run: |
+        # Compile the project using the pre-installed Kotlin compiler
         kotlinc src/bilang/*.kt generated/bilangGen/*.java \
-          -cp lib/antlr-4.13.2-complete.jar -d build
+          -cp antlr-4.13.2-complete.jar -d build
 
-    - name: Run Golden Master Test
-      run: |
-        # Run the compiler to generate output
+        # Run the compiler to generate output files
         kotlin -cp build:antlr-4.13.2-complete.jar bilang.MainKt
 
-        # Create a directory for the new output
+        # Create a directory for the new output to avoid diffing against itself
         mkdir -p new_output/gambit new_output/solidity
-
-        # Copy generated files to the new output directory
         cp examples/gambit/*.efg new_output/gambit/
         cp examples/solidity/*.sol new_output/solidity/
 
-        # Compare the new output with the committed "golden" versions
-        # The diff command will exit with a non-zero status if there are differences
+        # Compare generated files with golden masters. This will fail the job if there are differences.
         echo "Comparing generated files with golden masters..."
         diff -r examples/gambit new_output/gambit
         diff -r examples/solidity new_output/solidity
