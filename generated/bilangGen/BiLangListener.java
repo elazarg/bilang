@@ -1,4 +1,4 @@
-// Generated from D:/workspace/bilang/BiLang.g4 by ANTLR 4.13.2
+// Generated from C:/Users/elazar/workspace/bilang/BiLang.g4 by ANTLR 4.13.2
 package bilangGen;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
