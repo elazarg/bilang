@@ -20,33 +20,32 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
 
-    - name: Cache ANTLR
-      id: cache-antlr
-      uses: actions/cache@v4
-      with:
-        path: antlr-4.13.2-complete.jar
-        key: ${{ runner.os }}-antlr-4.13.2
-
-    - name: Download ANTLR if not cached
-      if: steps.cache-antlr.outputs.cache-hit != 'true'
-      run: wget https://www.antlr.org/download/antlr-4.13.2-complete.jar
-
     - name: Generate ANTLR Parser
       run: |
-        java -jar antlr-4.13.2-complete.jar -o ./generated/bilangGen \
+        # Use the ANTLR jar from the lib directory
+        java -jar lib/antlr-4.13.2-complete.jar -o ./generated/bilangGen \
           -package bilangGen -listener -visitor -lib . ./BiLang.g4
 
     - name: Compile and Run Tests
       run: |
-        # Correctly compile the mixed-language project by including both 'src' 
-        # (for Kotlin and the Java AstTranslator) and 'generated' (for ANTLR files) 
-        # as source directories.
-        kotlinc src generated -cp antlr-4.13.2-complete.jar -d build
+        # Create the build directory
+        mkdir -p build
+
+        # Step 1: Compile all Java sources
+        echo "Compiling Java sources..."
+        javac -cp lib/antlr-4.13.2-complete.jar -d build \
+          src/bilang/*.java \
+          generated/bilangGen/*.java
+
+        # Step 2: Compile Kotlin sources
+        echo "Compiling Kotlin sources..."
+        kotlinc src/bilang/*.kt -cp build:lib/antlr-4.13.2-complete.jar -d build
 
         # Run the compiler to generate output files
-        kotlin -cp build:antlr-4.13.2-complete.jar bilang.MainKt
+        echo "Running BiLang compiler..."
+        kotlin -cp build:lib/antlr-4.13.2-complete.jar bilang.MainKt
 
-        # Create a directory for the new output to avoid diffing against itself
+        # Create a directory for the new output
         mkdir -p new_output/gambit new_output/solidity
         cp examples/gambit/*.efg new_output/gambit/
         cp examples/solidity/*.sol new_output/solidity/
