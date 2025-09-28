@@ -36,7 +36,7 @@ jobs:
     - name: Set up Kotlin
       uses: setup-kotlin/setup-kotlin@v2
       with:
-        kotlin-version: '1.9.22' # Specify a version for consistency
+        kotlin-version: '1.9.22'
 
     - name: Compile BiLang
       run: |
