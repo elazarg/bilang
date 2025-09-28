@@ -22,7 +22,7 @@ jobs:
 
     - name: Compile and Run Tests
       run: |
-        # Install SDKMAN and Kotlin in the same step to ensure it's in the PATH
+        # Install SDKMAN and Kotlin to ensure a consistent environment
         curl -s "https://get.sdkman.io" | bash
         source "$HOME/.sdkman/bin/sdkman-init.sh"
         sdk install kotlin
@@ -30,21 +30,23 @@ jobs:
         # Create the build directory
         mkdir -p build
 
-        # Step 1: Compile all Java sources
+        # Step 1: Compile all Java sources. The classpath needs both the ANTLR library
+        # (for ANTLR imports) and the Kotlin standard library (for kotlin.Pair).
         echo "Compiling Java sources..."
         javac -cp "lib/antlr-4.13.2-complete.jar:$KOTLIN_HOME/lib/kotlin-stdlib.jar" -d build \
           src/bilang/*.java \
           generated/bilangGen/*.java
 
-        # Step 2: Compile Kotlin sources
+        # Step 2: Compile Kotlin sources. The classpath needs the compiled Java classes (`build`)
+        # and the ANTLR library (for ANTLR types used in Kotlin code).
         echo "Compiling Kotlin sources..."
         kotlinc src/bilang/*.kt -cp "build:lib/antlr-4.13.2-complete.jar" -d build
 
-        # Step 3: Run the compiled program
+        # Step 3: Run the compiled program with the full runtime classpath.
         echo "Running BiLang compiler..."
         kotlin -cp "build:lib/antlr-4.13.2-complete.jar:$KOTLIN_HOME/lib/kotlin-stdlib.jar" bilang.MainKt
 
-        # Step 4: Perform Golden Master Testing
+        # Step 4: Perform Golden Master Testing for verification.
         echo "Comparing generated files with golden masters..."
         mkdir -p new_output/gambit new_output/solidity
         cp examples/gambit/*.efg new_output/gambit/
