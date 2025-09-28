@@ -22,22 +22,25 @@ jobs:
 
     - name: Compile and Run Tests
       run: |
+        # Define the path to the pre-installed Kotlin standard library
+        KOTLIN_STDLIB_PATH="/usr/share/kotlin/lib/kotlin-stdlib.jar"
+
         # Create the build directory
         mkdir -p build
 
-        # Step 1: Compile all Java sources using the project's JDK
+        # Step 1: Compile all Java sources, including the Kotlin standard library in the classpath
         echo "Compiling Java sources..."
-        javac -cp lib/antlr-4.13.2-complete.jar -d build \
+        javac -cp "lib/antlr-4.13.2-complete.jar:$KOTLIN_STDLIB_PATH" -d build \
           src/bilang/*.java \
           generated/bilangGen/*.java
 
-        # Step 2: Compile Kotlin sources, adding the build directory to the classpath
+        # Step 2: Compile Kotlin sources, adding the build directory to its classpath
         echo "Compiling Kotlin sources..."
-        kotlinc src/bilang/*.kt -cp build:lib/antlr-4.13.2-complete.jar -d build
+        kotlinc src/bilang/*.kt -cp "build:lib/antlr-4.13.2-complete.jar" -d build
 
-        # Run the compiler to generate output files
+        # Run the compiler with the final, correct classpath
         echo "Running BiLang compiler..."
-        kotlin -cp build:lib/antlr-4.13.2-complete.jar bilang.MainKt
+        kotlin -cp "build:lib/antlr-4.13.2-complete.jar:$KOTLIN_STDLIB_PATH" bilang.MainKt
 
         # Create a directory for the new output
         mkdir -p new_output/gambit new_output/solidity
