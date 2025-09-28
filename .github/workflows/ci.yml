@@ -38,9 +38,10 @@ jobs:
 
     - name: Compile and Run Tests
       run: |
-        # Compile the project using the pre-installed Kotlin compiler
-        kotlinc src/bilang/*.kt generated/bilangGen/*.java \
-          -cp antlr-4.13.2-complete.jar -d build
+        # Correctly compile the mixed-language project by including both 'src' 
+        # (for Kotlin and the Java AstTranslator) and 'generated' (for ANTLR files) 
+        # as source directories.
+        kotlinc src generated -cp antlr-4.13.2-complete.jar -d build
 
         # Run the compiler to generate output files
         kotlin -cp build:antlr-4.13.2-complete.jar bilang.MainKt
@@ -50,7 +51,7 @@ jobs:
         cp examples/gambit/*.efg new_output/gambit/
         cp examples/solidity/*.sol new_output/solidity/
 
-        # Compare generated files with golden masters. This will fail the job if there are differences.
+        # Compare generated files with golden masters
         echo "Comparing generated files with golden masters..."
         diff -r examples/gambit new_output/gambit
         diff -r examples/solidity new_output/solidity
