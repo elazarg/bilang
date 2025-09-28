@@ -14,30 +14,24 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up JDK 11
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'temurin'
-
-    - name: Generate ANTLR Parser
-      run: |
-        # Use the ANTLR jar from the lib directory
-        java -jar lib/antlr-4.13.2-complete.jar -o ./generated/bilangGen \
-          -package bilangGen -listener -visitor -lib . ./BiLang.g4
 
     - name: Compile and Run Tests
       run: |
         # Create the build directory
         mkdir -p build
 
-        # Step 1: Compile all Java sources
+        # Step 1: Compile all Java sources using the project's JDK
         echo "Compiling Java sources..."
         javac -cp lib/antlr-4.13.2-complete.jar -d build \
           src/bilang/*.java \
           generated/bilangGen/*.java
 
-        # Step 2: Compile Kotlin sources
+        # Step 2: Compile Kotlin sources, adding the build directory to the classpath
         echo "Compiling Kotlin sources..."
         kotlinc src/bilang/*.kt -cp build:lib/antlr-4.13.2-complete.jar -d build
 
