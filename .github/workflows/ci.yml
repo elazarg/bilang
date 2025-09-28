@@ -20,37 +20,34 @@ jobs:
         java-version: '25'
         distribution: 'temurin'
 
-    - name: Set up Kotlin
-      uses: setup-kotlin/setup-kotlin@v2
-      with:
-        kotlin-version: '1.9.22' # Using a specific, stable version
-
     - name: Compile and Run Tests
       run: |
+        # Install SDKMAN and Kotlin in the same step to ensure it's in the PATH
+        curl -s "https://get.sdkman.io" | bash
+        source "$HOME/.sdkman/bin/sdkman-init.sh"
+        sdk install kotlin
+
         # Create the build directory
         mkdir -p build
 
-        # Step 1: Compile all Java sources.
-        # We must include the kotlin-stdlib.jar in the classpath so javac can resolve `import kotlin.Pair;`
+        # Step 1: Compile all Java sources
         echo "Compiling Java sources..."
         javac -cp "lib/antlr-4.13.2-complete.jar:$KOTLIN_HOME/lib/kotlin-stdlib.jar" -d build \
           src/bilang/*.java \
           generated/bilangGen/*.java
 
-        # Step 2: Compile Kotlin sources, adding the build directory (with the new Java .class files) to the classpath.
+        # Step 2: Compile Kotlin sources
         echo "Compiling Kotlin sources..."
         kotlinc src/bilang/*.kt -cp "build:lib/antlr-4.13.2-complete.jar" -d build
 
-        # Step 3: Run the compiled program. The classpath needs the build directory, the ANTLR lib, and the Kotlin lib.
+        # Step 3: Run the compiled program
         echo "Running BiLang compiler..."
         kotlin -cp "build:lib/antlr-4.13.2-complete.jar:$KOTLIN_HOME/lib/kotlin-stdlib.jar" bilang.MainKt
 
-        # Create a directory for the new output to compare against
+        # Step 4: Perform Golden Master Testing
+        echo "Comparing generated files with golden masters..."
         mkdir -p new_output/gambit new_output/solidity
         cp examples/gambit/*.efg new_output/gambit/
         cp examples/solidity/*.sol new_output/solidity/
-
-        # Compare generated files with golden masters for correctness
-        echo "Comparing generated files with golden masters..."
         diff -r examples/gambit new_output/gambit
         diff -r examples/solidity new_output/solidity
