@@ -1,7 +1,7 @@
 package bilang
 
-import bilangGen.BiLangLexer
-import bilangGen.BiLangParser
+import bilang.generated.BiLangLexer
+import bilang.generated.BiLangParser
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import java.nio.file.Paths

@@ -1,5 +1,5 @@
-// Generated from C:/Users/elazar/workspace/bilang/BiLang.g4 by ANTLR 4.13.2
-package bilangGen;
+// Generated from BiLang.g4 by ANTLR 4.13.2
+package bilang.generated;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**
