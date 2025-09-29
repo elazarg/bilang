@@ -3,6 +3,7 @@ grammar BiLang;
 program : typeDec* ext EOF ;
 
 typeDec : 'type' name=ID '=' typeExp ;
+
 typeExp
     : '{' vals+=INT (',' vals+=INT)* '}'  # SubsetTypeExp
     | '{' start=INT '..' end=INT '}'      # RangeTypeExp
@@ -11,37 +12,37 @@ typeExp
 
 // only sensible combination is independent yield
 ext : kind=('join' | 'yield' | 'reveal' | 'random') query+ ';' ext  # ReceiveExt
-    | 'withdraw' outcome # WithdrawExt
+    | 'withdraw' outcome                                            # WithdrawExt
     ;
 
 query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('$' deposit=INT)? ('where' cond=exp)? ;
 
 outcome
     : <assoc=right> cond=exp '?' ifTrue=outcome ':' ifFalse=outcome # IfOutcome
-    | 'let' dec=varDec '=' init=exp 'in' body=outcome  # LetOutcome
-    | '(' outcome ')'                          # ParenOutcome
-    | '{' items+=item+ '}'                    # OutcomeExp
+    | 'let' dec=varDec '=' init=exp 'in' body=outcome               # LetOutcome
+    | '(' outcome ')'                                               # ParenOutcome
+    | '{' items+=item+ '}'                                          # OutcomeExp
     ;
 
 item : (ID '->' exp ';'?) ;
 
 exp
-    : '(' exp ')'                             # ParenExp
-    | role=ID '.' field=ID                    # MemberExp
-    | callee=ID '(' (args+=exp (',' args+=exp)*)?  ')' # CallExp
-    | op=('-' | '!') exp                      # UnOpExp
-    | left=exp op=('*' | '/') right=exp       # BinOpMultExp
-    | left=exp op=('+' | '-') right=exp       # BinOpAddExp
-    | exp op=('!='|'==') 'null'                  # UndefExp
-    | left=exp op=('<' | '<=' | '>=' | '>') right=exp    # BinOpCompExp
-    | left=exp op=('==' | '!=' | '<->' | '<-!->') right=exp     # BinOpEqExp
-    | left=exp op=('&&' | '||') right=exp     # BinOpBoolExp
-    | <assoc=right> cond=exp '?' ifTrue=exp ':' ifFalse=exp # IfExp
-    | ('true'|'false')                        # BoolLiteralExp
-    | name=ID                                 # IdExp
-    | INT                                     # NumLiteralExp
-    | ADDRESS                                 # AddressLiteralExp
-    | 'let!' dec=varDec '=' init=exp 'in' body=exp  # LetExp
+    : '(' exp ')'                                            # ParenExp
+    | role=ID '.' field=ID                                   # MemberExp
+    | callee=ID '(' (args+=exp (',' args+=exp)*)?  ')'       # CallExp
+    | op=('-' | '!') exp                                     # UnOpExp
+    | left=exp op=('*' | '/') right=exp                      # BinOpMultExp
+    | left=exp op=('+' | '-') right=exp                      # BinOpAddExp
+    | exp op=('!='|'==') 'null'                              # UndefExp
+    | left=exp op=('<' | '<=' | '>=' | '>') right=exp        # BinOpCompExp
+    | left=exp op=('==' | '!=' | '<->' | '<-!->') right=exp  # BinOpEqExp
+    | left=exp op=('&&' | '||') right=exp                    # BinOpBoolExp
+    | <assoc=right> cond=exp '?' ifTrue=exp ':' ifFalse=exp  # IfExp
+    | ('true'|'false')                                       # BoolLiteralExp
+    | name=ID                                                # IdExp
+    | INT                                                    # NumLiteralExp
+    | ADDRESS                                                # AddressLiteralExp
+    | 'let!' dec=varDec '=' init=exp 'in' body=exp           # LetExp
     ;
 
 
