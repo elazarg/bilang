@@ -56,8 +56,6 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                         listOf(fromExp(subExt, revealed), fromExp(subExt, quit))
                     Tree.Node(role, revealed, infoset, edges, children)
                 }
-
-                Kind.MANY -> TODO()
             }
         }
         is Ext.Bind -> when (ext.kind) {
@@ -69,7 +67,6 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             }
             Kind.JOIN_CHANCE -> TODO()
             Kind.REVEAL -> TODO()
-            Kind.MANY -> TODO()
         }
         is Ext.Value -> Tree.Leaf(ext.exp.ts.mapValues { (_, exp) -> eval(exp, env) as OutcomeType })
     }

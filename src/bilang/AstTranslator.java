@@ -202,7 +202,6 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
             case "join" -> Kind.JOIN;
             case "yield" -> Kind.YIELD;
             case "reveal" -> Kind.REVEAL;
-            case "many" -> Kind.MANY;
             case "random" -> Kind.JOIN_CHANCE;
             default -> throw new AssertionError();
         };

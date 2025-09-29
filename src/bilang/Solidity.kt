@@ -87,15 +87,11 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
 
     return when (kind) {
         Kind.JOIN_CHANCE -> makeQuery(Kind.JOIN, q, step)
-        Kind.JOIN, Kind.MANY -> {
+        Kind.JOIN -> {
             if (q.params.isNotEmpty()) {
                 val revealArgs = (vars.map { (name, type) -> "$type _$name" } + "uint salt").join(", ")
                 val reveals = (names.map { "_$it" } + "salt").join(", ")
-                val (updateChosen, checkChosen) = if (kind == Kind.MANY)
-                    Pair("chosenRole$role = msg.sender;", "if (chosenRole$role != address(0x0)) require(times$role[msg.sender] < times$role[chosenRole$role]);")
-                else
-                    Pair("", "")
-                val declChosen = if (kind == Kind.MANY) "address chosenRole$role;" else ""
+                val (updateChosen, checkChosen) = Pair("", "")
             """
             |    mapping(address => bytes32) commits$role;
             |    mapping(address => uint) times$role;
@@ -117,7 +113,6 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |        lastBlock = block.timestamp;
             |    }
             |
-            |    $declChosen
             |    $decls
             |    $declsDone
             |
@@ -135,7 +130,7 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             |    }
             |""".trimMargin()
             } else {
-                val (checkDone, makeDone) = if (kind == Kind.JOIN) Pair("require(!done$role);", "done$role = true;") else Pair("", "")
+                val (checkDone, makeDone) = Pair("require(!done$role);", "done$role = true;")
                 """
             |    bool done$role;
             |    function join_$role() at_step($step) public by(Role.None) $payable{
@@ -196,7 +191,6 @@ private fun varname(name: String, type: TypeExp) =
         else name
 
 private fun genOutcome(switch: Outcome.Value, step: Int): String {
-    // TODO: many
     return switch.ts.entries.map { (role: String, money: Exp) ->
         """
         |    function withdraw_${step}_$role() by(Role.$role) at_step($step) public {

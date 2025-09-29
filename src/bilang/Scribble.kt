@@ -93,7 +93,6 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
             Kind.JOIN_CHANCE -> listOf(Sast.Action.Connect(role)) + sendToServer()
             Kind.YIELD -> sendToServer()
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
-            Kind.MANY -> TODO()
         }
 
         val broadcast = Sast.Action.Send("Broadcast", declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }), "Server", roles - role)

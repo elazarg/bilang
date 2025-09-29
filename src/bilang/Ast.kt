@@ -43,7 +43,7 @@ sealed class Outcome: Ast() {
 }
 
 typealias VarDec = Pair<String, TypeExp>
-enum class Kind { JOIN, YIELD, REVEAL, MANY, JOIN_CHANCE }
+enum class Kind { JOIN, YIELD, REVEAL, JOIN_CHANCE }
 
 sealed class TypeExp : Ast() {
     object INT : TypeExp(), IntClass

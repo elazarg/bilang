@@ -49,7 +49,6 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
                             checkWhere(n, m, q)
                             Pair(n, m)
                         }
-                        Kind.MANY -> TODO()
                         Kind.JOIN_CHANCE -> {
                             val n = mapOf(q.role to ROLE)
                             checkWhere(n, m, q)

@@ -9,8 +9,8 @@ typeExp
     | name=ID                             # TypeId
     ;
 
-// only sensible combination is independent yield + many
-ext : kind=('join' | 'yield' | 'reveal' | 'many' | 'random') query+ ';' ext  # ReceiveExt
+// only sensible combination is independent yield
+ext : kind=('join' | 'yield' | 'reveal' | 'random') query+ ';' ext  # ReceiveExt
     | 'withdraw' outcome # WithdrawExt
     ;
 
