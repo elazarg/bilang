@@ -3,7 +3,7 @@ __pycache__
 
 .idea
 .vscode/
-out/
+test-diffs/
 /.DS_Store
 target/
 bilang/src/generated/*

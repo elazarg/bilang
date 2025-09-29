@@ -14,14 +14,40 @@
         <kotlin.version>2.1.21</kotlin.version>
         <antlr.version>4.13.2</antlr.version>
         <java.version>25</java.version>
+        <kotest.version>5.7.2</kotest.version>
+        <junit.version>5.13.4</junit.version>
     </properties>
-
     <dependencies>
         <!-- Kotlin -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
             <version>${kotlin.version}</version>
+        </dependency>
+        <!-- Kotest -->
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-runner-junit5-jvm</artifactId>
+            <version>${kotest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-assertions-core-jvm</artifactId>
+            <version>${kotest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-property-jvm</artifactId>
+            <version>${kotest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-framework-datatest-jvm</artifactId>
+            <version>${kotest.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- ANTLR Runtime -->
@@ -33,8 +59,8 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>src/bilang</sourceDirectory>
-
+        <sourceDirectory>src/main/kotlin</sourceDirectory>
+        <testSourceDirectory>src/test/kotlin</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.antlr</groupId>
@@ -50,7 +76,7 @@
                             <includes>
                                 <include>BiLang.g4</include>
                             </includes>
-                            <outputDirectory>${project.basedir}/src/bilang/generated</outputDirectory>
+                            <outputDirectory>${project.basedir}/src/main/kotlin/bilang/generated</outputDirectory>
                             <visitor>true</visitor>
                             <listener>false</listener>
                             <arguments>
@@ -75,13 +101,35 @@
                         </goals>
                         <configuration>
                             <sourceDirs>
-                                <sourceDir>src</sourceDir>
+                                <sourceDir>src/main/kotlin</sourceDir>
+                            </sourceDirs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>test-compile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirs>
+                                <sourceDir>src/test/kotlin</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.*</include>
+                        <include>**/*Spec.*</include>
+                    </includes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

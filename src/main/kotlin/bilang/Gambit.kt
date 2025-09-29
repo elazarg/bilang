@@ -25,6 +25,18 @@ class Extensive(private val name: String, private val desc: String, private val 
 }
 
 class TreeMaker(private val types: Map<String, TypeExp>) {
+    private val infosetCounters = mutableMapOf<Role, Int>()
+    private val infosetIds = mutableMapOf<Pair<Role, Env<Const>>, Int>()
+
+    private fun nextInfosetId(role: Role, env: Env<Const>): Int {
+        val key = role to env.eraseHidden(role)
+        return infosetIds.getOrPut(key) {
+            val next = infosetCounters.getOrDefault(role, 0) + 1
+            infosetCounters[role] = next
+            next
+        }
+    }
+
     fun fromExp(ext: Ext, env: Env<Const> = Env()): Tree = when (ext) {
         is Ext.BindSingle -> {
             val q = ext.q
@@ -45,7 +57,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
                     val revealedPacket = names.associateWith { revealed.getValue(role, it) }
                     val quit = env.mapHidden(q) { UNDEFINED }
                     val quitPacket = names.associateWith { UNDEFINED }
-                    val infoset = UniqueHash.of(env.eraseHidden(role))
+                    val infoset = nextInfosetId(role, env)
                     val edges = if (env.isChance(role))
                         listOf(revealedPacket)
                     else
@@ -87,7 +99,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             if (qs.isEmpty())
                 return fromExp(next, env)
             val q = qs.first()
-            val infoset = UniqueHash.of(origEnv.eraseHidden(q.role))
+            val infoset = nextInfosetId(q.role, env)
             val edges = enumeratePackets(q, origEnv)
             val children = edges.map { e -> independentRec(qs.drop(1), env.updateHeap(q, e)) }
             return Tree.Node(q.role, env, infoset, edges, children)
@@ -100,7 +112,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
         TypeExp.BOOL -> listOf(Bool(true), Bool(false))
         is TypeExp.Hidden -> enumerateValues(t.type).map { hide(it) }
         is TypeExp.TypeId -> enumerateValues(types.getValue(t.name))
-        else -> TODO("cannot enumerate $t")
+        else -> throw NotImplementedError("cannot enumerate $t; Only small, finite domains are supported")
     }
 }
 
