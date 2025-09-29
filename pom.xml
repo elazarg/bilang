@@ -52,7 +52,7 @@
                             </includes>
                             <outputDirectory>${project.basedir}/src/bilang/generated</outputDirectory>
                             <visitor>true</visitor>
-                            <listener>true</listener>
+                            <listener>false</listener>
                             <arguments>
                                 <argument>-package</argument>
                                 <argument>bilang.generated</argument>

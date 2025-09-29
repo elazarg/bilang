@@ -3,8 +3,10 @@ package bilang.generated;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.misc.*;
 import org.antlr.v4.runtime.tree.*;
 import java.util.List;
+import java.util.Iterator;
 import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast", "CheckReturnValue", "this-escape"})
@@ -121,14 +123,6 @@ public class BiLangParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_program; }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterProgram(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitProgram(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitProgram(this);
 			else return visitor.visitChildren(this);
@@ -185,14 +179,6 @@ public class BiLangParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_typeDec; }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterTypeDec(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitTypeDec(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitTypeDec(this);
 			else return visitor.visitChildren(this);
@@ -244,14 +230,6 @@ public class BiLangParser extends Parser {
 		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
 		public TypeIdContext(TypeExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterTypeId(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitTypeId(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitTypeId(this);
 			else return visitor.visitChildren(this);
@@ -267,14 +245,6 @@ public class BiLangParser extends Parser {
 		}
 		public SubsetTypeExpContext(TypeExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterSubsetTypeExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitSubsetTypeExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitSubsetTypeExp(this);
 			else return visitor.visitChildren(this);
@@ -289,14 +259,6 @@ public class BiLangParser extends Parser {
 			return getToken(BiLangParser.INT, i);
 		}
 		public RangeTypeExpContext(TypeExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterRangeTypeExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitRangeTypeExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitRangeTypeExp(this);
@@ -405,14 +367,6 @@ public class BiLangParser extends Parser {
 		}
 		public ReceiveExtContext(ExtContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterReceiveExt(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitReceiveExt(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitReceiveExt(this);
 			else return visitor.visitChildren(this);
@@ -424,14 +378,6 @@ public class BiLangParser extends Parser {
 			return getRuleContext(OutcomeContext.class,0);
 		}
 		public WithdrawExtContext(ExtContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterWithdrawExt(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitWithdrawExt(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitWithdrawExt(this);
@@ -533,14 +479,6 @@ public class BiLangParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_query; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterQuery(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitQuery(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitQuery(this);
@@ -658,14 +596,6 @@ public class BiLangParser extends Parser {
 		}
 		public OutcomeExpContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterOutcomeExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitOutcomeExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitOutcomeExp(this);
 			else return visitor.visitChildren(this);
@@ -686,14 +616,6 @@ public class BiLangParser extends Parser {
 			return getRuleContext(OutcomeContext.class,i);
 		}
 		public IfOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterIfOutcome(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitIfOutcome(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitIfOutcome(this);
@@ -716,14 +638,6 @@ public class BiLangParser extends Parser {
 		}
 		public LetOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterLetOutcome(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitLetOutcome(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitLetOutcome(this);
 			else return visitor.visitChildren(this);
@@ -735,14 +649,6 @@ public class BiLangParser extends Parser {
 			return getRuleContext(OutcomeContext.class,0);
 		}
 		public ParenOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterParenOutcome(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitParenOutcome(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitParenOutcome(this);
@@ -853,14 +759,6 @@ public class BiLangParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_item; }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterItem(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitItem(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitItem(this);
 			else return visitor.visitChildren(this);
@@ -930,14 +828,6 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpEqExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterBinOpEqExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitBinOpEqExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpEqExp(this);
 			else return visitor.visitChildren(this);
@@ -950,14 +840,6 @@ public class BiLangParser extends Parser {
 			return getRuleContext(ExpContext.class,0);
 		}
 		public UndefExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterUndefExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitUndefExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitUndefExp(this);
@@ -977,14 +859,6 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpAddExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterBinOpAddExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitBinOpAddExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpAddExp(this);
 			else return visitor.visitChildren(this);
@@ -1003,14 +877,6 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpCompExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterBinOpCompExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitBinOpCompExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpCompExp(this);
 			else return visitor.visitChildren(this);
@@ -1023,14 +889,6 @@ public class BiLangParser extends Parser {
 			return getRuleContext(ExpContext.class,0);
 		}
 		public UnOpExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterUnOpExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitUnOpExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitUnOpExp(this);
@@ -1047,14 +905,6 @@ public class BiLangParser extends Parser {
 		}
 		public MemberExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterMemberExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitMemberExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitMemberExp(this);
 			else return visitor.visitChildren(this);
@@ -1065,14 +915,6 @@ public class BiLangParser extends Parser {
 		public Token name;
 		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
 		public IdExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterIdExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitIdExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitIdExp(this);
@@ -1093,14 +935,6 @@ public class BiLangParser extends Parser {
 		}
 		public CallExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterCallExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitCallExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitCallExp(this);
 			else return visitor.visitChildren(this);
@@ -1118,14 +952,6 @@ public class BiLangParser extends Parser {
 			return getRuleContext(ExpContext.class,i);
 		}
 		public IfExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterIfExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitIfExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitIfExp(this);
@@ -1145,14 +971,6 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpBoolExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterBinOpBoolExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitBinOpBoolExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpBoolExp(this);
 			else return visitor.visitChildren(this);
@@ -1165,14 +983,6 @@ public class BiLangParser extends Parser {
 		}
 		public ParenExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterParenExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitParenExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitParenExp(this);
 			else return visitor.visitChildren(this);
@@ -1181,14 +991,6 @@ public class BiLangParser extends Parser {
 	@SuppressWarnings("CheckReturnValue")
 	public static class BoolLiteralExpContext extends ExpContext {
 		public BoolLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterBoolLiteralExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitBoolLiteralExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBoolLiteralExp(this);
@@ -1211,14 +1013,6 @@ public class BiLangParser extends Parser {
 		}
 		public LetExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterLetExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitLetExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitLetExp(this);
 			else return visitor.visitChildren(this);
@@ -1228,14 +1022,6 @@ public class BiLangParser extends Parser {
 	public static class AddressLiteralExpContext extends ExpContext {
 		public TerminalNode ADDRESS() { return getToken(BiLangParser.ADDRESS, 0); }
 		public AddressLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterAddressLiteralExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitAddressLiteralExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitAddressLiteralExp(this);
@@ -1255,14 +1041,6 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpMultExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterBinOpMultExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitBinOpMultExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpMultExp(this);
 			else return visitor.visitChildren(this);
@@ -1272,14 +1050,6 @@ public class BiLangParser extends Parser {
 	public static class NumLiteralExpContext extends ExpContext {
 		public TerminalNode INT() { return getToken(BiLangParser.INT, 0); }
 		public NumLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterNumLiteralExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitNumLiteralExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitNumLiteralExp(this);
@@ -1651,14 +1421,6 @@ public class BiLangParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_varDec; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).enterVarDec(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof BiLangListener ) ((BiLangListener)listener).exitVarDec(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitVarDec(this);
