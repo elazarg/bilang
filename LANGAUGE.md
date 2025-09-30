@@ -791,6 +791,7 @@ BiLang is specialized for strategic interactions with:
 - Game-theoretic analysis (Gambit)
 - Information flow typing (hidden types)
 - Automatic protocol synthesis (commit-reveal)
+- Client conformance checking (Scribble)
 
 ---
 
