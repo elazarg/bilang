@@ -44,6 +44,17 @@ ${genExt(p.game, 0)}
 """.replace(Regex("( *\n){2,}"), "\n")
 }
 
+private fun allDiffExpr(args: List<String>): String {
+    if (args.size <= 1) return "true"
+    val pairs = ArrayList<String>(args.size * (args.size - 1) / 2)
+    for (i in 0 until args.size) {
+        for (j in i + 1 until args.size) {
+            pairs += "${args[i]} != ${args[j]}"
+        }
+    }
+    return pairs.joinToString(separator = " && ", prefix = "(", postfix = ")")
+}
+
 private fun genExt(ext: Ext, step: Int): String = when (ext) {
     is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
     is Ext.BindSingle -> makeStep(ext.kind, listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
@@ -221,7 +232,14 @@ private fun genOutcome(switch: Outcome.Value, step: Int): String {
 }
 
 private fun exp(e: Exp): String = when (e) {
-    is Exp.Call -> "${exp(e.target)}(${e.args.map { exp(it) }.join(",")})"
+    is Exp.Call -> {
+        if (e.target.name == "alldiff") {
+            // Detect the synthetic _alldiff(...) and expand in-line
+            allDiffExpr(e.args.map { exp(it) })
+        } else {
+            "${exp(e.target)}(${e.args.joinToString(",") { exp(it) }})"
+        }
+    }
     is Exp.UnOp -> when (e.op) {
         "isUndefined" -> {
             val operand = e.operand as Exp.Member
