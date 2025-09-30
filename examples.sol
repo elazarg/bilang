@@ -1,294 +1,420 @@
-pragma solidity ^0.4.14;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-contract StateMachine {
-    uint stmt_index = 0;
-    
-    /// step count is nonce, strictly increasing - but not between parallel operations
-    /// so this is race-avoiding identity of state-instance on the trace
-    /// It will also never overflow... :)
-    uint step_count = 0;
+/**
+ * @title StateMachine
+ * @notice Base contract for state machine pattern with step-based execution
+ */
+abstract contract StateMachine {
+    uint256 public stmtIndex;
+    uint256 public stepCount;
 
-    modifier step(uint _step_count) {
-        if (step_count != _step_count) revert();
+    error InvalidStep(uint256 expected, uint256 provided);
+    error InvalidState(uint256 expected, uint256 current);
+    error Unauthorized(address expected, address actual);
+
+    modifier step(uint256 _stepCount) {
+        if (stepCount != _stepCount) {
+            revert InvalidStep(stepCount, _stepCount);
+        }
         _;
-        step_count++;
+        unchecked {
+            stepCount++;
+        }
     }
-    
-    modifier state(uint s) {
-        if (s != stmt_index) revert();
+
+    modifier state(uint256 s) {
+        if (s != stmtIndex) {
+            revert InvalidState(s, stmtIndex);
+        }
         _;
-        stmt_index++;
+        unchecked {
+            stmtIndex++;
+        }
     }
-    
-    modifier state_non_inc(uint s) {
-        if (s != stmt_index) revert();
+
+    modifier stateNonInc(uint256 s) {
+        if (s != stmtIndex) {
+            revert InvalidState(s, stmtIndex);
+        }
+        _;
+    }
+
+    modifier onlyAddress(address expected) {
+        if (msg.sender != expected) {
+            revert Unauthorized(expected, msg.sender);
+        }
         _;
     }
 }
 
-//[Example: joint declaration]
+/**
+ * @title JointDeclaration
+ * @notice Contract for two parties to make a joint declaration
+ */
 contract JointDeclaration is StateMachine {
-    event Declare(string, address, address);
-    address a;
-    address b;
+    event Declare(string message, address indexed partyA, address indexed partyB);
 
-    // (a, b) = await {A, B}
-    function stmt_0_await_A(uint _step_count) step(_step_count) state_non_inc(0) {
-        if (a != 0x0) revert();
-        a = msg.sender;
-        inc_if_finish();
-    }
-    
-    // (a, b) = await {A, B}
-    function stmt_0_await_B(uint _step_count) step(_step_count) state_non_inc(0) {
-        if (b != 0x0) revert();
-        b = msg.sender;
-        inc_if_finish();
+    address public partyA;
+    address public partyB;
+
+    error PartyAlreadySet();
+
+    /// @notice Party A registers their participation
+    function stmt_0_await_A(uint256 _stepCount)
+    external
+    step(_stepCount)
+    stateNonInc(0)
+    {
+        if (partyA != address(0)) revert PartyAlreadySet();
+        partyA = msg.sender;
+        _incrementIfFinished();
     }
 
-    function inc_if_finish() internal {
-        if (a != 0x0 && b != 0x0) {
-            step_count++;
-            stmt_index++;
+    /// @notice Party B registers their participation
+    function stmt_0_await_B(uint256 _stepCount)
+    external
+    step(_stepCount)
+    stateNonInc(0)
+    {
+        if (partyB != address(0)) revert PartyAlreadySet();
+        partyB = msg.sender;
+        _incrementIfFinished();
+    }
+
+    function _incrementIfFinished() private {
+        if (partyA != address(0) && partyB != address(0)) {
+            unchecked {
+                stepCount++;
+                stmtIndex++;
+            }
         }
     }
 
-    // declare("${A.id} and ${B.id} are getting married")
-    function stmt_1_declare(uint _step_count) step(_step_count) state(1) {
-        Declare("${} and ${} are getting married", a, b);
+    /// @notice Make the joint declaration
+    function stmt_1_declare(uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(1)
+    {
+        emit Declare("are getting married", partyA, partyB);
     }
 
-    function end() state(2) {
-        selfdestruct(msg.sender);
+    /// @notice Finalize and destroy contract
+    function end() external state(2) {
+        selfdestruct(payable(msg.sender));
     }
 }
 
-//[Example: puzzle]
+/**
+ * @title Puzzle
+ * @notice A mathematical puzzle contract where solver must factorize a number
+ */
 contract Puzzle is StateMachine {
-    event Declare(string, address);
-    address a;
-    int a__q;
+    event Declare(string message, address indexed solver);
 
-    address s;
-    int s__m;
-    int s__n;
+    address public proposer;
+    int256 public question;
 
-    // a = await A [A has q: int]
-    function stmt_0_await_A(int q, uint _step_count) step(_step_count) state(0) {
-        if (a != 0x0) revert();
-        a = msg.sender;
-        a__q = q;
-    }
-    
-    // s = await S
-    function stmt_1_await_S(int m, int n,  uint _step_count) step(_step_count) state(1) {
-        s = msg.sender;
-        require(m != 1);  s__m = m;
-        require(n != 1);  s__n = n;
-        require(m * n == a__q);
-    }
+    address public solver;
+    int256 private solverM;
+    int256 private solverN;
 
-    function stmt_2_declare(uint _step_count) step(_step_count) state(2) {
-        Declare("${} solved the problem!", Solver);
+    error AlreadySet();
+    error InvalidFactor();
+
+    /// @notice Proposer submits a question (product to factorize)
+    function stmt_0_await_Proposer(int256 q, uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(0)
+    {
+        if (proposer != address(0)) revert AlreadySet();
+        proposer = msg.sender;
+        question = q;
     }
 
-    function end() state(3) {
-        selfdestruct(msg.sender);
+    /// @notice Solver submits factors
+    function stmt_1_await_Solver(int256 m, int256 n, uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(1)
+    {
+        if (m == 1 || n == 1) revert InvalidFactor();
+        if (m * n != question) revert InvalidFactor();
+
+        solver = msg.sender;
+        solverM = m;
+        solverN = n;
+    }
+
+    /// @notice Declare the winner
+    function stmt_2_declare(uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(2)
+    {
+        emit Declare("solved the problem!", solver);
+    }
+
+    /// @notice Finalize and destroy contract
+    function end() external state(3) {
+        selfdestruct(payable(msg.sender));
     }
 }
 
-//[Example: puzzle with payment]
+/**
+ * @title PuzzlePayment
+ * @notice Puzzle contract with payment reward for solver
+ */
 contract PuzzlePayment is StateMachine {
-    event Declare(string, address);
-    address a;
-    int a__q;
-    int a__amount;
+    event Declare(string message, address indexed solver);
+    event PaymentSent(address indexed to, uint256 amount);
 
-    address s;
-    int s__m;
-    int s__n;
+    address public proposer;
+    int256 public question;
+    uint256 public reward;
 
-    // a = await A [A has q: int]
-    function stmt_0_await_A(int q, uint _step_count) step(_step_count) state(0) payable {
-        a = msg.sender;
-        a__amount = msg.value;
-        a__q = q;
-    }
-    
-    // s = await S
-    function stmt_1_await_S(int m, int n,  uint _step_count) step(_step_count) state(1) {
-        s = msg.sender;
-        require(m != 1);  s__m = m;
-        require(n != 1);  s__n = n;
-        require(m * n == a__q);
-    }
+    address public solver;
+    int256 private solverM;
+    int256 private solverN;
 
-    function stmt_2_pay(uint _step_count) step(_step_count) state(2) {
-        //transfer(s, a__amount);
+    error InvalidFactor();
+
+    /// @notice Proposer submits question with payment
+    function stmt_0_await_Proposer(int256 q, uint256 _stepCount)
+    external
+    payable
+    step(_stepCount)
+    state(0)
+    {
+        proposer = msg.sender;
+        reward = msg.value;
+        question = q;
     }
 
-    function end() state(3) {
-        selfdestruct(msg.sender);
+    /// @notice Solver submits factors
+    function stmt_1_await_Solver(int256 m, int256 n, uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(1)
+    {
+        if (m == 1 || n == 1) revert InvalidFactor();
+        if (m * n != question) revert InvalidFactor();
+
+        solver = msg.sender;
+        solverM = m;
+        solverN = n;
+    }
+
+    /// @notice Pay the solver
+    function stmt_2_pay(uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(2)
+    {
+        uint256 amount = reward;
+        reward = 0;
+
+        (bool success,) = solver.call{value: amount}("");
+        require(success, "Transfer failed");
+
+        emit PaymentSent(solver, amount);
+    }
+
+    /// @notice Finalize and destroy contract
+    function end() external state(3) {
+        selfdestruct(payable(msg.sender));
     }
 }
 
-//[Example: trusted simultaneous game]
-contract TrustedSimultaneousGame is StateMachine {
-    event Declare(string, address);
-    address even;
-    bool even__choice;
+/**
+ * @title CommitRevealGame
+ * @notice Simultaneous game using commit-reveal scheme
+ */
+contract CommitRevealGame is StateMachine {
+    event Declare(string message, address indexed winner);
 
-    address odd;
-    bool odd__choice;
+    address public evenPlayer;
+    bytes32 public evenCommitment;
+    bool public evenChoice;
+    bool public evenRevealed;
 
-    address winner;
+    address public oddPlayer;
+    bytes32 public oddCommitment;
+    bool public oddChoice;
+    bool public oddRevealed;
 
-    function state_0_await_Even(bool choice, uint _step_count) {
-        require(_step_count == step_count);
-        require(state == 0);
-        if (even != 0x0) revert();
-        
-        even = msg.sender;
-        
-        even__choice = choice; 
-        
-        if (even != 0x0 && odd != 0x0) {
-            step_count += 1;
-            state = 1;
+    error AlreadyCommitted();
+    error InvalidReveal();
+    error NotRevealed();
+
+    /// @notice Even player commits their choice
+    function stmt_0_commit_Even(bytes32 commitment, uint256 _stepCount)
+    external
+    step(_stepCount)
+    stateNonInc(0)
+    {
+        if (evenPlayer != address(0)) revert AlreadyCommitted();
+        evenPlayer = msg.sender;
+        evenCommitment = commitment;
+        _incrementIfBothCommitted();
+    }
+
+    /// @notice Odd player commits their choice
+    function stmt_0_commit_Odd(bytes32 commitment, uint256 _stepCount)
+    external
+    step(_stepCount)
+    stateNonInc(0)
+    {
+        if (oddPlayer != address(0)) revert AlreadyCommitted();
+        oddPlayer = msg.sender;
+        oddCommitment = commitment;
+        _incrementIfBothCommitted();
+    }
+
+    function _incrementIfBothCommitted() private {
+        if (evenPlayer != address(0) && oddPlayer != address(0)) {
+            unchecked {
+                stepCount++;
+                stmtIndex++;
+            }
         }
     }
 
-    function state_0_await_Odd(bool choice, uint _step_count) {
-        require(_step_count == step_count);
-        require(state == 0);
-        if (odd != 0x0) revert();
-        
-        odd = msg.sender;
-        
-        odd__choice = choice; 
-        
-        if (even != 0x0 && odd != 0x0) {
-            step_count += 1;
-            state = 1;
+    /// @notice Even player reveals their choice
+    function stmt_1_reveal_Even(bool choice, bytes32 salt, uint256 _stepCount)
+    external
+    onlyAddress(evenPlayer)
+    step(_stepCount)
+    stateNonInc(1)
+    {
+        if (keccak256(abi.encodePacked(choice, salt)) != evenCommitment) {
+            revert InvalidReveal();
+        }
+        evenChoice = choice;
+        evenRevealed = true;
+        _incrementIfBothRevealed();
+    }
+
+    /// @notice Odd player reveals their choice
+    function stmt_1_reveal_Odd(bool choice, bytes32 salt, uint256 _stepCount)
+    external
+    onlyAddress(oddPlayer)
+    step(_stepCount)
+    stateNonInc(1)
+    {
+        if (keccak256(abi.encodePacked(choice, salt)) != oddCommitment) {
+            revert InvalidReveal();
+        }
+        oddChoice = choice;
+        oddRevealed = true;
+        _incrementIfBothRevealed();
+    }
+
+    function _incrementIfBothRevealed() private {
+        if (evenRevealed && oddRevealed) {
+            unchecked {
+                stepCount++;
+                stmtIndex++;
+            }
         }
     }
 
-    function stmt_1_declare(uint _step_count) state(1) step(_step_count) {
-        winner = (even__choice == odd__choice) ? even : odd;
-        Declare("${} won", winner);
+    /// @notice Declare winner
+    function stmt_2_declare(uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(2)
+    {
+        if (!evenRevealed || !oddRevealed) revert NotRevealed();
+        address winner = (evenChoice == oddChoice) ? evenPlayer : oddPlayer;
+        emit Declare("won", winner);
     }
 
-    function end() state(2) {
-        selfdestruct(msg.sender);
-    }
-}
-
-//[Example: simultaneous game] -- commitment etc.
-//[Example: simultaneous game with payment]
-
-//[Example: Monty Hall]
-contract MontyHall is StateMachine {
-    event Declare(string, address);
-    address host;
-    bytes64 host__car__commit;
-    int host__car;
-    bool host__car__failed; // ad-hoc option type
-    int host__goat;
-
-    address guest;
-    int guest__door1;
-    int guest__door2;
-
-    // host = await Host
-    function stmt_0_await_Host(uint _step_count) step(_step_count) state(0) payable {
-        host = msg.sender;
-        host__amount = msg.value;
-    }
-    
-    // guest = await Guest
-    function stmt_1_await_Guest(uint _step_count) step(_step_count) state(1) {
-        guest = msg.sender;
-    }
-
-    // with await hidden(host.car):
-    function stmt_2_with_await_hidden(int host__car__commit, uint _step_count) by(host) step(_step_count) state(2) {
-        host__car__commit = car__commit;
-    }
-
-    // await guest.door1
-    function stmt_3_await_door1(int door1, uint _step_count) by(guest) step(_step_count) state(3) {
-        guest__door1 = door1;
-    }
-
-    // await host.goat; require(host.goat != guest.door1)
-    function stmt_4_await_goat(int goat, uint _step_count) by(host) step(_step_count) state(4) {
-        require(goat != guest__door1);
-        host__goat = goat;
-    }
-
-    // await guest.door2;  require(guest.door2 != host.goat)
-    function stmt_5_await_door1(int door2, uint _step_count) by(guest) step(_step_count) state(5) {
-        require(door2 != gost__goat);
-        guest__door2 = door2;
-    }
-
-    // EXIT with await hidden(host.car)
-    function stmt_6_with_await_hidden(int car, uint salt, uint _step_count) by(host) step(_step_count) state(6) {
-        host__car__failed = sha3(car, salt) != host__car__commit);
-        if (!host__car__failed)
-            host__car = car;
-    }
-
-    function stmt_7_declare(uint _step_count) step(_step_count) state(7) {
-        if (host__car__failed || host__goat == host__car || guest__door2 == host__car)
-            Declare("${} won", guest);
-        else
-            Declare("${} won", host);
-    }
-
-    function end() state(8) {
-        selfdestruct(msg.sender);
+    /// @notice Finalize and destroy contract
+    function end() external state(3) {
+        selfdestruct(payable(msg.sender));
     }
 }
 
-//[Example: Auction]
-contract Auction is StateMachine {
-    event Declare(string, address);
-    address owner = 0x0;
-    uint owner__minimum;
+/**
+ * @title SimpleAuction
+ * @notice Basic auction contract with minimum price
+ */
+contract SimpleAuction is StateMachine {
+    event NewBid(address indexed bidder, uint256 amount);
+    event AuctionEnded(address indexed winner, uint256 amount);
 
-    uint last_offer;
+    address public owner;
+    uint256 public minimumBid;
 
-    address winner = 0x0;
+    address public highestBidder;
+    uint256 public highestBid;
 
-    function stmt_0_await_Owner(uint minimum, uint _step_count) state(0) step(_step_count) {
+    mapping(address => uint256) public pendingReturns;
+
+    error BidTooLow(uint256 required);
+
+    /// @notice Owner initializes auction
+    function stmt_0_await_Owner(uint256 minimum, uint256 _stepCount)
+    external
+    step(_stepCount)
+    state(0)
+    {
         owner = msg.sender;
-        owner__minimum = minimum;
-
-        //combined - pure optimization?
-        last_offer = owner__minimum;
+        minimumBid = minimum;
+        highestBid = minimum;
     }
 
-    function stmt_1_await_Bidder(uint _step_count) state(1) step(_step_count) payable {
-        // isinstance is in the method name?
-        require(msg.value > last_offer);
-        lazy_transfer(winner, winner.amount);
-        last_offer = winner.amount;  // implicit coercion :(
-        winner = msg.sender;
+    /// @notice Submit a bid
+    function stmt_1_bid(uint256 _stepCount)
+    external
+    payable
+    step(_stepCount)
+    stateNonInc(1)
+    {
+        if (msg.value <= highestBid) {
+            revert BidTooLow(highestBid + 1);
+        }
+
+        if (highestBidder != address(0)) {
+            pendingReturns[highestBidder] += highestBid;
+        }
+
+        highestBidder = msg.sender;
+        highestBid = msg.value;
+
+        emit NewBid(msg.sender, msg.value);
+
+        unchecked {
+            stepCount++;
+        }
     }
 
-    function stmt_1_await_Stop(uint _step_count) state(1) step(_step_count) payable {
-        require(msg.address == owner);
-        // break 
-        stmt_index = 3;
+    /// @notice Owner stops the auction
+    function stmt_1_stop(uint256 _stepCount)
+    external
+    onlyAddress(owner)
+    step(_stepCount)
+    state(1)
+    {
+        stmtIndex = 2;
+        emit AuctionEnded(highestBidder, highestBid);
     }
 
-    function stmt_4_pay(uint _step_count) state(2) step(_step_count) {
-        transfer(bidder, winner.amount);
-        // no price yet
+    /// @notice Withdraw overbid funds
+    function withdraw() external {
+        uint256 amount = pendingReturns[msg.sender];
+        if (amount > 0) {
+            pendingReturns[msg.sender] = 0;
+            (bool success,) = msg.sender.call{value: amount}("");
+            require(success, "Withdrawal failed");
+        }
     }
 
-    function end() state(2) {
-        selfdestruct(msg.sender);
+    /// @notice Finalize and destroy contract
+    function end() external state(2) {
+        selfdestruct(payable(owner));
     }
 }
