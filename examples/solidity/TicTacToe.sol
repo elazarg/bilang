@@ -86,7 +86,7 @@ contract TicTacToe {
     bool public done_O_3;
     function yield_O3(int256 _c1) public by(Role.O) at_step(3) {
         require(!done_O_3, "done");
-        require(_alldiff(X_c1,O_c1), "where");
+        require((X_c1 != O_c1), "where");
         O_c1 = _c1;
         O_c1_done = true;
         done_O_3 = true;
@@ -106,7 +106,7 @@ contract TicTacToe {
     bool public done_X_4;
     function yield_X4(int256 _c2) public by(Role.X) at_step(4) {
         require(!done_X_4, "done");
-        require(_alldiff(X_c1,O_c1,X_c2), "where");
+        require((X_c1 != O_c1 && X_c1 != X_c2 && O_c1 != X_c2), "where");
         X_c2 = _c2;
         X_c2_done = true;
         done_X_4 = true;
@@ -126,7 +126,7 @@ contract TicTacToe {
     bool public done_O_5;
     function yield_O5(int256 _c2) public by(Role.O) at_step(5) {
         require(!done_O_5, "done");
-        require(_alldiff(X_c1,O_c1,X_c2,O_c2), "where");
+        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && O_c1 != X_c2 && O_c1 != O_c2 && X_c2 != O_c2), "where");
         O_c2 = _c2;
         O_c2_done = true;
         done_O_5 = true;
@@ -146,7 +146,7 @@ contract TicTacToe {
     bool public done_X_6;
     function yield_X6(int256 _c3) public by(Role.X) at_step(6) {
         require(!done_X_6, "done");
-        require(_alldiff(X_c1,O_c1,X_c2,O_c2,X_c3), "where");
+        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && X_c2 != O_c2 && X_c2 != X_c3 && O_c2 != X_c3), "where");
         X_c3 = _c3;
         X_c3_done = true;
         done_X_6 = true;
@@ -166,7 +166,7 @@ contract TicTacToe {
     bool public done_O_7;
     function yield_O7(int256 _c3) public by(Role.O) at_step(7) {
         require(!done_O_7, "done");
-        require(_alldiff(X_c1,O_c1,X_c2,O_c2,X_c3,O_c3), "where");
+        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && X_c1 != O_c3 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && O_c1 != O_c3 && X_c2 != O_c2 && X_c2 != X_c3 && X_c2 != O_c3 && O_c2 != X_c3 && O_c2 != O_c3 && X_c3 != O_c3), "where");
         O_c3 = _c3;
         O_c3_done = true;
         done_O_7 = true;
@@ -186,7 +186,7 @@ contract TicTacToe {
     bool public done_X_8;
     function yield_X8(int256 _c4) public by(Role.X) at_step(8) {
         require(!done_X_8, "done");
-        require(_alldiff(X_c1,O_c1,X_c2,O_c2,X_c3,O_c3,X_c4), "where");
+        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && X_c1 != O_c3 && X_c1 != X_c4 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && O_c1 != O_c3 && O_c1 != X_c4 && X_c2 != O_c2 && X_c2 != X_c3 && X_c2 != O_c3 && X_c2 != X_c4 && O_c2 != X_c3 && O_c2 != O_c3 && O_c2 != X_c4 && X_c3 != O_c3 && X_c3 != X_c4 && O_c3 != X_c4), "where");
         X_c4 = _c4;
         X_c4_done = true;
         done_X_8 = true;
@@ -206,7 +206,7 @@ contract TicTacToe {
     bool public done_O_9;
     function yield_O9(int256 _c4) public by(Role.O) at_step(9) {
         require(!done_O_9, "done");
-        require(_alldiff(X_c1,O_c1,X_c2,O_c2,X_c3,O_c3,X_c4,O_c4), "where");
+        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && X_c1 != O_c3 && X_c1 != X_c4 && X_c1 != O_c4 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && O_c1 != O_c3 && O_c1 != X_c4 && O_c1 != O_c4 && X_c2 != O_c2 && X_c2 != X_c3 && X_c2 != O_c3 && X_c2 != X_c4 && X_c2 != O_c4 && O_c2 != X_c3 && O_c2 != O_c3 && O_c2 != X_c4 && O_c2 != O_c4 && X_c3 != O_c3 && X_c3 != X_c4 && X_c3 != O_c4 && O_c3 != X_c4 && O_c3 != O_c4 && X_c4 != O_c4), "where");
         O_c4 = _c4;
         O_c4_done = true;
         done_O_9 = true;
