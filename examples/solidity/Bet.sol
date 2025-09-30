@@ -1,113 +1,140 @@
-pragma solidity ^0.4.22;
+
+pragma solidity ^0.8.31;
 contract Bet {
-    constructor() public {
-        lastBlock = block.timestamp;
+    constructor() {
+        lastTs = block.timestamp;
     }
-    function keccak(bool x, uint salt) pure public returns(bytes32) {
-        return keccak256(x, salt);
+    function keccak(bool x, uint256 salt) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(x, salt));
     }
     // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint lastBlock;
-    modifier at_step(int _step) {
-        require(step == _step);
-        //require(block.timestamp < lastBlock + STEP_TIME);
+    uint256 public constant STEP_TIME = 500;
+    uint256 public step;
+    uint256 public lastTs;
+    modifier at_step(uint256 _step) {
+        require(step == _step, "wrong step");
+        // require(block.timestamp < lastTs + STEP_TIME, "step expired");
         _;
     }
     // roles
-    enum Role { None, Gambler }
-    mapping(address => Role) role;
-    mapping(address => uint) balanceOf;
+    enum Role { None, Race, Gambler }
+    mapping(address => Role) public role;
+    mapping(address => uint256) public balanceOf;
     modifier by(Role r) {
-        require(role[msg.sender] == r);
+        require(role[msg.sender] == r, "bad role");
         _;
     }
     // step 0
-    bool doneRace;
-    function join_Race() at_step(0) public by(Role.None) payable {
-        require(!doneRace);
+    bool public doneRace;
+    function join_Race() public payable by(Role.None) at_step(0) {
+        require(!doneRace, "already joined");
         role[msg.sender] = Role.Race;
-        require(msg.value == 100); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
+        require(msg.value == 100, "bad stake"); balanceOf[msg.sender] = msg.value;
+        require(true, "where");
         doneRace = true;
     }
     event Broadcast0(); // TODO: add params
     function __nextStep0() public {
-        require(step == 0);
-        //require(block.timestamp >= lastBlock + STEP_TIME);
+        require(step == 0, "wrong step");
+        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
         emit Broadcast0();
         step = 1;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
     // end 0
     // step 1
-    mapping(address => bytes32) commitsGambler;
-    mapping(address => uint) timesGambler;
-    bool halfStepGambler;
-    function join_commit_Gambler(bytes32 c) at_step(1) public {
-        require(commitsGambler[msg.sender] == bytes32(0));
-        require(!halfStepGambler);
+    mapping(address => bytes32) private commitsGambler;
+    mapping(address => uint256) private timesGambler;
+    bool public halfStepGambler;
+    function join_commit_Gambler(bytes32 c) public at_step(1) {
+        require(commitsGambler[msg.sender] == bytes32(0), "already committed");
+        require(!halfStepGambler, "half step passed");
         commitsGambler[msg.sender] = c;
         timesGambler[msg.sender] = block.timestamp;
     }
     event BroadcastHalfGambler();
-    function __nextHalfStepGambler() at_step(1) public {
-        require(block.timestamp >= lastBlock + STEP_TIME);
-        require(halfStepGambler == false);
+    function __nextHalfStepGambler() public at_step(1) {
+        require(block.timestamp >= lastTs + STEP_TIME, "too soon");
+        require(halfStepGambler == false, "already advanced");
         emit BroadcastHalfGambler();
         halfStepGambler = true;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
-    int Gambler_bet;
-    bool Gambler_bet_done;
-    function join_Gambler(int _bet, uint salt) at_step(1) public payable {
-        require(keccak256(_bet, salt) == bytes32(commitsGambler[msg.sender]));
+    int256 public Gambler_bet;
+    bool public Gambler_bet_done;
+    function join_Gambler(int256 _bet, uint256 salt) public payable at_step(1) {
+        require(keccak256(abi.encodePacked(_bet, salt)) == commitsGambler[msg.sender], "bad reveal");
         role[msg.sender] = Role.Gambler;
-        require(msg.value == 100); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
+        require(msg.value == 100, "bad stake"); balanceOf[msg.sender] = msg.value;
+        require(true, "where");
         Gambler_bet = _bet;
         Gambler_bet_done = true;
     }
     event Broadcast1(); // TODO: add params
     function __nextStep1() public {
-        require(step == 1);
-        //require(block.timestamp >= lastBlock + STEP_TIME);
+        require(step == 1, "wrong step");
+        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
         emit Broadcast1();
         step = 2;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
     // end 1
     // step 2
-    int Race_winner;
-    bool Race_winner_done;
-    bool done_Race_2;
-    function yield_Race2(int _winner) by (Role.Race) at_step(2) public {
-        require(!done_Race_2);
-        require(true);
+    int256 public Race_winner;
+    bool public Race_winner_done;
+    bool public done_Race_2;
+    function yield_Race2(int256 _winner) public by(Role.Race) at_step(2) {
+        require(!done_Race_2, "done");
+        require(true, "where");
         Race_winner = _winner;
         Race_winner_done = true;
         done_Race_2 = true;
     }
     event Broadcast2(); // TODO: add params
     function __nextStep2() public {
-        require(step == 2);
-        //require(block.timestamp >= lastBlock + STEP_TIME);
+        require(step == 2, "wrong step");
+        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
         emit Broadcast2();
         step = 3;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
     // end 2
-    function withdraw_3_Gambler() by(Role.Gambler) at_step(3) public {
-        int amount = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int(100) : int(0));
-        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
-        delete balanceOf[msg.sender];
+    function withdraw_3_Gambler() public by(Role.Gambler) at_step(3) {
+        int256 delta = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int256(100) : int256(0));
+        uint256 bal = balanceOf[msg.sender];
+        uint256 amount;
+        if (delta >= 0) {
+            amount = bal + uint256(delta);
+        } else {
+            uint256 d = uint256(-delta);
+            require(bal >= d, "insufficient");
+            amount = bal - d;
+        }
+        // Effects first
+        balanceOf[msg.sender] = 0;
+        // Interaction
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        require(ok, "ETH send failed");
     }
-    function withdraw_3_Race() by(Role.Race) at_step(3) public {
-        int amount = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int(0) : int(100));
-        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
-        delete balanceOf[msg.sender];
+    function withdraw_3_Race() public by(Role.Race) at_step(3) {
+        int256 delta = (((! Race_winner_done || (Race_winner == Gambler_bet))) ? int256(0) : int256(100));
+        uint256 bal = balanceOf[msg.sender];
+        uint256 amount;
+        if (delta >= 0) {
+            amount = bal + uint256(delta);
+        } else {
+            uint256 d = uint256(-delta);
+            require(bal >= d, "insufficient");
+            amount = bal - d;
+        }
+        // Effects first
+        balanceOf[msg.sender] = 0;
+        // Interaction
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        require(ok, "ETH send failed");
+    }
+    // Reject stray ETH by default
+    receive() external payable {
+        revert("direct ETH not allowed");
     }
 }

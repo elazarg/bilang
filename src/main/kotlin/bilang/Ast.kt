@@ -61,9 +61,15 @@ sealed class TypeExp : Ast() {
     data class Opt(val type: TypeExp) : TypeExp()
 }
 
+internal fun findRolesWithChance(ext: Ext): List<String> = when (ext) {
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role } else setOf()) + findRoles(ext.ext)
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) listOf(ext.q.role) else setOf()) + findRoles(ext.ext)
+    is Ext.Value -> listOf()
+}
+
 internal fun findRoles(ext: Ext): List<String> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role } else listOf()) + findRoles(ext.ext)
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role) else listOf()) + findRoles(ext.ext)
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role } else setOf()) + findRoles(ext.ext)
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role) else setOf()) + findRoles(ext.ext)
     is Ext.Value -> listOf()
 }
 

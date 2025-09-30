@@ -1,135 +1,173 @@
-pragma solidity ^0.4.22;
+
+pragma solidity ^0.8.31;
 contract ThreeWayLotteryShort {
-    constructor() public {
-        lastBlock = block.timestamp;
+    constructor() {
+        lastTs = block.timestamp;
     }
-    function keccak(bool x, uint salt) pure public returns(bytes32) {
-        return keccak256(x, salt);
+    function keccak(bool x, uint256 salt) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(x, salt));
     }
     // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint lastBlock;
-    modifier at_step(int _step) {
-        require(step == _step);
-        //require(block.timestamp < lastBlock + STEP_TIME);
+    uint256 public constant STEP_TIME = 500;
+    uint256 public step;
+    uint256 public lastTs;
+    modifier at_step(uint256 _step) {
+        require(step == _step, "wrong step");
+        // require(block.timestamp < lastTs + STEP_TIME, "step expired");
         _;
     }
     // roles
     enum Role { None, Issuer, Alice, Bob }
-    mapping(address => Role) role;
-    mapping(address => uint) balanceOf;
+    mapping(address => Role) public role;
+    mapping(address => uint256) public balanceOf;
     modifier by(Role r) {
-        require(role[msg.sender] == r);
+        require(role[msg.sender] == r, "bad role");
         _;
     }
     // step 0
-    mapping(address => bytes32) commitsIssuer;
-    mapping(address => uint) timesIssuer;
-    bool halfStepIssuer;
-    function join_commit_Issuer(bytes32 c) at_step(0) public {
-        require(commitsIssuer[msg.sender] == bytes32(0));
-        require(!halfStepIssuer);
+    mapping(address => bytes32) private commitsIssuer;
+    mapping(address => uint256) private timesIssuer;
+    bool public halfStepIssuer;
+    function join_commit_Issuer(bytes32 c) public at_step(0) {
+        require(commitsIssuer[msg.sender] == bytes32(0), "already committed");
+        require(!halfStepIssuer, "half step passed");
         commitsIssuer[msg.sender] = c;
         timesIssuer[msg.sender] = block.timestamp;
     }
     event BroadcastHalfIssuer();
-    function __nextHalfStepIssuer() at_step(0) public {
-        require(block.timestamp >= lastBlock + STEP_TIME);
-        require(halfStepIssuer == false);
+    function __nextHalfStepIssuer() public at_step(0) {
+        require(block.timestamp >= lastTs + STEP_TIME, "too soon");
+        require(halfStepIssuer == false, "already advanced");
         emit BroadcastHalfIssuer();
         halfStepIssuer = true;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
-    int Issuer_c;
-    bool Issuer_c_done;
-    function join_Issuer(int _c, uint salt) at_step(0) public payable {
-        require(keccak256(_c, salt) == bytes32(commitsIssuer[msg.sender]));
+    int256 public Issuer_c;
+    bool public Issuer_c_done;
+    function join_Issuer(int256 _c, uint256 salt) public payable at_step(0) {
+        require(keccak256(abi.encodePacked(_c, salt)) == commitsIssuer[msg.sender], "bad reveal");
         role[msg.sender] = Role.Issuer;
-        require(msg.value == 10); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
+        require(msg.value == 10, "bad stake"); balanceOf[msg.sender] = msg.value;
+        require(true, "where");
         Issuer_c = _c;
         Issuer_c_done = true;
     }
-    mapping(address => bytes32) commitsAlice;
-    mapping(address => uint) timesAlice;
-    bool halfStepAlice;
-    function join_commit_Alice(bytes32 c) at_step(0) public {
-        require(commitsAlice[msg.sender] == bytes32(0));
-        require(!halfStepAlice);
+    mapping(address => bytes32) private commitsAlice;
+    mapping(address => uint256) private timesAlice;
+    bool public halfStepAlice;
+    function join_commit_Alice(bytes32 c) public at_step(0) {
+        require(commitsAlice[msg.sender] == bytes32(0), "already committed");
+        require(!halfStepAlice, "half step passed");
         commitsAlice[msg.sender] = c;
         timesAlice[msg.sender] = block.timestamp;
     }
     event BroadcastHalfAlice();
-    function __nextHalfStepAlice() at_step(0) public {
-        require(block.timestamp >= lastBlock + STEP_TIME);
-        require(halfStepAlice == false);
+    function __nextHalfStepAlice() public at_step(0) {
+        require(block.timestamp >= lastTs + STEP_TIME, "too soon");
+        require(halfStepAlice == false, "already advanced");
         emit BroadcastHalfAlice();
         halfStepAlice = true;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
-    int Alice_c;
-    bool Alice_c_done;
-    function join_Alice(int _c, uint salt) at_step(0) public payable {
-        require(keccak256(_c, salt) == bytes32(commitsAlice[msg.sender]));
+    int256 public Alice_c;
+    bool public Alice_c_done;
+    function join_Alice(int256 _c, uint256 salt) public payable at_step(0) {
+        require(keccak256(abi.encodePacked(_c, salt)) == commitsAlice[msg.sender], "bad reveal");
         role[msg.sender] = Role.Alice;
-        require(msg.value == 10); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
+        require(msg.value == 10, "bad stake"); balanceOf[msg.sender] = msg.value;
+        require(true, "where");
         Alice_c = _c;
         Alice_c_done = true;
     }
-    mapping(address => bytes32) commitsBob;
-    mapping(address => uint) timesBob;
-    bool halfStepBob;
-    function join_commit_Bob(bytes32 c) at_step(0) public {
-        require(commitsBob[msg.sender] == bytes32(0));
-        require(!halfStepBob);
+    mapping(address => bytes32) private commitsBob;
+    mapping(address => uint256) private timesBob;
+    bool public halfStepBob;
+    function join_commit_Bob(bytes32 c) public at_step(0) {
+        require(commitsBob[msg.sender] == bytes32(0), "already committed");
+        require(!halfStepBob, "half step passed");
         commitsBob[msg.sender] = c;
         timesBob[msg.sender] = block.timestamp;
     }
     event BroadcastHalfBob();
-    function __nextHalfStepBob() at_step(0) public {
-        require(block.timestamp >= lastBlock + STEP_TIME);
-        require(halfStepBob == false);
+    function __nextHalfStepBob() public at_step(0) {
+        require(block.timestamp >= lastTs + STEP_TIME, "too soon");
+        require(halfStepBob == false, "already advanced");
         emit BroadcastHalfBob();
         halfStepBob = true;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
-    int Bob_c;
-    bool Bob_c_done;
-    function join_Bob(int _c, uint salt) at_step(0) public payable {
-        require(keccak256(_c, salt) == bytes32(commitsBob[msg.sender]));
+    int256 public Bob_c;
+    bool public Bob_c_done;
+    function join_Bob(int256 _c, uint256 salt) public payable at_step(0) {
+        require(keccak256(abi.encodePacked(_c, salt)) == commitsBob[msg.sender], "bad reveal");
         role[msg.sender] = Role.Bob;
-        require(msg.value == 10); 
-        balanceOf[msg.sender] = msg.value;
-        require(true);
+        require(msg.value == 10, "bad stake"); balanceOf[msg.sender] = msg.value;
+        require(true, "where");
         Bob_c = _c;
         Bob_c_done = true;
     }
     event Broadcast0(); // TODO: add params
     function __nextStep0() public {
-        require(step == 0);
-        //require(block.timestamp >= lastBlock + STEP_TIME);
+        require(step == 0, "wrong step");
+        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
         emit Broadcast0();
         step = 1;
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
     // end 0
-    function withdraw_1_Bob() by(Role.Bob) at_step(1) public {
-        int amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? int(20) : (- int(10))))));
-        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
-        delete balanceOf[msg.sender];
+    function withdraw_1_Bob() public by(Role.Bob) at_step(1) {
+        int256 delta = (((! Alice_c_done || ! Bob_c_done)) ? (- int256(10)) : ((! Issuer_c_done) ? (- int256(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int256(3)) * int256(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int256(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int256(3)) * int256(3)) == (((Issuer_c + Alice_c) + Bob_c) - int256(1)))) ? int256(20) : (- int256(10))))));
+        uint256 bal = balanceOf[msg.sender];
+        uint256 amount;
+        if (delta >= 0) {
+            amount = bal + uint256(delta);
+        } else {
+            uint256 d = uint256(-delta);
+            require(bal >= d, "insufficient");
+            amount = bal - d;
+        }
+        // Effects first
+        balanceOf[msg.sender] = 0;
+        // Interaction
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        require(ok, "ETH send failed");
     }
-    function withdraw_1_Issuer() by(Role.Issuer) at_step(1) public {
-        int amount = (((! Alice_c_done || ! Bob_c_done)) ? int(20) : ((! Issuer_c_done) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : int(20)))));
-        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
-        delete balanceOf[msg.sender];
+    function withdraw_1_Issuer() public by(Role.Issuer) at_step(1) {
+        int256 delta = (((! Alice_c_done || ! Bob_c_done)) ? int256(20) : ((! Issuer_c_done) ? (- int256(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int256(3)) * int256(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? (- int256(10)) : (((((((Issuer_c + Alice_c) + Bob_c) / int256(3)) * int256(3)) == (((Issuer_c + Alice_c) + Bob_c) - int256(1)))) ? (- int256(10)) : int256(20)))));
+        uint256 bal = balanceOf[msg.sender];
+        uint256 amount;
+        if (delta >= 0) {
+            amount = bal + uint256(delta);
+        } else {
+            uint256 d = uint256(-delta);
+            require(bal >= d, "insufficient");
+            amount = bal - d;
+        }
+        // Effects first
+        balanceOf[msg.sender] = 0;
+        // Interaction
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        require(ok, "ETH send failed");
     }
-    function withdraw_1_Alice() by(Role.Alice) at_step(1) public {
-        int amount = (((! Alice_c_done || ! Bob_c_done)) ? (- int(10)) : ((! Issuer_c_done) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? int(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int(3)) * int(3)) == (((Issuer_c + Alice_c) + Bob_c) - int(1)))) ? (- int(10)) : (- int(10))))));
-        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
-        delete balanceOf[msg.sender];
+    function withdraw_1_Alice() public by(Role.Alice) at_step(1) {
+        int256 delta = (((! Alice_c_done || ! Bob_c_done)) ? (- int256(10)) : ((! Issuer_c_done) ? int256(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int256(3)) * int256(3)) == ((Issuer_c + Alice_c) + Bob_c))) ? int256(20) : (((((((Issuer_c + Alice_c) + Bob_c) / int256(3)) * int256(3)) == (((Issuer_c + Alice_c) + Bob_c) - int256(1)))) ? (- int256(10)) : (- int256(10))))));
+        uint256 bal = balanceOf[msg.sender];
+        uint256 amount;
+        if (delta >= 0) {
+            amount = bal + uint256(delta);
+        } else {
+            uint256 d = uint256(-delta);
+            require(bal >= d, "insufficient");
+            amount = bal - d;
+        }
+        // Effects first
+        balanceOf[msg.sender] = 0;
+        // Interaction
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        require(ok, "ETH send failed");
+    }
+    // Reject stray ETH by default
+    receive() external payable {
+        revert("direct ETH not allowed");
     }
 }
