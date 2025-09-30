@@ -2,13 +2,10 @@ package bilang
 
 import bilang.TypeExp.*
 
-data class IncompatibleTypeError(val s: String) : Exception()
-
 internal class StaticError(reason: String) : RuntimeException(reason)
 
 // Short helpers to keep call sites terse
 internal fun pt(t: TypeExp): String = Pretty.type(t)
-internal fun pe(e: Exp): String = Pretty.exp(e)
 internal fun pvd(vd: VarDec): String = "${vd.first}: ${pt(vd.second)}"
 
 internal object Pretty {
@@ -102,13 +99,17 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
 
                         Kind.REVEAL -> {
                             requireRole(q)
-                            m.keys.forEach { (role, field) ->
+                            m.forEach { (rf, revealedType) ->
+                                val (role, field) = rf
+                                val existing = env.safeGetValue(role, field)
+                                requireStatic(existing is Hidden, "Parameter '$role.$field' must be hidden")
+                                val expected = (existing as Hidden).type
                                 requireStatic(
-                                    env.safeGetValue(role, field) is Hidden,
-                                    "Parameter '$role.$field' must be hidden"
+                                    compatible(revealedType, expected) && compatible(expected, revealedType),
+                                    "Reveal type mismatch for '$role.$field': expected ${pt(expected)}, got ${pt(revealedType)}"
                                 )
                             }
-                            val n = mapOf<String, TypeExp>()
+                            val n = emptyMap<String, TypeExp>()
                             checkWhere(n, m, q)
                             Pair(n, m)
                         }
