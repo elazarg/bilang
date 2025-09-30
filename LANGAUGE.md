@@ -92,7 +92,7 @@ The compiler transforms the abstract program into a **distributed protocol**:
 
 ### What the Compiler Handles Automatically
 
-✅ **Commit-Reveal Protocols**
+ **Commit-Reveal Protocols**
 
 ```bilang
 join Host() $ 100;
@@ -107,7 +107,7 @@ Generated Solidity:
 - `join_Host(door car, uint256 salt)` - reveal with verification
 - Automatic `keccak256` verification
 
-✅ **Step Sequencing**
+ **Step Sequencing**
 
 ```bilang
 yield A(x: int);
@@ -120,7 +120,7 @@ function yield_A(int x) at_step(0) { ... }
 function yield_B(int y) at_step(1) { ... }
 ```
 
-✅ **Information Flow Typing**
+ **Information Flow Typing**
 
 ```bilang
 reveal Host(car: door) where Host.car != Host.goat;
@@ -131,7 +131,7 @@ Type checker ensures:
 - Reveal type matches original hidden type
 - Where clause doesn't leak information
 
-✅ **Deposit Management**
+ **Deposit Management**
 
 ```bilang
 join Player() $ 100;
@@ -146,7 +146,7 @@ payable(msg.sender).call{value: 150}("");  // On withdraw
 
 ### What the Programmer Must Handle
 
-❌ **Player Abandonment**
+ **Player Abandonment**
 
 The language **forces** explicit null handling:
 
@@ -163,7 +163,7 @@ withdraw (Host.car != null && Guest.choice != null)
 - Using it in arithmetic without null check is a **type error**
 - Must use `isDefined()` or ternary with null check
 
-❌ **Step Timeout Configuration** (Current Limitation)
+ **Step Timeout Configuration** (Current Limitation)
 
 Currently hardcoded:
 ```kotlin
@@ -176,7 +176,7 @@ yield Host(strategy: complex_type) timeout 3600;  // 1 hour
 yield Guest(response: bool) timeout 300;          // 5 minutes
 ```
 
-❌ **Griefing Prevention Design**
+ **Griefing Prevention Design**
 
 The language provides mechanisms but not policy:
 
@@ -206,7 +206,7 @@ withdraw
 
 The type system ensures:
 1. **Information Flow Security**: Hidden values can't leak before reveal
-2. **Protocol Correctness**: Reveals match commitments
+2. **Protocol Correctness**: Reveals match commitments, or punished
 3. **Robustness**: Abandonment is explicitly handled
 4. **Game-Theoretic Properties**: Constraints are enforced
 
@@ -299,7 +299,7 @@ Abstract Program → Information Flow Analysis → Protocol Synthesis → Code G
 1. Resolve custom types
 2. Build role environment (who's in scope when)
 3. Track hidden vs public information
-4. Enforce reveal constraints
+4. Enforce commit constraints upon reveal
 5. Check null handling
 
 **Example**:
@@ -570,9 +570,7 @@ withdraw (Alice.c == null || Bob.c == null)
 ```
 
 **What the Compiler Does**:
-1. All three `join` are simultaneous (same step)
-2. No commit-reveal needed (all join with choices)
-3. Generates efficient outcome computation in Solidity
+1. All three `join` are conceptually simultaneous (same step). No explicit commit-reveal needed
 
 **What the Programmer Does**:
 1. Specifies lottery rule (sum mod 3)
