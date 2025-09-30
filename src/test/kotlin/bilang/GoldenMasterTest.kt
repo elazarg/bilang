@@ -11,8 +11,13 @@ import org.antlr.v4.runtime.CommonTokenStream
 import java.io.File
 import java.nio.file.Paths
 
+data class Example(
+    val name: String,
+    val disableBackend: Set<String> = emptySet(),
+)
+
 data class TestCase(
-    val example: String,
+    val example: Example,
     val extension: String,
     val backend: String,
     val generator: (ExpProgram) -> String
@@ -23,19 +28,19 @@ data class TestCase(
 class GoldenMasterTest : FreeSpec({
 
     val exampleFiles = listOf(
-        "Bet",
-        "MontyHall",
-        "MontyHallChance",
-        "OddsEvens",
-        "OddsEvensShort",
-        "Prisoners",
-        "Simple",
-        "Trivial1",
-        "Puzzle",
-        "ThreeWayLottery",
-        "ThreeWayLotteryBuggy",
-        "ThreeWayLotteryShort",
-//        "TicTacToe"
+        Example("Bet"),
+        Example("MontyHall"),
+        Example("MontyHallChance"),
+        Example("OddsEvens"),
+        Example("OddsEvensShort"),
+        Example("Prisoners"),
+        Example("Simple"),
+        Example("Trivial1"),
+        Example("Puzzle"),
+        Example("ThreeWayLottery"),
+        Example("ThreeWayLotteryBuggy"),
+        Example("ThreeWayLotteryShort"),
+        Example("TicTacToe", disableBackend=setOf("efg")),
     )
 
     val testCases = exampleFiles.flatMap { example ->
@@ -43,7 +48,7 @@ class GoldenMasterTest : FreeSpec({
             TestCase(example, "sol", "solidity") { prog -> genGame(prog) },
             TestCase(example, "efg", "gambit") { prog -> Extensive(prog).toEfg() },
             TestCase(example, "z3", "smt") { prog -> smt(prog) }
-        )
+        ).filter { t -> t.extension !in example.disableBackend }
     }
 
     "Golden Master Tests" - {
@@ -54,14 +59,16 @@ class GoldenMasterTest : FreeSpec({
                 try {
                     val actualOutput = generateOutput(testCase)
                     val sanitized = sanitizeOutput(actualOutput, testCase.backend)
+
+                    val parent = "test-diffs/${testCase.backend}"
+                    val diffFile = File("$parent/${testCase.example.name}.${testCase.extension}.diff")
+                    val actualFile = File("$parent/${testCase.example.name}.${testCase.extension}")
+
                     if (!goldenFile.exists()) {
+                        actualFile.writeText(actualOutput)
                         error("Missing golden file for $testCase.")
                     }
                     val expectedOutput = sanitizeOutput(goldenFile.readText(), testCase.backend)
-
-                    val parent = "test-diffs/${testCase.backend}"
-                    val diffFile = File("$parent/${testCase.example}.${testCase.extension}.diff")
-                    val actualFile = File("$parent/${testCase.example}.${testCase.extension}")
 
                     if (sanitized != expectedOutput) {
                         // Write debug artifacts
@@ -76,9 +83,9 @@ class GoldenMasterTest : FreeSpec({
                     }
                     sanitized shouldBe expectedOutput
 
-                } catch (e: NotImplementedError) {
+                } catch (_: NotImplementedError) {
                     // Skip test for unimplemented features
-                    println("Skipped (not implemented): ${testCase.example}.${testCase.extension}")
+                    println("Skipped (not implemented): ${testCase.example.name}.${testCase.extension}")
                 }
             }
         }
@@ -116,10 +123,10 @@ class GoldenMasterTest : FreeSpec({
 // === Helpers ===
 
 private fun getGoldenFile(testCase: TestCase): File =
-    File("examples/${testCase.backend}/${testCase.example}.${testCase.extension}")
+    File("examples/${testCase.backend}/${testCase.example.name}.${testCase.extension}")
 
 private fun generateOutput(testCase: TestCase): String {
-    val program = parseExample(testCase.example)
+    val program = parseExample(testCase.example.name)
     return testCase.generator(program)
 }
 
