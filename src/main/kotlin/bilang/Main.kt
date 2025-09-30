@@ -6,7 +6,16 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import java.nio.file.Paths
 
-fun parse(inputFilename: String): ExpProgram {
+fun parseCode(code: String): ExpProgram {
+    // Ensure there's always a withdraw statement
+    val fullCode = if (!code.contains("withdraw")) "$code; withdraw {}" else code
+    val chars = CharStreams.fromString(fullCode)
+    val tokens = CommonTokenStream(BiLangLexer(chars))
+    val ast = BiLangParser(tokens).program()
+    return AstTranslator().visitProgram(ast)
+}
+
+fun parseFile(inputFilename: String): ExpProgram {
     val chars = CharStreams.fromPath(Paths.get(inputFilename))
     val tokens = CommonTokenStream(BiLangLexer(chars))
     val ast = BiLangParser(tokens).program()
@@ -16,7 +25,7 @@ fun parse(inputFilename: String): ExpProgram {
 private fun run(name: String) {
     val inputFilename = "examples/$name.bi"
     println("Analyzing $inputFilename ...")
-    val program = parse(inputFilename).copy(name=name, desc=name)
+    val program = parseFile(inputFilename).copy(name=name, desc=name)
     println("roles: " + findRoles(program.game))
     doTypecheck(program)
     writeFile("examples/smt/$name.z3") { smt(program) }
