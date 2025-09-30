@@ -33,7 +33,9 @@ class GoldenMasterTest : FreeSpec({
         "Trivial1",
         "Puzzle",
         "ThreeWayLottery",
-        "ThreeWayLotteryShort"
+        "ThreeWayLotteryBuggy",
+        "ThreeWayLotteryShort",
+//        "TicTacToe"
     )
 
     val testCases = exampleFiles.flatMap { example ->
@@ -65,7 +67,7 @@ class GoldenMasterTest : FreeSpec({
                         // Write debug artifacts
                         diffFile.parentFile.mkdirs()
                         diffFile.writeText(computeDiff(expectedOutput, sanitized))
-                        actualFile.writeText(sanitized)
+                        actualFile.writeText(actualOutput)
                     } else {
                         // Clean up stale debug artifacts
                         // Note that untested artifacts would remain, whether stale or not
@@ -132,8 +134,6 @@ private fun parseExample(example: String): ExpProgram {
 private fun sanitizeOutput(content: String, backend: String): String =
     when (backend) {
         "solidity" -> content
-            .replace(Regex("lastBlock = block\\.timestamp;"), "lastBlock = TIMESTAMP;")
-            .replace(Regex("block\\.timestamp"), "TIMESTAMP")
             .replace(Regex("//.*\\d{10,}.*\n"), "// TIMESTAMP_COMMENT\n")
             .replace(Regex("0x[0-9a-fA-F]{40}"), "0xADDRESS")
             .replace(Regex("\\s+\n"), "\n")

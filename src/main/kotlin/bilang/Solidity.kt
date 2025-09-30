@@ -1,44 +1,48 @@
 package bilang
 
 fun genGame(p: ExpProgram): String {
-    val roles = findRoles(p.game).join(", ")
-    return """pragma solidity ^0.4.22;
+    val roles = findRolesWithChance(p.game).join(", ")
+    return """
+pragma solidity ^0.8.31;
 
 contract ${p.desc} {
-    constructor() public {
-        lastBlock = block.timestamp;
+    constructor() {
+        lastTs = block.timestamp;
     }
 
-    function keccak(bool x, uint salt) pure public returns(bytes32) {
-        return keccak256(x, salt);
+    function keccak(bool x, uint256 salt) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(x, salt));
     }
 
     // Step
-    uint constant STEP_TIME = 500;
-    int step;
-    uint lastBlock;
+    uint256 public constant STEP_TIME = 500;
+    uint256 public step;
+    uint256 public lastTs;
 
-    modifier at_step(int _step) {
-        require(step == _step);
-        //require(block.timestamp < lastBlock + STEP_TIME);
+    modifier at_step(uint256 _step) {
+        require(step == _step, "wrong step");
+        // require(block.timestamp < lastTs + STEP_TIME, "step expired");
         _;
     }
     
     // roles
     enum Role { None, $roles }
-    mapping(address => Role) role;
-    mapping(address => uint) balanceOf;
+    mapping(address => Role) public role;
+    mapping(address => uint256) public balanceOf;
 
     modifier by(Role r) {
-        require(role[msg.sender] == r);
+        require(role[msg.sender] == r, "bad role");
         _;
     }
 ${genExt(p.game, 0)}
 
+    // Reject stray ETH by default
+    receive() external payable {
+        revert("direct ETH not allowed");
+    }
 }
 """.replace(Regex("( *\n){2,}"), "\n")
 }
-
 
 private fun genExt(ext: Ext, step: Int): String = when (ext) {
     is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
@@ -55,11 +59,11 @@ $items
 
     event Broadcast$step(); // TODO: add params
     function __nextStep$step() public {
-        require(step == $step);
-        //require(block.timestamp >= lastBlock + STEP_TIME);
+        require(step == $step, "wrong step");
+        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
         emit Broadcast$step();
         step = ${step + 1};
-        lastBlock = block.timestamp;
+        lastTs = block.timestamp;
     }
 
     // end $step
@@ -73,72 +77,71 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val typeWheres = q.params.map { (name, type) -> whereof(varname(name, type), type) }.statements()
     val vars = q.params.map { (name, type) -> Pair(varname(name, type), typeOf(type)) }
     val params = vars.map { (name, type) -> "$type _$name" }.join(", ")
-    val decls = vars.map { (name, type) -> "$type ${role}_$name;" }.declarations()
+    val decls = vars.map { (name, type) -> "$type public ${role}_$name;" }.declarations()
 
     val names = vars.names()
-    val declsDone = names.map { "bool ${role}_${it}_done;" }.declarations()
+    val declsDone = names.map { "bool public ${role}_${it}_done;" }.declarations()
     val assignments = names.map { "${role}_$it = _$it;" }.statements()
     val inits = names.map { "${role}_${it}_done = true;" }.statements()
     val doneRole = "done_${role}_$step"
 
     val deposit = q.deposit.n
     val payable = if (deposit != 0) "payable " else ""
-    val requirePayment = if (deposit != 0) "require(msg.value == $deposit); " else ""
+    val requirePayment = if (deposit != 0) "require(msg.value == $deposit, \"bad stake\"); " else ""
 
     return when (kind) {
         Kind.JOIN_CHANCE -> makeQuery(Kind.JOIN, q, step)
+
         Kind.JOIN -> {
             if (q.params.isNotEmpty()) {
-                val revealArgs = (vars.map { (name, type) -> "$type _$name" } + "uint salt").join(", ")
+                val revealArgs = (vars.map { (name, type) -> "$type _$name" } + "uint256 salt").join(", ")
                 val reveals = (names.map { "_$it" } + "salt").join(", ")
                 val (updateChosen, checkChosen) = Pair("", "")
-            """
-            |    mapping(address => bytes32) commits$role;
-            |    mapping(address => uint) times$role;
-            |    bool halfStep$role;
+                """
+            |    mapping(address => bytes32) private commits$role;
+            |    mapping(address => uint256) private times$role;
+            |    bool public halfStep$role;
             |
-            |    function join_commit_$role(bytes32 c) at_step($step) public {
-            |        require(commits$role[msg.sender] == bytes32(0));
-            |        require(!halfStep$role);
+            |    function join_commit_$role(bytes32 c) public at_step($step) {
+            |        require(commits$role[msg.sender] == bytes32(0), "already committed");
+            |        require(!halfStep$role, "half step passed");
             |        commits$role[msg.sender] = c;
             |        times$role[msg.sender] = block.timestamp;
             |    }
             |
             |    event BroadcastHalf$role();
-            |    function __nextHalfStep$role() at_step($step) public {
-            |        require(block.timestamp >= lastBlock + STEP_TIME);
-            |        require(halfStep$role == false);
+            |    function __nextHalfStep$role() public at_step($step) {
+            |        require(block.timestamp >= lastTs + STEP_TIME, "too soon");
+            |        require(halfStep$role == false, "already advanced");
             |        emit BroadcastHalf$role();
             |        halfStep$role = true;
-            |        lastBlock = block.timestamp;
+            |        lastTs = block.timestamp;
             |    }
             |
             |    $decls
             |    $declsDone
             |
-            |    function join_$role($revealArgs) at_step($step) public $payable{
-            |        require(keccak256($reveals) == bytes32(commits$role[msg.sender]));
+            |    function join_$role($revealArgs) public ${payable}at_step($step) {
+            |        require(keccak256(abi.encodePacked($reveals)) == commits$role[msg.sender], "bad reveal");
             |        $checkChosen
             |        role[msg.sender] = Role.$role;
-            |        $requirePayment
-            |        balanceOf[msg.sender] = msg.value;
+            |        ${requirePayment}balanceOf[msg.sender] = msg.value;
             |        $updateChosen
             |        $typeWheres
-            |        require($where);
+            |        require($where, "where");
             |        $assignments
             |        $inits
             |    }
             |""".trimMargin()
             } else {
-                val (checkDone, makeDone) = Pair("require(!done$role);", "done$role = true;")
+                val (checkDone, makeDone) = Pair("require(!done$role, \"already joined\");", "done$role = true;")
                 """
-            |    bool done$role;
-            |    function join_$role() at_step($step) public by(Role.None) $payable{
+            |    bool public done$role;
+            |    function join_$role() public ${payable}by(Role.None) at_step($step) {
             |        $checkDone
             |        role[msg.sender] = Role.$role;
-            |        $requirePayment
-            |        balanceOf[msg.sender] = msg.value;
-            |        require($where);
+            |        ${requirePayment}balanceOf[msg.sender] = msg.value;
+            |        require($where, "where");
             |        $inits
             |        $makeDone
             |    }
@@ -150,12 +153,12 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
             """
             |    $decls
             |    $declsDone
-            |    bool $doneRole;
+            |    bool public $doneRole;
             |
-            |    function yield_$role$step($params) by (Role.$role) at_step($step) public {
-            |        require(!$doneRole);
+            |    function yield_${role}${step}($params) public by(Role.$role) at_step($step) {
+            |        require(!$doneRole, "done");
             |        $typeWheres
-            |        require($where);
+            |        require($where, "where");
             |        $assignments
             |        $inits
             |        $doneRole = true;
@@ -164,19 +167,19 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
         }
 
         Kind.REVEAL -> {
-            val reveals = vars.names().map {
-                name -> "require(keccak256(_$name, salt) == bytes32(${role}_hidden_$name));"
+            val reveals = vars.names().map { name ->
+                "require(keccak256(abi.encodePacked(_$name, salt)) == bytes32(${role}_hidden_$name), \"bad reveal\");"
             }.statements()
             """
             |    $decls
             |    $declsDone
-            |    bool $doneRole;
+            |    bool public $doneRole;
             |
-            |    function reveal_$role$step($params, uint salt) by(Role.$role) at_step($step) public {
-            |        require(!$doneRole);
+            |    function reveal_${role}${step}($params, uint256 salt) public by(Role.$role) at_step($step) {
+            |        require(!$doneRole, "done");
             |        $typeWheres
             |        $reveals
-            |        require($where);
+            |        require($where, "where");
             |        $assignments
             |        $inits
             |        $doneRole = true;
@@ -187,19 +190,34 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
 }
 
 private fun varname(name: String, type: TypeExp) =
-        if (type is TypeExp.Hidden) "hidden_$name"
-        else name
+    if (type is TypeExp.Hidden) "hidden_$name" else name
 
 private fun genOutcome(switch: Outcome.Value, step: Int): String {
+    // New: safe uint balance +/- int delta, CEI, call-based payout
     return switch.ts.entries.map { (role: String, money: Exp) ->
         """
-        |    function withdraw_${step}_$role() by(Role.$role) at_step($step) public {
-        |        int amount = ${exp(money)};
-        |        msg.sender.transfer(uint(int(balanceOf[msg.sender]) + amount));
-        |        delete balanceOf[msg.sender];
+        |    function withdraw_${step}_$role() public by(Role.$role) at_step($step) {
+        |        int256 delta = ${exp(money)};
+        |        uint256 bal = balanceOf[msg.sender];
+        |
+        |        uint256 amount;
+        |        if (delta >= 0) {
+        |            amount = bal + uint256(delta);
+        |        } else {
+        |            uint256 d = uint256(-delta);
+        |            require(bal >= d, "insufficient");
+        |            amount = bal - d;
+        |        }
+        |
+        |        // Effects first
+        |        balanceOf[msg.sender] = 0;
+        |
+        |        // Interaction
+        |        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        |        require(ok, "ETH send failed");
         |    }
         """.trimMargin()
-        }.join("\n")
+    }.join("\n")
 }
 
 private fun exp(e: Exp): String = when (e) {
@@ -222,7 +240,7 @@ private fun exp(e: Exp): String = when (e) {
     is Exp.Var -> "_${e.name}"
     is Exp.Member -> "${e.target}_${e.field}"
     is Exp.Cond -> "((${exp(e.cond)}) ? ${exp(e.ifTrue)} : ${exp(e.ifFalse)})"
-    is Exp.Const.Num -> "int(${e.n})"
+    is Exp.Const.Num -> "int256(${e.n})"
     is Exp.Const.Bool -> "${e.truth}"
     is Exp.Const.Address -> "address(${e.n.toString(16)})" // todo hex
     is Exp.Const.Hidden -> exp(e.value as Exp)
@@ -231,24 +249,25 @@ private fun exp(e: Exp): String = when (e) {
 }
 
 private fun typeOf(t: TypeExp): String = when (t) {
-    TypeExp.INT -> "int"
+    TypeExp.INT -> "int256"
     TypeExp.BOOL -> "bool"
     TypeExp.ROLE -> "Role"
     TypeExp.ROLESET -> "mapping(address => bool)"
     TypeExp.ADDRESS -> "address"
     TypeExp.EMPTY -> throw AssertionError()
-    is TypeExp.Hidden -> "uint"
-    is TypeExp.TypeId -> "int" // FIX: either inline or declare types
-    is TypeExp.Subset -> "int"
-    is TypeExp.Range -> "int"
+    is TypeExp.Hidden -> "uint256"
+    is TypeExp.TypeId -> "int256" // keep for now
+    is TypeExp.Subset -> "int256"
+    is TypeExp.Range -> "int256"
     is TypeExp.Opt -> typeOf(t.type)
 }
 
 private fun whereof(v: String, t: TypeExp): String = when (t) {
-    is TypeExp.Subset -> "require(${t.values.map { "$v == $it" }.join(" || ")})"
+    is TypeExp.Subset -> "require(${t.values.map { "$v == $it" }.join(" || ")});"
     is TypeExp.Range -> "require(${t.min} <= $v && $v <= ${t.max});"
     else -> ""
 }
 
 private fun Iterable<String>.declarations() = join("\n    ")
 private fun Iterable<String>.statements() = join("\n        ")
+private fun List<Pair<String, String>>.names() = this.map { it.first }
