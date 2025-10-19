@@ -11,6 +11,7 @@ sealed class Ext : Ast() {
     data class BindSingle(val kind: Kind, val q: Query, val ext: Ext) : Ext(), Step
     data class Value(val exp: Outcome.Value) : Ext()
 }
+
 data class Query(val role: String, val params: List<VarDec>, val deposit: Exp.Const.Num, val where: Exp) : Ast()
 
 sealed class Exp : Ast() {
@@ -29,10 +30,11 @@ sealed class Exp : Ast() {
         data class Address(val n: Int) : Const()
         data class Hidden(val value: Const) : Const()
     }
+
     data class Let(val dec: VarDec, val init: Exp, val exp: Exp) : Exp()
 }
 
-sealed class Outcome: Ast() {
+sealed class Outcome : Ast() {
     data class Cond(val cond: Exp, val ifTrue: Outcome, val ifFalse: Outcome) : Outcome()
     // Idea: not a simple Var -> Exp mapping, but a `lambda (Var : RoleSet) . Exp` mapping
     // (the trivial case where RoleSet is a singleton van have Var -> Exp as a syntactic sugar)
@@ -43,6 +45,7 @@ sealed class Outcome: Ast() {
 }
 
 typealias VarDec = Pair<String, TypeExp>
+
 enum class Kind { JOIN, YIELD, REVEAL, JOIN_CHANCE }
 
 sealed class TypeExp : Ast() {
@@ -62,8 +65,14 @@ sealed class TypeExp : Ast() {
 }
 
 internal fun findRolesWithChance(ext: Ext): List<String> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role } else setOf()) + findRoles(ext.ext)
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) listOf(ext.q.role) else setOf()) + findRoles(ext.ext)
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role } else setOf()) + findRoles(
+        ext.ext
+    )
+
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) listOf(ext.q.role) else setOf()) + findRoles(
+        ext.ext
+    )
+
     is Ext.Value -> listOf()
 }
 
@@ -75,17 +84,34 @@ internal fun findRoles(ext: Ext): List<String> = when (ext) {
 
 fun desugar(outcome: Outcome): Outcome.Value = desugar(outcome, listOf())
 
+private fun <T : Ast> copySpan(to: T, from: Ast): T {
+    SourceLoc.copy(to, from)
+    return to
+}
+
 // TODO: FIX. let binding does not seem to happen
 private fun desugar(outcome: Outcome, names: List<Pair<VarDec, Exp>>): Outcome.Value = when (outcome) {
     is Outcome.Value -> outcome.copy(ts = outcome.ts.mapValues { (_, exp) ->
-        names.foldRight(exp){(vd, init), acc -> Exp.Let(vd, init, acc)}
+        names.foldRight(exp) { (vd, init), acc -> copySpan(Exp.Let(vd, init, acc), outcome) }
     })
+
     is Outcome.Cond -> {
         val ifTrue = desugar(outcome.ifTrue).ts
         val ifFalse = desugar(outcome.ifFalse).ts
-        val ts = ifTrue.keys.associateWith { Exp.Cond(outcome.cond, ifTrue.getValue(it), ifFalse.getValue(it)) }
-        Outcome.Value(ts)
+        fun safeGetRole(m: Map<String, Exp>, k: String): Exp {
+            try {
+                return m.getValue(k)
+            } catch (e: NoSuchElementException) {
+                throw StaticError("Unknown role $k", outcome)
+            }
+        }
+
+        val ts = ifTrue.keys.associateWith {
+            copySpan(Exp.Cond(outcome.cond, safeGetRole(ifTrue, it), safeGetRole(ifFalse, it)), outcome)
+        }
+        copySpan(Outcome.Value(ts), outcome)
     }
+
     is Outcome.Let -> desugar(outcome.outcome, names + Pair(outcome.dec, outcome.init))
 }
 

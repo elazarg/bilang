@@ -12,6 +12,7 @@ import vegas.generated.VegasLexer
 import vegas.generated.VegasParser
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
+import vegas.Span
 import java.util.concurrent.CompletableFuture
 
 class VegasTextDocumentService(private val server: VegasLanguageServer) : TextDocumentService {
@@ -38,6 +39,14 @@ class VegasTextDocumentService(private val server: VegasLanguageServer) : TextDo
         // Can be used to trigger validation
     }
 
+    private fun spanToRange(span: Span?): Range {
+        return if (span == null) {
+            Range(Position(0, 0), Position(0, Int.MAX_VALUE))
+        } else {
+            Range(Position(span.startLine-1, span.startCol-1), Position(span.endLine-1,span.endCol))
+        }
+    }
+
     private fun validateDocument(uri: String) {
         val content = documentManager[uri] ?: return
         val diagnostics = mutableListOf<Diagnostic>()
@@ -45,12 +54,11 @@ class VegasTextDocumentService(private val server: VegasLanguageServer) : TextDo
             val program: ExpProgram = parseCode(content)
             typeCheck(program)
         } catch (e: StaticError) {
-            // In a real implementation, you would get line/column info from the parser
-            val range = Range(Position(0, 0), Position(0, Int.MAX_VALUE))
-            diagnostics.add(Diagnostic(range, e.message, DiagnosticSeverity.Error, "vegas"))
+            diagnostics.add(Diagnostic(spanToRange(e.span()), e.message, DiagnosticSeverity.Error, "vegas"))
         } catch (e: Exception) {
             val range = Range(Position(0, 0), Position(0, Int.MAX_VALUE))
             diagnostics.add(Diagnostic(range, "Parsing error: " + e.message, DiagnosticSeverity.Error, "vegas"))
+            diagnostics.add(Diagnostic(range, "Parsing error: " + e.stackTraceToString(), DiagnosticSeverity.Error, "vegas"))
         }
 
         server.getClient().publishDiagnostics(PublishDiagnosticsParams(uri, diagnostics))

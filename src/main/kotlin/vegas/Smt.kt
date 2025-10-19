@@ -71,7 +71,7 @@ private fun exp(e: Exp): String = when (e) {
     is Address -> TODO()
     is Hidden -> exp(e.value as Exp)
     is Let -> "(let ${e.dec.name} ${exp(e.init)} ${exp(e.exp)})"
-    UNDEFINED -> throw StaticError("Undefined")
+    UNDEFINED -> throw StaticError("Undefined", e)
 }
 
 private fun binop(op: String) = when (op) {
