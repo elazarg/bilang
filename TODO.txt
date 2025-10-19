@@ -8,4 +8,3 @@ TODO:
 * Generate Viper code
 * Implement Language Server Protocol
 * Support variable deposits
-*

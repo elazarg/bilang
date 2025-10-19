@@ -2,9 +2,7 @@
 __pycache__
 
 .idea
-.vscode/
 test-diffs/
-/.DS_Store
 target/
 vegas/src/generated/*
 vegas/bin/*
@@ -16,4 +14,22 @@ coq/#*.v#
 coq/*.aux
 coq/*.glob
 coq/*.vo
+
+# Node / build
+node_modules/
+out/
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+.pnpm-store/
+.eslintcache
+
+# VS Code dev + artifacts
+.vscode/
+.vscode-test/
+*.vsix
+
+# OS junk
 .DS_Store
+Thumbs.db
