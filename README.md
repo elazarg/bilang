@@ -1,6 +1,6 @@
 # Vegas: A Domain-Specific Language for Game-Theoretically Analyzed Blockchain-Based Games
 
-Vegas is a research tool that provides a unified language for specifying multi-party games with economic incentives, automatic translation to game-theoretic models, and smart contract generation.
+Vegas (VErified Game Analysis and Synthesis) is a research tool that provides a unified language for specifying multi-party games with economic incentives, automatic translation to game-theoretic models, and smart contract generation.
 
 ## Overview
 
