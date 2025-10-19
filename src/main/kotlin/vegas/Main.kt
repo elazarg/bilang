@@ -1,7 +1,7 @@
-package bilang
+package vegas
 
-import bilang.generated.BiLangLexer
-import bilang.generated.BiLangParser
+import vegas.generated.VegasLexer
+import vegas.generated.VegasParser
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import java.nio.file.Paths
@@ -10,20 +10,20 @@ fun parseCode(code: String): ExpProgram {
     // Ensure there's always a withdraw statement
     val fullCode = if (!code.contains("withdraw")) "$code; withdraw {}" else code
     val chars = CharStreams.fromString(fullCode)
-    val tokens = CommonTokenStream(BiLangLexer(chars))
-    val ast = BiLangParser(tokens).program()
+    val tokens = CommonTokenStream(VegasLexer(chars))
+    val ast = VegasParser(tokens).program()
     return AstTranslator().visitProgram(ast)
 }
 
 fun parseFile(inputFilename: String): ExpProgram {
     val chars = CharStreams.fromPath(Paths.get(inputFilename))
-    val tokens = CommonTokenStream(BiLangLexer(chars))
-    val ast = BiLangParser(tokens).program()
+    val tokens = CommonTokenStream(VegasLexer(chars))
+    val ast = VegasParser(tokens).program()
     return AstTranslator().visitProgram(ast)
 }
 
 private fun run(name: String) {
-    val inputFilename = "examples/$name.bi"
+    val inputFilename = "examples/$name.vg"
     println("Analyzing $inputFilename ...")
     val program = parseFile(inputFilename).copy(name=name, desc=name)
     println("roles: " + findRoles(program.game))

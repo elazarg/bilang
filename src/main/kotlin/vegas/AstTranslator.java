@@ -1,7 +1,7 @@
-package bilang;
+package vegas;
 
-import bilang.generated.BiLangBaseVisitor;
-import bilang.generated.BiLangParser.*;
+import vegas.generated.VegasBaseVisitor;
+import vegas.generated.VegasParser.*;
 import kotlin.Pair;
 import org.antlr.v4.runtime.Token;
 
@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 import static java.util.stream.Collectors.*;
 
-class AstTranslator extends BiLangBaseVisitor<Ast> {
+class AstTranslator extends VegasBaseVisitor<Ast> {
 
     @Override
     public ExpProgram visitProgram(ProgramContext ctx) {
@@ -69,7 +69,7 @@ class AstTranslator extends BiLangBaseVisitor<Ast> {
 
     @Override
     public Ext.Value visitWithdrawExt(WithdrawExtContext ctx) {
-        return new Ext.Value(bilang.AstKt.desugar(outcome(ctx.outcome())));
+        return new Ext.Value(vegas.AstKt.desugar(outcome(ctx.outcome())));
     }
 
     @Override

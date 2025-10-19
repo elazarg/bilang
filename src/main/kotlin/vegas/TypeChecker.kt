@@ -1,6 +1,6 @@
-package bilang
+package vegas
 
-import bilang.TypeExp.*
+import vegas.TypeExp.*
 
 internal class StaticError(reason: String) : RuntimeException(reason)
 

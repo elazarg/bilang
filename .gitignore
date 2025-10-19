@@ -6,9 +6,9 @@ __pycache__
 test-diffs/
 /.DS_Store
 target/
-bilang/src/generated/*
-bilang/bin/*
-bilang/gambit/*.efg
+vegas/src/generated/*
+vegas/bin/*
+vegas/gambit/*.efg
 scala.iml
 *.sbt
 

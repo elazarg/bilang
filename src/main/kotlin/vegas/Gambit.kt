@@ -1,7 +1,7 @@
-package bilang
+package vegas
 
-import bilang.Exp.*
-import bilang.Exp.Const.*
+import vegas.Exp.*
+import vegas.Exp.Const.*
 
 typealias OutcomeType = Num
 

@@ -1,5 +1,4 @@
-// Generated from BiLang.g4 by ANTLR 4.13.2
-package bilang.generated;
+package vegas.generated;// Generated from C:/Users/elazar/workspace/bilang/Vegas.g4 by ANTLR 4.13.2
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -10,7 +9,7 @@ import java.util.Iterator;
 import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast", "CheckReturnValue", "this-escape"})
-public class BiLangParser extends Parser {
+public class VegasParser extends Parser {
 	static { RuntimeMetaData.checkVersion("4.13.2", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
@@ -89,7 +88,7 @@ public class BiLangParser extends Parser {
 	}
 
 	@Override
-	public String getGrammarFileName() { return "BiLang.g4"; }
+	public String getGrammarFileName() { return "Vegas.g4"; }
 
 	@Override
 	public String[] getRuleNames() { return ruleNames; }
@@ -100,7 +99,7 @@ public class BiLangParser extends Parser {
 	@Override
 	public ATN getATN() { return _ATN; }
 
-	public BiLangParser(TokenStream input) {
+	public VegasParser(TokenStream input) {
 		super(input);
 		_interp = new ParserATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
 	}
@@ -110,7 +109,7 @@ public class BiLangParser extends Parser {
 		public ExtContext ext() {
 			return getRuleContext(ExtContext.class,0);
 		}
-		public TerminalNode EOF() { return getToken(BiLangParser.EOF, 0); }
+		public TerminalNode EOF() { return getToken(VegasParser.EOF, 0); }
 		public List<TypeDecContext> typeDec() {
 			return getRuleContexts(TypeDecContext.class);
 		}
@@ -122,8 +121,16 @@ public class BiLangParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_program; }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterProgram(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitProgram(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitProgram(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitProgram(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -172,14 +179,22 @@ public class BiLangParser extends Parser {
 		public TypeExpContext typeExp() {
 			return getRuleContext(TypeExpContext.class,0);
 		}
-		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
+		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
 		public TypeDecContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_typeDec; }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterTypeDec(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitTypeDec(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitTypeDec(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitTypeDec(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -226,11 +241,19 @@ public class BiLangParser extends Parser {
 	@SuppressWarnings("CheckReturnValue")
 	public static class TypeIdContext extends TypeExpContext {
 		public Token name;
-		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
+		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
 		public TypeIdContext(TypeExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterTypeId(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitTypeId(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitTypeId(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitTypeId(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -238,14 +261,22 @@ public class BiLangParser extends Parser {
 	public static class SubsetTypeExpContext extends TypeExpContext {
 		public Token INT;
 		public List<Token> vals = new ArrayList<Token>();
-		public List<TerminalNode> INT() { return getTokens(BiLangParser.INT); }
+		public List<TerminalNode> INT() { return getTokens(VegasParser.INT); }
 		public TerminalNode INT(int i) {
-			return getToken(BiLangParser.INT, i);
+			return getToken(VegasParser.INT, i);
 		}
 		public SubsetTypeExpContext(TypeExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterSubsetTypeExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitSubsetTypeExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitSubsetTypeExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitSubsetTypeExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -253,14 +284,22 @@ public class BiLangParser extends Parser {
 	public static class RangeTypeExpContext extends TypeExpContext {
 		public Token start;
 		public Token end;
-		public List<TerminalNode> INT() { return getTokens(BiLangParser.INT); }
+		public List<TerminalNode> INT() { return getTokens(VegasParser.INT); }
 		public TerminalNode INT(int i) {
-			return getToken(BiLangParser.INT, i);
+			return getToken(VegasParser.INT, i);
 		}
 		public RangeTypeExpContext(TypeExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterRangeTypeExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitRangeTypeExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitRangeTypeExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitRangeTypeExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -366,8 +405,16 @@ public class BiLangParser extends Parser {
 		}
 		public ReceiveExtContext(ExtContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterReceiveExt(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitReceiveExt(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitReceiveExt(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitReceiveExt(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -378,8 +425,16 @@ public class BiLangParser extends Parser {
 		}
 		public WithdrawExtContext(ExtContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterWithdrawExt(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitWithdrawExt(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitWithdrawExt(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitWithdrawExt(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -462,8 +517,8 @@ public class BiLangParser extends Parser {
 		public List<VarDecContext> decls = new ArrayList<VarDecContext>();
 		public Token deposit;
 		public ExpContext cond;
-		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
-		public TerminalNode INT() { return getToken(BiLangParser.INT, 0); }
+		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
+		public TerminalNode INT() { return getToken(VegasParser.INT, 0); }
 		public ExpContext exp() {
 			return getRuleContext(ExpContext.class,0);
 		}
@@ -478,8 +533,16 @@ public class BiLangParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_query; }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterQuery(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitQuery(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitQuery(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitQuery(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -594,8 +657,16 @@ public class BiLangParser extends Parser {
 		}
 		public OutcomeExpContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterOutcomeExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitOutcomeExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitOutcomeExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitOutcomeExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -615,8 +686,16 @@ public class BiLangParser extends Parser {
 		}
 		public IfOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterIfOutcome(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitIfOutcome(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitIfOutcome(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitIfOutcome(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -636,8 +715,16 @@ public class BiLangParser extends Parser {
 		}
 		public LetOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterLetOutcome(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitLetOutcome(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitLetOutcome(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitLetOutcome(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -648,8 +735,16 @@ public class BiLangParser extends Parser {
 		}
 		public ParenOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterParenOutcome(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitParenOutcome(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitParenOutcome(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitParenOutcome(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -748,7 +843,7 @@ public class BiLangParser extends Parser {
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class ItemContext extends ParserRuleContext {
-		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
+		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
 		public ExpContext exp() {
 			return getRuleContext(ExpContext.class,0);
 		}
@@ -757,8 +852,16 @@ public class BiLangParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_item; }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterItem(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitItem(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitItem(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitItem(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -826,8 +929,16 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpEqExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpEqExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpEqExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpEqExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpEqExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -839,8 +950,16 @@ public class BiLangParser extends Parser {
 		}
 		public UndefExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterUndefExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitUndefExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitUndefExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitUndefExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -857,8 +976,16 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpAddExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpAddExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpAddExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpAddExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpAddExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -875,8 +1002,16 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpCompExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpCompExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpCompExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpCompExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpCompExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -888,8 +1023,16 @@ public class BiLangParser extends Parser {
 		}
 		public UnOpExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterUnOpExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitUnOpExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitUnOpExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitUnOpExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -897,25 +1040,41 @@ public class BiLangParser extends Parser {
 	public static class MemberExpContext extends ExpContext {
 		public Token role;
 		public Token field;
-		public List<TerminalNode> ID() { return getTokens(BiLangParser.ID); }
+		public List<TerminalNode> ID() { return getTokens(VegasParser.ID); }
 		public TerminalNode ID(int i) {
-			return getToken(BiLangParser.ID, i);
+			return getToken(VegasParser.ID, i);
 		}
 		public MemberExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterMemberExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitMemberExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitMemberExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitMemberExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class IdExpContext extends ExpContext {
 		public Token name;
-		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
+		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
 		public IdExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterIdExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitIdExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitIdExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitIdExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -924,7 +1083,7 @@ public class BiLangParser extends Parser {
 		public Token callee;
 		public ExpContext exp;
 		public List<ExpContext> args = new ArrayList<ExpContext>();
-		public TerminalNode ID() { return getToken(BiLangParser.ID, 0); }
+		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
 		public List<ExpContext> exp() {
 			return getRuleContexts(ExpContext.class);
 		}
@@ -933,8 +1092,16 @@ public class BiLangParser extends Parser {
 		}
 		public CallExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterCallExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitCallExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitCallExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitCallExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -951,8 +1118,16 @@ public class BiLangParser extends Parser {
 		}
 		public IfExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterIfExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitIfExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitIfExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitIfExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -969,8 +1144,16 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpBoolExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpBoolExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpBoolExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpBoolExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpBoolExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -981,8 +1164,16 @@ public class BiLangParser extends Parser {
 		}
 		public ParenExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterParenExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitParenExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitParenExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitParenExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -990,8 +1181,16 @@ public class BiLangParser extends Parser {
 	public static class BoolLiteralExpContext extends ExpContext {
 		public BoolLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBoolLiteralExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBoolLiteralExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBoolLiteralExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBoolLiteralExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -1011,18 +1210,34 @@ public class BiLangParser extends Parser {
 		}
 		public LetExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterLetExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitLetExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitLetExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitLetExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class AddressLiteralExpContext extends ExpContext {
-		public TerminalNode ADDRESS() { return getToken(BiLangParser.ADDRESS, 0); }
+		public TerminalNode ADDRESS() { return getToken(VegasParser.ADDRESS, 0); }
 		public AddressLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterAddressLiteralExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitAddressLiteralExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitAddressLiteralExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitAddressLiteralExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -1039,18 +1254,34 @@ public class BiLangParser extends Parser {
 		}
 		public BinOpMultExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpMultExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpMultExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitBinOpMultExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpMultExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
 	@SuppressWarnings("CheckReturnValue")
 	public static class NumLiteralExpContext extends ExpContext {
-		public TerminalNode INT() { return getToken(BiLangParser.INT, 0); }
+		public TerminalNode INT() { return getToken(VegasParser.INT, 0); }
 		public NumLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterNumLiteralExp(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitNumLiteralExp(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitNumLiteralExp(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitNumLiteralExp(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -1411,17 +1642,25 @@ public class BiLangParser extends Parser {
 		public Token name;
 		public Token hidden;
 		public Token type;
-		public List<TerminalNode> ID() { return getTokens(BiLangParser.ID); }
+		public List<TerminalNode> ID() { return getTokens(VegasParser.ID); }
 		public TerminalNode ID(int i) {
-			return getToken(BiLangParser.ID, i);
+			return getToken(VegasParser.ID, i);
 		}
 		public VarDecContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_varDec; }
 		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterVarDec(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitVarDec(this);
+		}
+		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof BiLangVisitor ) return ((BiLangVisitor<? extends T>)visitor).visitVarDec(this);
+			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitVarDec(this);
 			else return visitor.visitChildren(this);
 		}
 	}

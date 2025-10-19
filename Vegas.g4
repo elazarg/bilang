@@ -1,4 +1,4 @@
-grammar BiLang;
+grammar Vegas;
 
 program : typeDec* ext EOF ;
 

@@ -1,4 +1,4 @@
-package bilang
+package vegas
 
 fun genGame(p: ExpProgram): String {
     val roles = findRolesWithChance(p.game).join(", ")

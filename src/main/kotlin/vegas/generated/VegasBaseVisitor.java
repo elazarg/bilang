@@ -1,9 +1,8 @@
-// Generated from BiLang.g4 by ANTLR 4.13.2
-package bilang.generated;
+package vegas.generated;// Generated from C:/Users/elazar/workspace/bilang/Vegas.g4 by ANTLR 4.13.2
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**
- * This class provides an empty implementation of {@link BiLangVisitor},
+ * This class provides an empty implementation of {@link VegasVisitor},
  * which can be extended to create a visitor which only needs to handle a subset
  * of the available methods.
  *
@@ -11,215 +10,215 @@ import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
  * operations with no return type.
  */
 @SuppressWarnings("CheckReturnValue")
-public class BiLangBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements BiLangVisitor<T> {
+public class VegasBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements VegasVisitor<T> {
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitProgram(BiLangParser.ProgramContext ctx) { return visitChildren(ctx); }
+	@Override public T visitProgram(VegasParser.ProgramContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitTypeDec(BiLangParser.TypeDecContext ctx) { return visitChildren(ctx); }
+	@Override public T visitTypeDec(VegasParser.TypeDecContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitSubsetTypeExp(BiLangParser.SubsetTypeExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitSubsetTypeExp(VegasParser.SubsetTypeExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitRangeTypeExp(BiLangParser.RangeTypeExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitRangeTypeExp(VegasParser.RangeTypeExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitTypeId(BiLangParser.TypeIdContext ctx) { return visitChildren(ctx); }
+	@Override public T visitTypeId(VegasParser.TypeIdContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitReceiveExt(BiLangParser.ReceiveExtContext ctx) { return visitChildren(ctx); }
+	@Override public T visitReceiveExt(VegasParser.ReceiveExtContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitWithdrawExt(BiLangParser.WithdrawExtContext ctx) { return visitChildren(ctx); }
+	@Override public T visitWithdrawExt(VegasParser.WithdrawExtContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitQuery(BiLangParser.QueryContext ctx) { return visitChildren(ctx); }
+	@Override public T visitQuery(VegasParser.QueryContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitIfOutcome(BiLangParser.IfOutcomeContext ctx) { return visitChildren(ctx); }
+	@Override public T visitIfOutcome(VegasParser.IfOutcomeContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitLetOutcome(BiLangParser.LetOutcomeContext ctx) { return visitChildren(ctx); }
+	@Override public T visitLetOutcome(VegasParser.LetOutcomeContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitParenOutcome(BiLangParser.ParenOutcomeContext ctx) { return visitChildren(ctx); }
+	@Override public T visitParenOutcome(VegasParser.ParenOutcomeContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitOutcomeExp(BiLangParser.OutcomeExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitOutcomeExp(VegasParser.OutcomeExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitItem(BiLangParser.ItemContext ctx) { return visitChildren(ctx); }
+	@Override public T visitItem(VegasParser.ItemContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitBinOpEqExp(BiLangParser.BinOpEqExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitBinOpEqExp(VegasParser.BinOpEqExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitUndefExp(BiLangParser.UndefExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitUndefExp(VegasParser.UndefExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitBinOpAddExp(BiLangParser.BinOpAddExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitBinOpAddExp(VegasParser.BinOpAddExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitBinOpCompExp(BiLangParser.BinOpCompExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitBinOpCompExp(VegasParser.BinOpCompExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitUnOpExp(BiLangParser.UnOpExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitUnOpExp(VegasParser.UnOpExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitMemberExp(BiLangParser.MemberExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitMemberExp(VegasParser.MemberExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitIdExp(BiLangParser.IdExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitIdExp(VegasParser.IdExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitCallExp(BiLangParser.CallExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitCallExp(VegasParser.CallExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitIfExp(BiLangParser.IfExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitIfExp(VegasParser.IfExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitBinOpBoolExp(BiLangParser.BinOpBoolExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitBinOpBoolExp(VegasParser.BinOpBoolExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitParenExp(BiLangParser.ParenExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitParenExp(VegasParser.ParenExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitBoolLiteralExp(BiLangParser.BoolLiteralExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitBoolLiteralExp(VegasParser.BoolLiteralExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitLetExp(BiLangParser.LetExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitLetExp(VegasParser.LetExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitAddressLiteralExp(BiLangParser.AddressLiteralExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitAddressLiteralExp(VegasParser.AddressLiteralExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitBinOpMultExp(BiLangParser.BinOpMultExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitBinOpMultExp(VegasParser.BinOpMultExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitNumLiteralExp(BiLangParser.NumLiteralExpContext ctx) { return visitChildren(ctx); }
+	@Override public T visitNumLiteralExp(VegasParser.NumLiteralExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitVarDec(BiLangParser.VarDecContext ctx) { return visitChildren(ctx); }
+	@Override public T visitVarDec(VegasParser.VarDecContext ctx) { return visitChildren(ctx); }
 }

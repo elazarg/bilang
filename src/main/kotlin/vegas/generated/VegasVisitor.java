@@ -1,218 +1,217 @@
-// Generated from BiLang.g4 by ANTLR 4.13.2
-package bilang.generated;
+package vegas.generated;// Generated from C:/Users/elazar/workspace/bilang/Vegas.g4 by ANTLR 4.13.2
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
 /**
  * This interface defines a complete generic visitor for a parse tree produced
- * by {@link BiLangParser}.
+ * by {@link VegasParser}.
  *
  * @param <T> The return type of the visit operation. Use {@link Void} for
  * operations with no return type.
  */
-public interface BiLangVisitor<T> extends ParseTreeVisitor<T> {
+public interface VegasVisitor<T> extends ParseTreeVisitor<T> {
 	/**
-	 * Visit a parse tree produced by {@link BiLangParser#program}.
+	 * Visit a parse tree produced by {@link VegasParser#program}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitProgram(BiLangParser.ProgramContext ctx);
+	T visitProgram(VegasParser.ProgramContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link BiLangParser#typeDec}.
+	 * Visit a parse tree produced by {@link VegasParser#typeDec}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitTypeDec(BiLangParser.TypeDecContext ctx);
+	T visitTypeDec(VegasParser.TypeDecContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code SubsetTypeExp}
-	 * labeled alternative in {@link BiLangParser#typeExp}.
+	 * labeled alternative in {@link VegasParser#typeExp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSubsetTypeExp(BiLangParser.SubsetTypeExpContext ctx);
+	T visitSubsetTypeExp(VegasParser.SubsetTypeExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code RangeTypeExp}
-	 * labeled alternative in {@link BiLangParser#typeExp}.
+	 * labeled alternative in {@link VegasParser#typeExp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitRangeTypeExp(BiLangParser.RangeTypeExpContext ctx);
+	T visitRangeTypeExp(VegasParser.RangeTypeExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code TypeId}
-	 * labeled alternative in {@link BiLangParser#typeExp}.
+	 * labeled alternative in {@link VegasParser#typeExp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitTypeId(BiLangParser.TypeIdContext ctx);
+	T visitTypeId(VegasParser.TypeIdContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code ReceiveExt}
-	 * labeled alternative in {@link BiLangParser#ext}.
+	 * labeled alternative in {@link VegasParser#ext}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitReceiveExt(BiLangParser.ReceiveExtContext ctx);
+	T visitReceiveExt(VegasParser.ReceiveExtContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code WithdrawExt}
-	 * labeled alternative in {@link BiLangParser#ext}.
+	 * labeled alternative in {@link VegasParser#ext}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitWithdrawExt(BiLangParser.WithdrawExtContext ctx);
+	T visitWithdrawExt(VegasParser.WithdrawExtContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link BiLangParser#query}.
+	 * Visit a parse tree produced by {@link VegasParser#query}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitQuery(BiLangParser.QueryContext ctx);
+	T visitQuery(VegasParser.QueryContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code IfOutcome}
-	 * labeled alternative in {@link BiLangParser#outcome}.
+	 * labeled alternative in {@link VegasParser#outcome}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIfOutcome(BiLangParser.IfOutcomeContext ctx);
+	T visitIfOutcome(VegasParser.IfOutcomeContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code LetOutcome}
-	 * labeled alternative in {@link BiLangParser#outcome}.
+	 * labeled alternative in {@link VegasParser#outcome}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitLetOutcome(BiLangParser.LetOutcomeContext ctx);
+	T visitLetOutcome(VegasParser.LetOutcomeContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code ParenOutcome}
-	 * labeled alternative in {@link BiLangParser#outcome}.
+	 * labeled alternative in {@link VegasParser#outcome}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitParenOutcome(BiLangParser.ParenOutcomeContext ctx);
+	T visitParenOutcome(VegasParser.ParenOutcomeContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code OutcomeExp}
-	 * labeled alternative in {@link BiLangParser#outcome}.
+	 * labeled alternative in {@link VegasParser#outcome}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitOutcomeExp(BiLangParser.OutcomeExpContext ctx);
+	T visitOutcomeExp(VegasParser.OutcomeExpContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link BiLangParser#item}.
+	 * Visit a parse tree produced by {@link VegasParser#item}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitItem(BiLangParser.ItemContext ctx);
+	T visitItem(VegasParser.ItemContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code BinOpEqExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBinOpEqExp(BiLangParser.BinOpEqExpContext ctx);
+	T visitBinOpEqExp(VegasParser.BinOpEqExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code UndefExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitUndefExp(BiLangParser.UndefExpContext ctx);
+	T visitUndefExp(VegasParser.UndefExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code BinOpAddExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBinOpAddExp(BiLangParser.BinOpAddExpContext ctx);
+	T visitBinOpAddExp(VegasParser.BinOpAddExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code BinOpCompExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBinOpCompExp(BiLangParser.BinOpCompExpContext ctx);
+	T visitBinOpCompExp(VegasParser.BinOpCompExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code UnOpExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitUnOpExp(BiLangParser.UnOpExpContext ctx);
+	T visitUnOpExp(VegasParser.UnOpExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code MemberExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitMemberExp(BiLangParser.MemberExpContext ctx);
+	T visitMemberExp(VegasParser.MemberExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code IdExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIdExp(BiLangParser.IdExpContext ctx);
+	T visitIdExp(VegasParser.IdExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code CallExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitCallExp(BiLangParser.CallExpContext ctx);
+	T visitCallExp(VegasParser.CallExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code IfExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIfExp(BiLangParser.IfExpContext ctx);
+	T visitIfExp(VegasParser.IfExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code BinOpBoolExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBinOpBoolExp(BiLangParser.BinOpBoolExpContext ctx);
+	T visitBinOpBoolExp(VegasParser.BinOpBoolExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code ParenExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitParenExp(BiLangParser.ParenExpContext ctx);
+	T visitParenExp(VegasParser.ParenExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code BoolLiteralExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBoolLiteralExp(BiLangParser.BoolLiteralExpContext ctx);
+	T visitBoolLiteralExp(VegasParser.BoolLiteralExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code LetExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitLetExp(BiLangParser.LetExpContext ctx);
+	T visitLetExp(VegasParser.LetExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code AddressLiteralExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitAddressLiteralExp(BiLangParser.AddressLiteralExpContext ctx);
+	T visitAddressLiteralExp(VegasParser.AddressLiteralExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code BinOpMultExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBinOpMultExp(BiLangParser.BinOpMultExpContext ctx);
+	T visitBinOpMultExp(VegasParser.BinOpMultExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code NumLiteralExp}
-	 * labeled alternative in {@link BiLangParser#exp}.
+	 * labeled alternative in {@link VegasParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitNumLiteralExp(BiLangParser.NumLiteralExpContext ctx);
+	T visitNumLiteralExp(VegasParser.NumLiteralExpContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link BiLangParser#varDec}.
+	 * Visit a parse tree produced by {@link VegasParser#varDec}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitVarDec(BiLangParser.VarDecContext ctx);
+	T visitVarDec(VegasParser.VarDecContext ctx);
 }

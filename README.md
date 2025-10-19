@@ -1,16 +1,16 @@
-# BiLang: A Domain-Specific Language for Game-Theoretically Analyzed Blockchain-Based Games
+# Vegas: A Domain-Specific Language for Game-Theoretically Analyzed Blockchain-Based Games
 
-BiLang is a research tool that provides a unified language for specifying multi-party games with economic incentives, automatic translation to game-theoretic models, and smart contract generation.
+Vegas is a research tool that provides a unified language for specifying multi-party games with economic incentives, automatic translation to game-theoretic models, and smart contract generation.
 
 ## Overview
 
-BiLang allows you to specify strategic interactions between multiple parties, including:
+Vegas allows you to specify strategic interactions between multiple parties, including:
 - Players joining with deposits
 - Sequential and simultaneous moves
 - Hidden information and reveal mechanisms
 - Conditional payouts based on player actions
 
-From a single BiLang specification, the tool generates:
+From a single Vegas specification, the tool generates:
 - **Extensive form games** (Gambit EFG format) for game-theoretic analysis
 - **Solidity smart contracts** for blockchain deployment
 
@@ -26,7 +26,7 @@ From a single BiLang specification, the tool generates:
 
 ### Example: Monty Hall Game
 
-```bilang
+```vegas
 type door = {0, 1, 2}
 
 join Host() $ 100;
@@ -49,16 +49,16 @@ withdraw (Host.car != null && Guest.switch != null)
 
 ```bash
 # Generate ANTLR parser (assumes ANTLR is configured)
-antlr4 -o ./generated/bilangGen -package bilangGen -listener -visitor -lib . ./BiLang.g4
+antlr4 -o ./generated/vegasGen -package vegasGen -listener -visitor -lib . ./Vegas.g4
 
 # Compile Kotlin code
-kotlinc src/bilang/*.kt -cp antlr-runtime.jar
+kotlinc src/vegas/*.kt -cp antlr-runtime.jar
 ```
 
 ### Run
 
 ```bash
-kotlin -cp .:antlr-runtime.jar bilang.MainKt
+kotlin -cp .:antlr-runtime.jar vegas.MainKt
 ```
 
 This will process all example files and generate outputs in:
@@ -71,12 +71,12 @@ This will process all example files and generate outputs in:
 
 The `examples/` directory contains several game specifications:
 
-- **Bet.bi**: Simple betting game with random outcome
-- **MontyHall.bi**: Classic Monty Hall problem with hidden information
-- **Prisoners.bi**: Prisoner's dilemma
-- **OddsEvens.bi**: Matching pennies variant
-- **ThreeWayLottery.bi**: Three-player lottery with strategic selection
-- **Puzzle.bi**: Number factorization puzzle
+- **Bet.vg**: Simple betting game with random outcome
+- **MontyHall.vg**: Classic Monty Hall problem with hidden information
+- **Prisoners.vg**: Prisoner's dilemma
+- **OddsEvens.vg**: Matching pennies variant
+- **ThreeWayLottery.vg**: Three-player lottery with strategic selection
+- **Puzzle.vg**: Number factorization puzzle
 
 ## Output Formats
 
@@ -101,8 +101,8 @@ Generates Ethereum smart contracts that implement the game mechanics including:
 
 ```
 .
-├── BiLang.g4                 # ANTLR grammar definition
-├── src/bilang/
+├── Vegas.g4                 # ANTLR grammar definition
+├── src/vegas/
 │   ├── Ast.kt               # Abstract syntax tree definitions
 │   ├── AstTranslator.java   # ANTLR to AST translation
 │   ├── Env.kt               # Environment for evaluation
@@ -114,7 +114,7 @@ Generates Ethereum smart contracts that implement the game mechanics including:
 │   ├── TypeChecker.kt       # Type system implementation
 │   └── Utils.kt             # Utility functions
 └── examples/
-    ├── *.bi                 # BiLang source files
+    ├── *.vg                 # Vegas source files
     ├── gambit/              # Generated .efg files
     └── solidity/            # Generated .sol files
 ```

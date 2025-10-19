@@ -1,8 +1,8 @@
-# BiLang Language Reference
+# Vegas Language Reference
 
 ## Overview
 
-BiLang is a domain-specific language for specifying strategic games and multi-party protocols with **distribution transparency**. Programs are written as sequential game descriptions that compile to distributed implementations preserving game-theoretic properties.
+Vegas is a domain-specific language for specifying strategic games and multi-party protocols with **distribution transparency**. Programs are written as sequential game descriptions that compile to distributed implementations preserving game-theoretic properties.
 
 ### Design Philosophy
 
@@ -15,7 +15,7 @@ BiLang is a domain-specific language for specifying strategic games and multi-pa
 
 ### Core Execution Model
 
-A BiLang program describes a **sequential game tree** executed by multiple parties:
+A Vegas program describes a **sequential game tree** executed by multiple parties:
 
 ```
 program ::= typeDec* ext
@@ -94,7 +94,7 @@ The compiler transforms the abstract program into a **distributed protocol**:
 
  **Commit-Reveal Protocols**
 
-```bilang
+```vegas
 join Host() $ 100;
 join Guest() $ 100;
 yield Host(car: hidden door);  // Compiler generates commitment scheme
@@ -109,7 +109,7 @@ Generated Solidity:
 
  **Step Sequencing**
 
-```bilang
+```vegas
 yield A(x: int);
 yield B(y: int);
 ```
@@ -122,7 +122,7 @@ function yield_B(int y) at_step(1) { ... }
 
  **Information Flow Typing**
 
-```bilang
+```vegas
 reveal Host(car: door) where Host.car != Host.goat;
 ```
 
@@ -133,7 +133,7 @@ Type checker ensures:
 
  **Deposit Management**
 
-```bilang
+```vegas
 join Player() $ 100;
 withdraw { Player -> 150 }
 ```
@@ -150,7 +150,7 @@ payable(msg.sender).call{value: 150}("");  // On withdraw
 
 The language **forces** explicit null handling:
 
-```bilang
+```vegas
 withdraw (Host.car != null && Guest.choice != null)
     ? { Host -> 0; Guest -> 100 }   // Normal case
     : { Host -> -100; Guest -> 100 } // Griefing penalty
@@ -171,7 +171,7 @@ uint256 public constant STEP_TIME = 500;
 ```
 
 **Future**: Should be configurable per-step based on complexity:
-```bilang
+```vegas
 yield Host(strategy: complex_type) timeout 3600;  // 1 hour
 yield Guest(response: bool) timeout 300;          // 5 minutes
 ```
@@ -180,7 +180,7 @@ yield Guest(response: bool) timeout 300;          // 5 minutes
 
 The language provides mechanisms but not policy:
 
-```bilang
+```vegas
 // Option 1: Full forfeit
 withdraw Alice.choice != null 
     ? { Alice -> 100; Bob -> 0 }
@@ -236,7 +236,7 @@ hidden T <: hidden T' if T <: T'  (covariant)
 
 **Security Property**: Hidden values cannot flow to public contexts before reveal
 
-```bilang
+```vegas
 yield Host(secret: hidden int);
 yield Guest(guess: int) where Guest.guess == Host.secret;  // TYPE ERROR!
 ```
@@ -244,7 +244,7 @@ yield Guest(guess: int) where Guest.guess == Host.secret;  // TYPE ERROR!
 Error: Cannot compare hidden and public values
 
 **Correct Version**:
-```bilang
+```vegas
 yield Host(secret: hidden int);
 yield Guest(guess: int);
 reveal Host(secret: int);  // Now public
@@ -255,13 +255,13 @@ withdraw { Guest -> (Guest.guess == Host.secret ? 100 : 0) }
 
 **Rule**: Any `yield` or `reveal` creates `Opt[T]` if timeout possible
 
-```bilang
+```vegas
 yield Alice(x: int);
 withdraw { Alice -> Alice.x + 10 }  // TYPE ERROR: Alice.x : Opt[int]
 ```
 
 **Fix**: Explicit null check
-```bilang
+```vegas
 withdraw Alice.x != null 
     ? { Alice -> Alice.x + 10 }
     : { Alice -> -100 }  // Penalty for abandoning
@@ -293,7 +293,7 @@ Abstract Program → Information Flow Analysis → Protocol Synthesis → Code G
 
 ### Phase 1: Type Checking & Analysis
 
-**Input**: BiLang AST  
+**Input**: Vegas AST  
 **Output**: Typed AST + Information Flow Graph
 
 1. Resolve custom types
@@ -303,7 +303,7 @@ Abstract Program → Information Flow Analysis → Protocol Synthesis → Code G
 5. Check null handling
 
 **Example**:
-```bilang
+```vegas
 type door = {0, 1, 2}
 join Host();
 yield Host(car: hidden door);  // Host.car : hidden {0,1,2}
@@ -322,7 +322,7 @@ After reveal: Γ = {Host: role, Host.car: Opt[{0,1,2}]}  // Opt due to timeout
 **Commitment Synthesis**:
 
 For each `query` with hidden parameters:
-```bilang
+```vegas
 yield Role(p1: hidden T1, p2: T2, p3: hidden T3)
 ```
 
@@ -333,7 +333,7 @@ Generate:
 
 **Step Linearization**:
 
-```bilang
+```vegas
 join A(); join B();
 yield A(x: int) B(y: int);
 yield A(x2: int);
@@ -404,7 +404,7 @@ function withdraw_Role() by(Role.R) at_step(FINAL) {
 
 Converts to extensive-form game tree:
 
-```bilang
+```vegas
 join A(); join B();
 yield A(c: bool) B(c: bool);
 withdraw { A -> (A.c <-> B.c ? 10 : -10), B -> ... }
@@ -431,7 +431,7 @@ This enables:
 
 Generates verification conditions:
 
-```bilang
+```vegas
 yield A(x: int) where x > 0;
 withdraw { A -> x * 2 }
 ```
@@ -455,10 +455,10 @@ Becomes:
 
 ## Game-Theoretic Properties
 
-### Properties Expressible in BiLang
+### Properties Expressible in Vegas
 
 **1. Budget Balance**:
-```bilang
+```vegas
 // Zero-sum game
 withdraw { A -> x; B -> (- x) }
 ```
@@ -466,7 +466,7 @@ withdraw { A -> x; B -> (- x) }
 Compiler can verify: `sum(payoffs) = sum(deposits)`
 
 **2. Individual Rationality**:
-```bilang
+```vegas
 join Player() $ 100;
 withdraw Player.choice != null
     ? { Player -> max(0, outcome(Player.choice)) }
@@ -476,7 +476,7 @@ withdraw Player.choice != null
 Property: `Expected[payout] >= -deposit` if player plays optimally
 
 **3. Incentive Compatibility**:
-```bilang
+```vegas
 yield Bidder(bid: int) where bid >= 0;
 withdraw { 
     Winner -> (valuation - price); 
@@ -489,7 +489,7 @@ Can verify truthful bidding is dominant strategy (via SMT backend)
 **4. Collusion Resistance**:
 
 Hard to express directly, but can encode constraints:
-```bilang
+```vegas
 yield A(c: int) B(c: int) where A.c != B.c;  // Force different choices
 ```
 
@@ -503,7 +503,7 @@ yield A(c: int) B(c: int) where A.c != B.c;  // Force different choices
 3. **Front-Running**: Not modeled (requires additional analysis)
 
 **Mitigation**:
-```bilang
+```vegas
 // Explicit griefing penalties
 withdraw Alice.c != null && Bob.c != null
     ? normal_outcome(Alice.c, Bob.c)
@@ -523,7 +523,7 @@ This ensures:
 ### Example 1: Commit-Reveal (Coin Flip)
 
 **Abstract**:
-```bilang
+```vegas
 join Alice() $ 10;
 join Bob() $ 10;
 yield Alice(c: hidden bool);  // Alice commits to a bit
@@ -551,7 +551,7 @@ withdraw Alice.c != null && Bob.c != null
 ### Example 2: Multi-Party Lottery
 
 **Abstract**:
-```bilang
+```vegas
 type choice = {1, 2, 3}
 
 join Issuer(c: choice) $ 10
@@ -582,7 +582,7 @@ withdraw (Alice.c == null || Bob.c == null)
 ### Example 3: Monty Hall (Information Flow)
 
 **Abstract**:
-```bilang
+```vegas
 type door = {0, 1, 2}
 
 join Host() $ 100;
@@ -624,7 +624,7 @@ withdraw (Host.car != null && Host.goat != null && Guest.switch != null)
 
 ### Where Clauses: Constrained Moves
 
-```bilang
+```vegas
 yield Player(x: int) where x >= 0 && x <= 100;
 ```
 
@@ -645,7 +645,7 @@ function yield_Player(int x) {
 
 ### Let Bindings: Outcome Computation
 
-```bilang
+```vegas
 withdraw 
     let total_bids = Alice.bid + Bob.bid in
     let winner = (Alice.bid > Bob.bid ? Alice : Bob) in
@@ -661,7 +661,7 @@ withdraw
 
 ### Custom Types: Domain Modeling
 
-```bilang
+```vegas
 type card = {1..52}
 type suit = {0, 1, 2, 3}  // Hearts, Diamonds, Clubs, Spades
 
@@ -747,7 +747,7 @@ A: Solidity is too low-level:
 - No automatic analysis (Nash equilibria, etc.)
 - Information flow bugs are common
 
-BiLang provides:
+Vegas provides:
 - Compiler-generated cryptographic protocols
 - Static type checking for information flow
 - Multi-backend compilation for analysis
@@ -756,20 +756,20 @@ BiLang provides:
 **Q: How do I handle complex timing (e.g., auction deadlines)?**
 
 A: Current workaround:
-```bilang
+```vegas
 yield Bidder(bid: int, timestamp: int)
     where timestamp <= DEADLINE;
 ```
 
 Future: First-class time:
-```bilang
+```vegas
 yield Bidder(bid: int) deadline block(1000);
 ```
 
 **Q: Can I express partially observable games?**
 
 A: Yes, via hidden information:
-```bilang
+```vegas
 type card = {1..52}
 
 yield Dealer(hand1: hidden card, hand2: hidden card);
@@ -787,7 +787,7 @@ A:
 - **Simplicity**: Low-level, no game abstractions
 - **Pact**: General smart contracts, no game semantics
 
-BiLang is specialized for strategic interactions with:
+Vegas is specialized for strategic interactions with:
 - Game-theoretic analysis (Gambit)
 - Information flow typing (hidden types)
 - Automatic protocol synthesis (commit-reveal)
@@ -797,11 +797,11 @@ BiLang is specialized for strategic interactions with:
 
 ## Conclusion
 
-BiLang achieves **game-analyzability** **distribution transparency** by:
+Vegas achieves **game-analyzability** **distribution transparency** by:
 
 1. **Abstracting Protocols**: Programmer writes sequential game logic; compiler generates distributed protocols
 2. **Enforcing Robustness**: Type system forces explicit handling of abandonment
 3. **Preserving Properties**: Compilation is semantics-preserving for game-theoretic guarantees
 4. **Enabling Analysis**: Multi-backend compilation allows formal verification and equilibrium computation
 
-The key insight: **Strategic games are naturally sequential**, but implementations are distributed. BiLang bridges this gap while maintaining the programmer's ability to reason about high-level properties.
+The key insight: **Strategic games are naturally sequential**, but implementations are distributed. Vegas bridges this gap while maintaining the programmer's ability to reason about high-level properties.

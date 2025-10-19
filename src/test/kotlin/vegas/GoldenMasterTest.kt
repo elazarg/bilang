@@ -1,11 +1,11 @@
-package bilang
+package vegas
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.datatest.withData
-import bilang.generated.BiLangLexer
-import bilang.generated.BiLangParser
+import vegas.generated.VegasLexer
+import vegas.generated.VegasParser
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import java.io.File
@@ -131,10 +131,10 @@ private fun generateOutput(testCase: TestCase): String {
 }
 
 private fun parseExample(example: String): ExpProgram {
-    val inputPath = Paths.get("examples/$example.bi")
+    val inputPath = Paths.get("examples/$example.vg")
     val chars = CharStreams.fromPath(inputPath)
-    val tokens = CommonTokenStream(BiLangLexer(chars))
-    val ast = BiLangParser(tokens).program()
+    val tokens = CommonTokenStream(VegasLexer(chars))
+    val ast = VegasParser(tokens).program()
     return AstTranslator().visitProgram(ast).copy(name = example, desc = example)
 }
 

@@ -1,4 +1,4 @@
-package bilang
+package vegas
 
 typealias Role = String
 

@@ -1,8 +1,8 @@
-package bilang
+package vegas
 
-import bilang.Exp.*
-import bilang.Outcome.*
-import bilang.TypeExp.*
+import vegas.Exp.*
+import vegas.Outcome.*
+import vegas.TypeExp.*
 import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FreeSpec

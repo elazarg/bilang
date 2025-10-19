@@ -5,8 +5,8 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.bilang</groupId>
-    <artifactId>bilang</artifactId>
+    <groupId>org.vegas</groupId>
+    <artifactId>vegas</artifactId>
     <version>0.1</version>
 
     <properties>
@@ -74,14 +74,14 @@
                         <configuration>
                             <sourceDirectory>${project.basedir}</sourceDirectory>
                             <includes>
-                                <include>BiLang.g4</include>
+                                <include>Vegas.g4</include>
                             </includes>
-                            <outputDirectory>${project.basedir}/src/main/kotlin/bilang/generated</outputDirectory>
+                            <outputDirectory>${project.basedir}/src/main/kotlin/vegas/generated</outputDirectory>
                             <visitor>true</visitor>
                             <listener>false</listener>
                             <arguments>
                                 <argument>-package</argument>
-                                <argument>bilang.generated</argument>
+                                <argument>vegas.generated</argument>
                             </arguments>
                         </configuration>
                     </execution>
@@ -164,7 +164,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>bilang.MainKt</mainClass>
+                            <mainClass>vegas.MainKt</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
