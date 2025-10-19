@@ -1,4 +1,5 @@
-package vegas.generated;// Generated from C:/Users/elazar/workspace/bilang/Vegas.g4 by ANTLR 4.13.2
+// Generated from C:/Users/elazar/workspace/vegas/Vegas.g4 by ANTLR 4.13.2
+package vegas.generated;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
 /**
