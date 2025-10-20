@@ -10,6 +10,11 @@ vegas/gambit/*.efg
 scala.iml
 *.sbt
 
+# ANTLR intermediate files
+*.tokens
+*.interp
+.antlr/
+
 coq/#*.v#
 coq/*.aux
 coq/*.glob
