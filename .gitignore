@@ -1,10 +1,9 @@
-.vscode/settings.json
+
 __pycache__
 
 .idea
 test-diffs/
 target/
-vegas/src/generated/*
 vegas/bin/*
 vegas/gambit/*.efg
 scala.iml
@@ -31,7 +30,9 @@ pnpm-lock.yaml
 .eslintcache
 
 # VS Code dev + artifacts
-.vscode/
+.vscode/*.log
+.vscode/*.db
+.vscode/*.cache
 .vscode-test/
 *.vsix
 
