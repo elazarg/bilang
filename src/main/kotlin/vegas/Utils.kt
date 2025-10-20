@@ -19,6 +19,10 @@ fun <K, V, V1> Iterable<Pair<K, V>>.mapValues(f: (Pair<K, V>) -> V1) : List<Pair
 
 fun <K, V> Iterable<Map<K, V>>.union(): Map<K, V> = flatMap { xs -> xs.entries.map { it.toPair() } }.toMap()
 
+fun <K> Iterable<Set<K>>.union(): Set<K> = fold(emptySet()) { accumulator, set ->
+    accumulator union set
+}
+
 // type-specific
 
 fun <T> Iterable<Pair<String, T>>.names() = map { (name, _) -> name }

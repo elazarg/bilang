@@ -15,7 +15,8 @@ private val keywordTexts = setOf(
 
 
 private fun classifyToken(token: Token): String? = when {
-    token.type == VegasParser.ID -> "variable"
+    token.type == VegasParser.ROLE_ID -> "role"
+    token.type == VegasParser.LOWER_ID -> "variable"
     token.type in listOf(VegasParser.INT, VegasParser.ADDRESS, VegasParser.STRING) -> "literal"
     token.text in operatorTexts -> "operator"
     token.text in keywordTexts -> "keyword"

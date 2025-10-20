@@ -2,7 +2,6 @@ package vegas;
 
 import vegas.generated.VegasBaseVisitor;
 import vegas.generated.VegasParser.*;
-import kotlin.Pair;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -59,8 +58,8 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
         return new ExpProgram("", "", map(ctx.typeDec()), ext(ctx.ext()));
     }
 
-    private Map<String, TypeExp> map(List<TypeDecContext> ctxs) {
-        return ctxs.stream().collect(toMap(ctx -> ctx.name.getText(), this::makeType));
+    private Map<TypeExp.TypeId, TypeExp> map(List<TypeDecContext> ctxs) {
+        return ctxs.stream().collect(toMap(ctx -> visitTypeId(ctx.typeId()), this::makeType));
     }
 
     private TypeExp makeType(TypeDecContext ctx) {
@@ -72,14 +71,28 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
         return new TypeExp.Subset(ctx.vals.stream().map(this::num).collect(toSet()));
     }
 
+    @Override
+    public TypeExp.Range visitRangeTypeExp(RangeTypeExpContext ctx) {
+        return new TypeExp.Range(num(ctx.start), num(ctx.end));
+    }
+
+    @Override
+    public TypeExp.TypeId visitIdTypeExp(IdTypeExpContext t) {
+        return withSpan(new TypeExp.TypeId(t.getText()), t);
+    }
+
+    @Override
+    public TypeExp.TypeId visitTypeId(TypeIdContext t) {
+        return withSpan(new TypeExp.TypeId(t.getText()), t);
+    }
+
     private Exp.Const.Num num(Token v) {
         String text = v == null ? "0" : v.getText();
         return new Exp.Const.Num(Integer.parseInt(text));
     }
 
-    @Override
-    public TypeExp.Range visitRangeTypeExp(RangeTypeExpContext ctx) {
-        return new TypeExp.Range(num(ctx.start), num(ctx.end));
+    private Role role(RoleIdContext roleId) {
+        return withSpan(new Role(roleId.getText()), roleId);
     }
 
     private Exp exp(ExpContext ctx) {
@@ -101,7 +114,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     private Query query(QueryContext ctx) {
-        return withSpan(new Query(var(ctx.role), list(ctx.decls, this::vardec), num(ctx.deposit), where(ctx.cond)), ctx);
+        return withSpan(new Query(role(ctx.roleId()), list(ctx.decls, this::vardec), num(ctx.deposit), where(ctx.cond)), ctx);
     }
 
     private Exp where(ExpContext cond) {
@@ -110,7 +123,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
 
     @Override
     public Ext.Value visitWithdrawExt(WithdrawExtContext ctx) {
-        return new Ext.Value(vegas.AstKt.desugar(outcome(ctx.outcome())));
+        return new Ext.Value(outcome(ctx.outcome()));
     }
 
     @Override
@@ -134,7 +147,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
             case "false":
                 assert false;
         }
-        return new Exp.Var(name);
+        return var(ctx);
     }
 
     @Override
@@ -144,7 +157,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
 
     @Override
     public Exp.Member visitMemberExp(MemberExpContext ctx) {
-        return new Exp.Member(ctx.role.getText(), ctx.field.getText());
+        return new Exp.Member(role(ctx.role), var(ctx.field));
     }
 
     @Override
@@ -210,13 +223,17 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
         return num(ctx.INT().getSymbol());
     }
 
-    private String var(Token target) {
-        return target.getText();
+    private Exp.Var var(IdExpContext v) {
+        return withSpan(new Exp.Var(v.getText()), v);
+    }
+
+    private Exp.Var var(VarIdContext v) {
+        return withSpan(new Exp.Var(v.getText()), v);
     }
 
     @Override
     public Outcome visitOutcomeExp(OutcomeExpContext ctx) {
-        Map<String, Exp> m = ctx.items.stream().collect(toMap(e -> e.ID().getText(), e -> exp(e.exp())));
+        Map<Role, Exp> m = ctx.items.stream().collect(toMap(e -> role(e.role), e -> exp(e.exp())));
         return new Outcome.Value(m);
     }
 
@@ -248,16 +265,16 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
         };
     }
 
-    private Pair<String, TypeExp> vardec(VarDecContext ctx) {
+    private VarDec vardec(VarDecContext ctx) {
         TypeExp type = type(ctx);
-        return new Pair<>(var(ctx.name), (ctx.hidden != null) ? withSpan(new TypeExp.Hidden(type), ctx) : type);
+        return new VarDec(var(ctx.varId()), (ctx.hidden != null) ? withSpan(new TypeExp.Hidden(type), ctx.typeExp()) : type);
     }
 
     private TypeExp type(VarDecContext ctx) {
         return switch (ctx.type.getText()) {
             case "bool" -> TypeExp.BOOL.INSTANCE;
             case "int" -> TypeExp.INT.INSTANCE;
-            default -> withSpan(new TypeExp.TypeId(ctx.type.getText()), ctx);
+            default -> withSpan(new TypeExp.TypeId(ctx.type.getText()), ctx.typeExp());
         };
     }
 }

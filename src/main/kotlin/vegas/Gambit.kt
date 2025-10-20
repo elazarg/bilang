@@ -6,17 +6,17 @@ import vegas.Exp.Const.*
 typealias OutcomeType = Num
 
 sealed class Tree {
-    data class Node(val owner: String, val env: Env<Const>, val infoset: Int, val edges: List<Map<String, Const>>, val children: List<Tree>) : Tree()
+    data class Node(val owner: Role, val env: Env<Const>, val infoset: Int, val edges: List<Map<Var, Const>>, val children: List<Tree>) : Tree()
 
-    data class Leaf(val outcome: Map<String, OutcomeType>) : Tree()
+    data class Leaf(val outcome: Map<Role, OutcomeType>) : Tree()
 }
 
-class Extensive(private val name: String, private val desc: String, private val players: List<String>, private val game: Tree) {
+class Extensive(private val name: String, private val desc: String, private val players: List<Role>, private val game: Tree) {
     constructor(prog: ExpProgram) :
             this(prog.name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game))
 
     fun toEfg(): String = (
-        listOf("EFG 2 R ${quote(name)} ${stringList(players)}", quote(desc), "")
+        listOf("EFG 2 R ${quote(name)} ${stringList(players.map { it.name })}", quote(desc), "")
                 + ExtensivePrinter().toEfg(game, players)
     ).joinToString("\n")
 
@@ -24,7 +24,7 @@ class Extensive(private val name: String, private val desc: String, private val 
 
 }
 
-class TreeMaker(private val types: Map<String, TypeExp>) {
+class TreeMaker(private val types: Map<TypeExp.TypeId, TypeExp>) {
     private val infosetCounters = mutableMapOf<Role, Int>()
     private val infosetIds = mutableMapOf<Pair<Role, Env<Const>>, Int>()
 
@@ -53,7 +53,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
 
                 Kind.REVEAL -> {
                     val revealed = env.mapHidden(q){it.value}
-                    val names = q.params.names()
+                    val names = q.params.map {it.v}
                     val revealedPacket = names.associateWith { revealed.getValue(role, it) }
                     val quit = env.mapHidden(q) { UNDEFINED }
                     val quitPacket = names.associateWith { UNDEFINED }
@@ -80,12 +80,12 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
             Kind.JOIN_CHANCE -> TODO()
             Kind.REVEAL -> TODO()
         }
-        is Ext.Value -> Tree.Leaf(ext.exp.ts.mapValues { (_, exp) -> eval(exp, env) as OutcomeType })
+        is Ext.Value -> Tree.Leaf(desugar(ext.outcome).ts.mapValues { (_, exp) -> eval(exp, env) as OutcomeType })
     }
 
-    private fun enumeratePackets(q: Query, env: Env<Const>): List<Map<String, Const>> {
+    private fun enumeratePackets(q: Query, env: Env<Const>): List<Map<Var, Const>> {
         fun combineValues(f: (TypeExp) -> List<Const>) =
-                q.params.mapValues { (_, type) -> f(type) }.toMap().product()
+            q.params.associate { (v, type) -> Pair(v, f(type)) }.product()
 
         val undefs = if (env.isChance(q.role)) listOf() else combineValues { listOf<Const>(UNDEFINED) }
         return if (env.quitted(q.role)) undefs
@@ -111,7 +111,7 @@ class TreeMaker(private val types: Map<String, TypeExp>) {
         is TypeExp.Subset -> t.values.toList()
         TypeExp.BOOL -> listOf(Bool(true), Bool(false))
         is TypeExp.Hidden -> enumerateValues(t.type).map { hide(it) }
-        is TypeExp.TypeId -> enumerateValues(types.getValue(t.name))
+        is TypeExp.TypeId -> enumerateValues(types.getValue(t))
         else -> throw NotImplementedError("cannot enumerate $t; Only small, finite domains are supported")
     }
 }
@@ -162,7 +162,7 @@ fun eval(exp: Exp, env: Env<Const>): Const {
             }
             res
         }
-        is Var -> env.getValue(exp.name)
+        is Var -> env.getValue(exp)
         is Member -> env.getValue(exp.target, exp.field)
         is Cond -> {
             when (val cond = eval(exp.cond)) {
@@ -175,14 +175,14 @@ fun eval(exp: Exp, env: Env<Const>): Const {
         is Num -> exp
         is Bool -> exp
         is Hidden -> exp
-        is Let -> eval(exp.exp, env + Pair(exp.dec.name, eval(exp.init)))
+        is Let -> eval(exp.exp, env + Pair(exp.dec.v, eval(exp.init)))
     }
 }
 
 class ExtensivePrinter(private val outcomeToPayoff: (Role, OutcomeType) -> Int = {_, v -> v.n}) {
     private var outcomeNumber: Int = 0
 
-    fun toEfg(t: Tree, roleOrder: List<String>): List<String> = when (t) {
+    fun toEfg(t: Tree, roleOrder: List<Role>): List<String> = when (t) {
         is Tree.Node -> {
             if (t.env.isChance(t.owner)) { // FIX: this should be known statically, not by env
                 val nodeName = ""
@@ -237,27 +237,27 @@ private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") 
 
 private fun Env<Const>.mapHidden(q: Query, f: (Hidden) -> Const) = copy(h =
     h.mapValues { (rv, k) ->
-        if (k is Hidden && rv.role == q.role
-                && rv.field in q.params.map { (name, _) -> name }) f(k) else k
+        if (k is Hidden && rv.first == q.role
+                && rv.second in q.params.map { (v, _) -> v }) f(k) else k
     }
 )
 
-private fun Env<Const>.eraseHidden(role: String) = copy(h =
+private fun Env<Const>.eraseHidden(role: Role) = copy(h =
     h.mapValues { (rv, k) ->
-        if (k is Hidden && rv.role != role) Hidden(UNDEFINED) else k
+        if (k is Hidden && rv.first != role) Hidden(UNDEFINED) else k
     }
 )
 
-private fun Env<Const>.updateHeap(q: Query, newEnv: Map<String, Const>): Env<Const> = copy(h =
+private fun Env<Const>.updateHeap(q: Query, newEnv: Map<Var, Const>): Env<Const> = copy(h =
     h + newEnv.map { (v, k) -> Pair(Pair(q.role, v), k) }
 )
 
-private fun Env<Const>.addRole(role: String, chance: Boolean = false): Env<Const> {
+private fun Env<Const>.addRole(role: Role, chance: Boolean = false): Env<Const> {
     val address = if (chance) 0 else
         (1 + (g.values.maxOfOrNull { (it as? Address)?.n ?: 0 } ?: 0))
-    return this + Pair(role, Address(address))
+    return this withRole Pair(role, Address(address))
 }
 
-private fun Env<Const>.quitted(role: String): Boolean = h.any { (rv, k) -> rv.role == role && k == UNDEFINED }
+private fun Env<Const>.quitted(role: Role): Boolean = h.any { (rv, k) -> rv.first == role && k == UNDEFINED }
 
-private fun Env<Const>.isChance(role: String) = g.getValue(role) == Address(0)
+private fun Env<Const>.isChance(role: Role) = this.getValue(role) == Address(0)

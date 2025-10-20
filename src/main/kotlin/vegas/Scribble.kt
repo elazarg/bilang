@@ -1,6 +1,6 @@
 package vegas
 
-typealias Role = String
+import kotlin.String
 
 sealed class Sast {
 
@@ -20,11 +20,13 @@ sealed class Sast {
 
 fun Sast.Protocol.prettyPrintAll(): String {
     val typedecls = types.map {"""type <java> "java.lang.${it.value}" from "rt.jar" as ${it.key};"""}.join("\n")
-    val items = listOf("module Game;", typedecls, prettyPrint()) + (roles + "Server").map { prettyPrint(it) }
+    val items = listOf("module Game;", typedecls, prettyPrint()) + (roles + SERVER).map { prettyPrint(it) }
     return items.join("\n\n")
 }
 
-fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role> = setOf()): String {
+private val SERVER = Role("Server")
+
+fun Sast.prettyPrint(role: Role? = null, indent: Int = 0, connected: Set<Role> = setOf()): String {
     fun pretty(x: Sast) = x.prettyPrint(role, indent, connected)
     val code = when (this) {
         is Sast.Protocol -> {
@@ -32,7 +34,7 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role>
             val ps = roles.join(", ") { "role $it" }
             when (role) {
                 null -> "explicit global protocol $name(role Server, $ps)"
-                "Server" -> "local protocol ${name}_Server(role Server, $ps)"
+                SERVER -> "local protocol ${name}_Server(role Server, $ps)"
                 else -> "local protocol ${name}_$role(role Server, role $role)"
             } + pretty(block)
         }
@@ -67,9 +69,9 @@ fun Sast.prettyPrint(role: String? = null, indent: Int = 0, connected: Set<Role>
 
 fun programToScribble(p: ExpProgram): Sast.Protocol {
     val roles = findRoles(p.game).toSet()
-    val types = p.types.mapValues { (_, v) -> javaTypeOf(v) } + ("int" to "Integer") + ("bool" to "Boolean") + ("hidden" to "Integer")
+    val types = p.types.map { (k, v) -> k.name to javaTypeOf(v) } + ("int" to "Integer") + ("bool" to "Boolean") + ("hidden" to "Integer")
 
-    return Sast.Protocol(p.name, types, roles, Sast.Block(gameToScribble(p.game, roles)))
+    return Sast.Protocol(p.name, types.toMap(), roles, Sast.Block(gameToScribble(p.game, roles)))
 }
 
 private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when (ext) {
@@ -77,7 +79,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
         val params = ext.q.params
         val role = ext.q.role
 
-        fun send(label: String, decls: List<Pair<String, String>>, to: Set<Role> = setOf("Server")) =
+        fun send(label: String, decls: List<Pair<String, String>>, to: Set<Role> = setOf(SERVER)) =
                 Sast.Action.Send(label, decls, role, to)
 
         fun sendToServer(): List<Sast.Action.Send> {
@@ -95,7 +97,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
         }
 
-        val broadcast = Sast.Action.Send("Broadcast", declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }), "Server", roles - role)
+        val broadcast = Sast.Action.Send("Broadcast", declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }), SERVER, roles - role)
 
         send + broadcast + gameToScribble(ext.ext, roles)
     }
@@ -104,7 +106,7 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
         gameToScribble(Ext.BindSingle(ext.kind, query, Ext.Value(Outcome.Value(mapOf()))), roles)
     }.sortedBy { rankOrder(it) } + gameToScribble(ext.ext, roles)
 
-    is Ext.Value -> ext.exp.ts.keys.map { Sast.Action.Send("Withdraw", listOf(), it, setOf("Server")) }
+    is Ext.Value -> desugar(ext.outcome).ts.keys.map { Sast.Action.Send("Withdraw", listOf(), it, setOf(SERVER)) }
 }
 
 private fun rankOrder(it: Sast.Action): Int =
@@ -114,13 +116,11 @@ private fun rankOrder(it: Sast.Action): Int =
             else -> 3
         } else 0
 
-private fun declsOf(params: List<VarDec>) = params.mapValues { (_, type) -> typeOf(type) }
+private fun declsOf(params: List<VarDec>) = params.map { (v, type) -> Pair(v.name, typeOf(type)) }
 
 private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "int"
     TypeExp.BOOL -> "bool"
-    TypeExp.ROLE -> "role"
-    TypeExp.ROLESET -> "roleset"
     TypeExp.ADDRESS -> "address"
     TypeExp.EMPTY -> throw AssertionError()
     is TypeExp.Hidden -> "hidden" //_${typeOf(t.type)}"
@@ -133,8 +133,6 @@ private fun typeOf(t: TypeExp): String = when (t) {
 private fun javaTypeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "Integer"
     TypeExp.BOOL -> "Boolean"
-    TypeExp.ROLE -> TODO()
-    TypeExp.ROLESET -> TODO()
     TypeExp.ADDRESS -> "Integer"
     TypeExp.EMPTY -> throw AssertionError()
     is TypeExp.Hidden -> "Integer"

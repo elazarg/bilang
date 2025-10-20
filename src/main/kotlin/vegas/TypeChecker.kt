@@ -8,14 +8,12 @@ internal class StaticError(reason: String, val node: Ast) : RuntimeException(rea
 
 // Short helpers to keep call sites terse
 internal fun pt(t: TypeExp): String = Pretty.type(t)
-internal fun pvd(vd: VarDec): String = "${vd.first}: ${pt(vd.second)}"
+internal fun pvd(vd: VarDec): String = "${vd.v.name}: ${pt(vd.type)}"
 
 internal object Pretty {
     fun type(t: TypeExp): String = when (t) {
         INT -> "int"
         BOOL -> "bool"
-        ROLE -> "role"
-        ROLESET -> "roleset"
         ADDRESS -> "address"
         EMPTY -> "∅"
         is TypeId -> t.name
@@ -26,7 +24,7 @@ internal object Pretty {
     }
 
     private fun wrapIfComplex(t: TypeExp): String = when (t) {
-        is TypeId, INT, BOOL, ROLE, ROLESET, ADDRESS -> type(t)
+        is TypeId, INT, BOOL, ADDRESS -> type(t)
         else -> "(${type(t)})"
     }
 
@@ -56,27 +54,25 @@ fun requireStatic(b: Boolean, s: String, node: Ast) {
 fun typeCheck(program: ExpProgram) {
     Checker(
         program.types + mapOf(
-            Pair("bool", BOOL),
-            Pair("role", ROLE),
-            Pair("int", INT)
-        )
+            Pair(TypeId("bool"), BOOL),
+            Pair(TypeId("int"), INT)
+        ),
     ).type(program.game)
 }
 
-private fun Env<TypeExp>.safeGetValue(role: String, name: String, node: Ast): TypeExp =
-    try {
-        getValue(role, name)
-    } catch (_: NoSuchElementException) {
-        throw StaticError("Member '$role.$name' is undefined or role '$role' is not in scope", node)
+
+private class Checker(private val typeMap: Map<TypeId, TypeExp>, private val roles: Set<Role> = emptySet(), private val env: Env<TypeExp> = Env()) {
+
+    private fun requireRole(role: Role) {
+        requireStatic(role in roles, "$role is not a role", role)
     }
 
-private class Checker(private val typeMap: Map<String, TypeExp>, private val env: Env<TypeExp> = Env()) {
-
-    private fun requireRole(q: Query) {
+    private fun Env<TypeExp>.safeGetValue(role: Role, name: Exp.Var, node: Ast): TypeExp {
+        requireRole(role)
         try {
-            requireStatic(env.getValue(q.role) == ROLE, "${q.role} is not a role", q)
+            return getValue(role, name)
         } catch (_: NoSuchElementException) {
-            throw StaticError("Role '${q.role}' is undefined", q)
+            throw StaticError("Member '$role.$name' is undefined", node)
         }
     }
 
@@ -88,30 +84,30 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
     fun type(ext: Ext) {
         when (ext) {
             is Ext.Bind -> {
-                val (ns, ms) = ext.qs.map { q ->
-                    for (c in q.params) {
-                        val t = stripHidden(c.type)
-                        if (t is TypeId && !typeMap.containsKey(t.name)) {
-                            throw StaticError("Unknown type '${t.name}'", t)
-                        }
+                ext.qs.forEach { q -> for (c in q.params) {
+                    val t = stripHidden(c.type)
+                    if (t is TypeId && !typeMap.containsKey(t)) {
+                        throw StaticError("Unknown type '${t.name}'", c.type)
                     }
-                    val m = q.params.associate { (k, v) -> Pair(q.role, k) to v }
+                }
+                }
+                val (newRoles, ms) = ext.qs.map { q ->
+                    val m = q.params.associate { (k, type) -> Pair(q.role, k) to type }
                     when (ext.kind) {
                         Kind.JOIN, Kind.JOIN_CHANCE -> {
-                            val n = mapOf(q.role to ROLE)
-                            checkWhere(n, m, q)
-                            Pair(n, m)
+                            val newRole = setOf(q.role)
+                            checkWhere(roles + newRole, m, q)
+                            Pair(newRole, m)
                         }
 
                         Kind.YIELD -> {
-                            requireRole(q)
-                            val n = mapOf<String, TypeExp>()
-                            checkWhere(n, m, q)
-                            Pair(n, m)
+                            requireRole(q.role)
+                            checkWhere(roles, m, q)
+                            Pair(emptySet(), m)
                         }
 
                         Kind.REVEAL -> {
-                            requireRole(q)
+                            requireRole(q.role)
                             m.forEach { (rf, revealedType) ->
                                 val (role, field) = rf
                                 val existing = env.safeGetValue(role, field, q)
@@ -119,30 +115,32 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
                                 val expected = (existing as Hidden).type
                                 requireStatic(
                                     compatible(revealedType, expected) && compatible(expected, revealedType),
-                                    "Reveal type mismatch for '$role.$field': expected ${pt(expected)}, got ${
+                                    "Reveal type mismatch for '${role.name}.${field.name}': expected ${pt(expected)}, got ${
                                         pt(
                                             revealedType
                                         )
                                     }", q
                                 )
                             }
-                            val n = emptyMap<String, TypeExp>()
-                            checkWhere(n, m, q)
-                            Pair(n, m)
+                            checkWhere(roles, m, q)
+                            Pair(emptySet(), m)
                         }
                     }
                 }.unzip()
-                Checker(typeMap, env + ns.union() with ms.union()).type(ext.ext)
+                val checker = Checker(typeMap, roles + newRoles.union(), env withMap ms.union())
+                checker.type(ext.ext)
             }
 
-            is Ext.BindSingle -> type(Ext.Bind(ext.kind, listOf(ext.q), ext.ext))
+            is Ext.BindSingle -> {
+                type(Ext.Bind(ext.kind, listOf(ext.q), ext.ext))
+            }
 
-            is Ext.Value -> type(ext.exp)
+            is Ext.Value -> type(ext.outcome)
         }
     }
 
-    private fun checkWhere(n: Map<String, TypeExp>, m: Map<Pair<String, String>, TypeExp>, q: Query) {
-        requireStatic(Checker(typeMap, env + n with m).type(q.where) == BOOL, "Where clause failed", q)
+    private fun checkWhere(n: Set<Role>, m: Map<Pair<Role, Exp.Var>, TypeExp>, q: Query) {
+        requireStatic(Checker(typeMap, n, env withMap m).type(q.where) == BOOL, "Where clause failed", q)
     }
 
     private fun type(outcome: Outcome) {
@@ -155,18 +153,14 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
 
             is Outcome.Value -> {
                 outcome.ts.forEach { (role, v) ->
-                    try {
-                        requireStatic(env.getValue(role) == ROLE, "$role is not a role", outcome)
-                    } catch (_: NoSuchElementException) {
-                        throw StaticError("Role '${role}' is undefined", outcome)
-                    }
+                    requireRole(role)
                     requireStatic(type(v) == INT, "Outcome value must be an int", v)
                 }
             }
 
             is Outcome.Let -> {
                 requireStatic(type(outcome.init) == outcome.dec.type, "Bad initialization of let ext", outcome.init)
-                Checker(typeMap, env + outcome.dec).type(outcome.outcome)
+                Checker(typeMap, emptySet(), env + Pair(outcome.dec.v, outcome.dec.type)).type(outcome.outcome)
             }
         }
     }
@@ -255,17 +249,11 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
         is Exp.Const.Bool -> BOOL
         is Exp.Const.Hidden -> Hidden(type(exp.value as Exp))
         is Exp.Var -> try {
-            env.getValue(exp.name)
+            env.getValue(exp)
         } catch (e: NoSuchElementException) {
             throw StaticError("Variable '${exp.name}' is undefined", exp)
         }
         is Exp.Member -> {
-            try {
-                val role = env.getValue(exp.target)
-                requireStatic(role == ROLE, "${exp.target} is not a role", exp)
-            } catch (_: NoSuchElementException) {
-                throw StaticError("Role '${exp.target}' is undefined", exp)
-            }
             env.safeGetValue(exp.target, exp.field, exp)
         }
 
@@ -276,7 +264,7 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
 
         is Exp.Let -> {
             requireStatic(type(exp.init) == exp.dec.type, "Bad initialization of let exp", exp)
-            Checker(typeMap, env + exp.dec).type(exp.exp)
+            Checker(typeMap, emptySet(), env + Pair(exp.dec.v, exp.dec.type)).type(exp.exp)
         }
 
         Exp.Const.UNDEFINED -> throw AssertionError()
@@ -330,17 +318,16 @@ private class Checker(private val typeMap: Map<String, TypeExp>, private val env
         t2 is Opt -> Opt(join(t1, t2.type))
         t1 == t2 -> t1
         t1 is TypeId -> {
-            requireStatic(typeMap.containsKey(t1.name), "${pt(t1)} not in type map", t1)
-            join(typeMap.getValue(t1.name), t2)
+            requireStatic(typeMap.containsKey(t1), "${pt(t1)} not in type map", t1)
+            join(typeMap.getValue(t1), t2)
         }
 
         t2 is TypeId -> {
-            requireStatic(typeMap.containsKey(t2.name), "${pt(t2)} not in type map", t2)
-            join(t1, typeMap.getValue(t2.name))
+            requireStatic(typeMap.containsKey(t2), "${pt(t2)} not in type map", t2)
+            join(t1, typeMap.getValue(t2))
         }
 
         t1 === TypeId("role") && t2 === TypeId("role") -> TypeId("role")
-        t1 === ROLESET && t2 === ROLESET -> ROLESET
         t1 === ADDRESS && t2 === ADDRESS -> ADDRESS
         t1 === BOOL && t2 === BOOL -> BOOL
         t1 === INT && t2 is IntClass -> INT

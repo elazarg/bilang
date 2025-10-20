@@ -1,20 +1,21 @@
 package vegas
 
 
-data class Env<T>(val g: Map<String, T>, val h: Map<Pair<String, String>, T>) {
-    constructor(): this(mapOf(), mapOf())
+data class Env<T>(val g: Map<Exp.Var, T>, val r: Map<Role, T>, val h: Map<Pair<Role, Exp.Var>, T>) {
+    constructor(): this(mapOf(), mapOf(), mapOf())
 
-    operator fun plus(p: Pair<String, T>) = Env(g + p, h)
-    operator fun plus(p: Map<String, T>) = Env(g + p, h)
-    infix fun with(p: Map<Pair<String, String>, T>) = Env(g, h + p)
-    infix fun with(p: Pair<Pair<String, String>, T>) = Env(g, h + p)
+    operator fun plus(p: Pair<Exp.Var, T>) = Env(g + p, r, h)
+    operator fun plus(p: Map<Exp.Var, T>) = Env(g + p, r, h)
+    infix fun withMap(p: Map<Pair<Role, Exp.Var>, T>) = Env(g, r, h + p)
+    infix fun withRole(p: Pair<Role, T>) = Env(g, r + p, h)
 
-    fun getValue(role: String, field: String) = getValue(Pair(role, field))
-    fun getValue(m: Pair<String, String>) = h.getValue(m)
+    fun getValue(role: Role, field: Exp.Var) = getValue(Pair(role, field))
+    fun getValue(m: Pair<Role, Exp.Var>) = h.getValue(m)
 
-    fun getValue(v: String) = g.getValue(v)
+    fun getValue(v: Exp.Var) = g.getValue(v)
+    fun getValue(role: Role) = r.getValue(role)
 
     // Utils
-    val Pair<String, String>.role: String get() = first
-    val Pair<String, String>.field: String get() = second
+    val Pair<Role, String>.role: Role get() = first
+    val Pair<Role, String>.field: String get() = second
 }

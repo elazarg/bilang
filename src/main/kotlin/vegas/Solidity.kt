@@ -58,7 +58,7 @@ private fun allDiffExpr(args: List<String>): String {
 private fun genExt(ext: Ext, step: Int): String = when (ext) {
     is Ext.Bind -> makeStep(ext.kind, ext.qs, step) + "\n" + genExt(ext.ext, step + 1)
     is Ext.BindSingle -> makeStep(ext.kind, listOf(ext.q), step) + "\n" + genExt(ext.ext, step + 1)
-    is Ext.Value -> genOutcome(ext.exp, step)
+    is Ext.Value -> genOutcome(desugar(ext.outcome), step)
 }
 
 private fun makeStep(kind: Kind, qs: List<Query>, step: Int): String {
@@ -85,8 +85,8 @@ private fun makeQuery(kind: Kind, q: Query, step: Int): String {
     val role = q.role
     val where = exp(q.where)
 
-    val typeWheres = q.params.map { (name, type) -> whereof(varname(name, type), type) }.statements()
-    val vars = q.params.map { (name, type) -> Pair(varname(name, type), typeOf(type)) }
+    val typeWheres = q.params.map { (v, type) -> whereof(varname(v.name, type), type) }.statements()
+    val vars = q.params.map { (v, type) -> Pair(varname(v.name, type), typeOf(type)) }
     val params = vars.map { (name, type) -> "$type _$name" }.join(", ")
     val decls = vars.map { (name, type) -> "$type public ${role}_$name;" }.declarations()
 
@@ -205,7 +205,7 @@ private fun varname(name: String, type: TypeExp) =
 
 private fun genOutcome(switch: Outcome.Value, step: Int): String {
     // New: safe uint balance +/- int delta, CEI, call-based payout
-    return switch.ts.entries.map { (role: String, money: Exp) ->
+    return switch.ts.entries.map { (role: Role, money: Exp) ->
         """
         |    function withdraw_${step}_$role() public by(Role.$role) at_step($step) {
         |        int256 delta = ${exp(money)};
@@ -269,8 +269,6 @@ private fun exp(e: Exp): String = when (e) {
 private fun typeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "int256"
     TypeExp.BOOL -> "bool"
-    TypeExp.ROLE -> "Role"
-    TypeExp.ROLESET -> "mapping(address => bool)"
     TypeExp.ADDRESS -> "address"
     TypeExp.EMPTY -> throw AssertionError()
     is TypeExp.Hidden -> "uint256"

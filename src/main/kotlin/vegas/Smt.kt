@@ -4,7 +4,7 @@ import vegas.Exp.*
 import vegas.Exp.Const.*
 
 fun smt(g: ExpProgram) = """
-    |${defineTypes(g.types)}
+    |${defineTypes(g.types.mapKeys { it.key.name })}
     |
     |${ext(g.game)}
     |
@@ -19,8 +19,8 @@ private fun ext(e: Ext): String = when (e) {
     is Ext.Bind -> e.qs.map { bind(it) }.join("\n") + ext(e.ext)
     is Ext.BindSingle -> bind(e.q) + ext(e.ext)
     is Ext.Value -> {
-        e.exp.ts.map { (a, b) ->
-            val m = Member(a, "outcome")
+        desugar(e.outcome).ts.map { (a, b) ->
+            val m = Member(a, Var("outcome"))
             // TODO: define-fun? declare-fun?
             "(declare-const ${exp(m)} Int)\n" +
             "(assert ${exp(BinOp("=", m, b))})"
@@ -29,7 +29,7 @@ private fun ext(e: Ext): String = when (e) {
 }
 
 private fun bind(q: Query) = if (q.params.isEmpty()) "" else {
-    val vars = q.params.filter { it.type !is TypeExp.Hidden }.map { (name, type) -> Pair(Member(q.role, name), type) }
+    val vars = q.params.filter { it.type !is TypeExp.Hidden }.map { (v, type) -> Pair(Member(q.role, v), type) }
     val decls = vars.map { (m, type) -> "(declare-const ${exp(m)} ${smtTypeOf(type)})" }.join("\n")
     val dones = vars.map { (m, _) -> "(declare-const ${exp(m)}_done Bool)" }.join("\n")
     //val doneQuit = vars.map { (m, _) -> "(assert (=> ${exp(m)}_done last_var_done))" }.join("\n")
@@ -70,7 +70,7 @@ private fun exp(e: Exp): String = when (e) {
     is Bool -> "${e.truth}"
     is Address -> TODO()
     is Hidden -> exp(e.value as Exp)
-    is Let -> "(let ${e.dec.name} ${exp(e.init)} ${exp(e.exp)})"
+    is Let -> "(let ${e.dec.v.name} ${exp(e.init)} ${exp(e.exp)})"
     UNDEFINED -> throw StaticError("Undefined", e)
 }
 
@@ -93,8 +93,6 @@ private fun unop(op: String) = when (op) {
 private fun smtTypeOf(t: TypeExp): String = when (t) {
     TypeExp.INT -> "Int"
     TypeExp.BOOL -> "Bool"
-    TypeExp.ROLE -> TODO()
-    TypeExp.ROLESET -> TODO()
     TypeExp.ADDRESS -> "Int"
     TypeExp.EMPTY -> throw AssertionError()
     is TypeExp.Hidden -> smtTypeOf(t.type)
@@ -106,7 +104,7 @@ private fun smtTypeOf(t: TypeExp): String = when (t) {
 
 
 fun main(args: Array<String>) {
-    val e = BinOp("<", Num(5), Member("Host", "choice"))
+    val e = BinOp("<", Num(5), Member(Role("Host"), Var("choice")))
     println(e)
     println(exp(e))
 }
