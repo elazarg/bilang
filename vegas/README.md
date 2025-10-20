@@ -1,71 +1,70 @@
-# vegas README
+# Vegas Language Support (VS Code)
 
-This is the README for your extension "vegas". After writing up a brief description, we recommend including the following sections.
+Language server and VS Code extension for the **Vegas** game-synthesis language.
+Provides diagnostics, (basic) hover, and **semantic syntax highlighting**.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+* **Live diagnostics** (parse/type errors) on open/change via LSP `publishDiagnostics`.
+* **Hover (placeholder)** returns a simple message for now.
+* **Semantic tokens** (keywords, variables, numbers, operators, etc.) — the server advertises a semantic-token legend and serves full-document tokens.
 
-For example if there is an image subfolder under your extension project workspace:
+    * Current token types registered: `keyword`, `variable`, `number`, `operator`, `type`, `string`.
+    * The visitor class encodes tokens (5-tuples per LSP: `deltaLine, deltaStart, length, tokenTypeIndex, modifiers`).
 
-\!\[feature X\]\(images/feature-x.png\)
+## How it works (high level)
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* **Server**: Kotlin (LSP4J). Exposes `TextDocumentService` and `WorkspaceService`; registers text sync, hover, and semantic-token capabilities. Entry point runs on stdio.
+* **Tokens**: `SemanticTokenVisitor` walks the parse tree and tags identifiers, ints, operators, and grammar-defined keywords.
+* **Client (VS Code)**: Activates on `vegas` files and requests diagnostics/hover/tokens like any LSP client (standard VS Code languageclient wiring).
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+* **Java 17+** (to launch the server). Server runs over **stdio** via `LSPLauncher`.
+* **VS Code** recent build (the extension targets current VS Code language features).
+* Node.js (for building the VS Code client).
 
-## Extension Settings
+## Install / Build (dev workflow)
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+1. **Build the language server jar** (Maven/Gradle as in your repo). Ensure the fat/shaded jar is available to the extension (e.g., `vegas/server/vegas-…-jar-with-dependencies.jar`).
+2. **Install client deps**:
 
-For example:
+   ```bash
+   cd vegas
+   npm ci
+   npm run compile
+   ```
+3. **Run the Extension Host**:
 
-This extension contributes the following settings:
+    * In VS Code, open the **vegas** folder and press **F5** (“Run Extension”).
+    * In the Extension Development Host window, open a `.vg` file. The server starts and diagnostics/tokens flow.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+> Packaging: the server’s `main` uses stdio and must be launched by the client; the LSP entrypoint is in Kotlin (see `main()` in `Server.kt`).
 
-## Known Issues
+## Project layout (relevant pieces)
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+* `vegas/src/*` — VS Code extension (TypeScript).
+* `src/main/kotlin/vegas/lsp/*` — LSP server:
 
-## Release Notes
+    * `Server.kt` – capabilities, semantic-token legend, stdio launcher.
+    * `VegasTextDocumentService.kt` – document open/change → validate & publish diagnostics; hover; semanticTokens/full.
+    * `SemanticTokenVisitor.kt` – parse-tree walk → encoded tokens.
+    * `VegasWorkspaceService.kt` – stubbed workspace notifications.
 
-Users appreciate release notes as you update your extension.
+## Semantic tokens details
 
-### 1.0.0
+* **Legend** (server-side): `keyword`, `variable`, `number`, `operator`, `type`, `string`. Indices correspond to their positions in the array.
+* **Visitor mapping** (examples):
+  `ID → variable`, `INT → number`, grammar ranges map to `keyword` or `operator`. Encoded with running `deltaLine/deltaChar`.
 
-Initial release of ...
+## Troubleshooting
 
-### 1.0.1
+* **No colors after “adding spans”**: If semantic tokens are registered but the handler throws or returns mismatched data, VS Code prefers semantics and your TextMate colors disappear. Ensure the server advertises only what it serves (legend ↔ visitor indices) and returns `IntArray`/list in multiples of 5. See `Server.kt` (legend) and `VegasTextDocumentService.semanticTokensFull`.
+* **Diagnostics don’t show**: Confirm `didOpen`/`didChange` store the text and `validateDocument` runs; errors are published via `publishDiagnostics`.
+* **Server doesn’t start**: You need Java on PATH; the server’s `main()` uses stdio.
 
-Fixed issue #.
+## Roadmap
 
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+* Proper hover content (types/symbol docs).
+* Incremental sync & range semantic tokens (optional).
+* Code actions, completions.
