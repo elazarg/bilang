@@ -1,4 +1,4 @@
-// Generated from C:/Users/elazar/workspace/vegas/Vegas.g4 by ANTLR 4.13.2
+// Generated from Vegas.g4 by ANTLR 4.13.2
 package vegas.generated;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -122,14 +122,6 @@ public class VegasParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_program; }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterProgram(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitProgram(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitProgram(this);
 			else return visitor.visitChildren(this);
@@ -186,14 +178,6 @@ public class VegasParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_typeDec; }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterTypeDec(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitTypeDec(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitTypeDec(this);
 			else return visitor.visitChildren(this);
@@ -245,14 +229,6 @@ public class VegasParser extends Parser {
 		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
 		public TypeIdContext(TypeExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterTypeId(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitTypeId(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitTypeId(this);
 			else return visitor.visitChildren(this);
@@ -268,14 +244,6 @@ public class VegasParser extends Parser {
 		}
 		public SubsetTypeExpContext(TypeExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterSubsetTypeExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitSubsetTypeExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitSubsetTypeExp(this);
 			else return visitor.visitChildren(this);
@@ -290,14 +258,6 @@ public class VegasParser extends Parser {
 			return getToken(VegasParser.INT, i);
 		}
 		public RangeTypeExpContext(TypeExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterRangeTypeExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitRangeTypeExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitRangeTypeExp(this);
@@ -406,14 +366,6 @@ public class VegasParser extends Parser {
 		}
 		public ReceiveExtContext(ExtContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterReceiveExt(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitReceiveExt(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitReceiveExt(this);
 			else return visitor.visitChildren(this);
@@ -425,14 +377,6 @@ public class VegasParser extends Parser {
 			return getRuleContext(OutcomeContext.class,0);
 		}
 		public WithdrawExtContext(ExtContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterWithdrawExt(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitWithdrawExt(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitWithdrawExt(this);
@@ -533,14 +477,6 @@ public class VegasParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_query; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterQuery(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitQuery(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitQuery(this);
@@ -658,14 +594,6 @@ public class VegasParser extends Parser {
 		}
 		public OutcomeExpContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterOutcomeExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitOutcomeExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitOutcomeExp(this);
 			else return visitor.visitChildren(this);
@@ -686,14 +614,6 @@ public class VegasParser extends Parser {
 			return getRuleContext(OutcomeContext.class,i);
 		}
 		public IfOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterIfOutcome(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitIfOutcome(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitIfOutcome(this);
@@ -716,14 +636,6 @@ public class VegasParser extends Parser {
 		}
 		public LetOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterLetOutcome(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitLetOutcome(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitLetOutcome(this);
 			else return visitor.visitChildren(this);
@@ -735,14 +647,6 @@ public class VegasParser extends Parser {
 			return getRuleContext(OutcomeContext.class,0);
 		}
 		public ParenOutcomeContext(OutcomeContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterParenOutcome(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitParenOutcome(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitParenOutcome(this);
@@ -853,14 +757,6 @@ public class VegasParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_item; }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterItem(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitItem(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitItem(this);
 			else return visitor.visitChildren(this);
@@ -930,14 +826,6 @@ public class VegasParser extends Parser {
 		}
 		public BinOpEqExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpEqExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpEqExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpEqExp(this);
 			else return visitor.visitChildren(this);
@@ -950,14 +838,6 @@ public class VegasParser extends Parser {
 			return getRuleContext(ExpContext.class,0);
 		}
 		public UndefExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterUndefExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitUndefExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitUndefExp(this);
@@ -977,14 +857,6 @@ public class VegasParser extends Parser {
 		}
 		public BinOpAddExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpAddExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpAddExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpAddExp(this);
 			else return visitor.visitChildren(this);
@@ -1003,14 +875,6 @@ public class VegasParser extends Parser {
 		}
 		public BinOpCompExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpCompExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpCompExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpCompExp(this);
 			else return visitor.visitChildren(this);
@@ -1023,14 +887,6 @@ public class VegasParser extends Parser {
 			return getRuleContext(ExpContext.class,0);
 		}
 		public UnOpExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterUnOpExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitUnOpExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitUnOpExp(this);
@@ -1047,14 +903,6 @@ public class VegasParser extends Parser {
 		}
 		public MemberExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterMemberExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitMemberExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitMemberExp(this);
 			else return visitor.visitChildren(this);
@@ -1065,14 +913,6 @@ public class VegasParser extends Parser {
 		public Token name;
 		public TerminalNode ID() { return getToken(VegasParser.ID, 0); }
 		public IdExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterIdExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitIdExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitIdExp(this);
@@ -1093,14 +933,6 @@ public class VegasParser extends Parser {
 		}
 		public CallExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterCallExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitCallExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitCallExp(this);
 			else return visitor.visitChildren(this);
@@ -1118,14 +950,6 @@ public class VegasParser extends Parser {
 			return getRuleContext(ExpContext.class,i);
 		}
 		public IfExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterIfExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitIfExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitIfExp(this);
@@ -1145,14 +969,6 @@ public class VegasParser extends Parser {
 		}
 		public BinOpBoolExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpBoolExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpBoolExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpBoolExp(this);
 			else return visitor.visitChildren(this);
@@ -1165,14 +981,6 @@ public class VegasParser extends Parser {
 		}
 		public ParenExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterParenExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitParenExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitParenExp(this);
 			else return visitor.visitChildren(this);
@@ -1181,14 +989,6 @@ public class VegasParser extends Parser {
 	@SuppressWarnings("CheckReturnValue")
 	public static class BoolLiteralExpContext extends ExpContext {
 		public BoolLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBoolLiteralExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBoolLiteralExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBoolLiteralExp(this);
@@ -1211,14 +1011,6 @@ public class VegasParser extends Parser {
 		}
 		public LetExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterLetExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitLetExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitLetExp(this);
 			else return visitor.visitChildren(this);
@@ -1228,14 +1020,6 @@ public class VegasParser extends Parser {
 	public static class AddressLiteralExpContext extends ExpContext {
 		public TerminalNode ADDRESS() { return getToken(VegasParser.ADDRESS, 0); }
 		public AddressLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterAddressLiteralExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitAddressLiteralExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitAddressLiteralExp(this);
@@ -1255,14 +1039,6 @@ public class VegasParser extends Parser {
 		}
 		public BinOpMultExpContext(ExpContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterBinOpMultExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitBinOpMultExp(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitBinOpMultExp(this);
 			else return visitor.visitChildren(this);
@@ -1272,14 +1048,6 @@ public class VegasParser extends Parser {
 	public static class NumLiteralExpContext extends ExpContext {
 		public TerminalNode INT() { return getToken(VegasParser.INT, 0); }
 		public NumLiteralExpContext(ExpContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterNumLiteralExp(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitNumLiteralExp(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitNumLiteralExp(this);
@@ -1651,14 +1419,6 @@ public class VegasParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_varDec; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).enterVarDec(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof VegasListener ) ((VegasListener)listener).exitVarDec(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof VegasVisitor ) return ((VegasVisitor<? extends T>)visitor).visitVarDec(this);
