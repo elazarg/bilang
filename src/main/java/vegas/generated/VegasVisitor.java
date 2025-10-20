@@ -1,4 +1,5 @@
-package vegas.generated;// Generated from C:/Users/elazar/workspace/bilang/Vegas.g4 by ANTLR 4.13.2
+// Generated from C:/Users/elazar/workspace/vegas/Vegas.g4 by ANTLR 4.13.2
+package vegas.generated;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
 /**
@@ -36,12 +37,12 @@ public interface VegasVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitRangeTypeExp(VegasParser.RangeTypeExpContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code TypeId}
+	 * Visit a parse tree produced by the {@code IdTypeExp}
 	 * labeled alternative in {@link VegasParser#typeExp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitTypeId(VegasParser.TypeIdContext ctx);
+	T visitIdTypeExp(VegasParser.IdTypeExpContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code ReceiveExt}
 	 * labeled alternative in {@link VegasParser#ext}.
@@ -214,4 +215,22 @@ public interface VegasVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitVarDec(VegasParser.VarDecContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link VegasParser#typeId}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTypeId(VegasParser.TypeIdContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link VegasParser#varId}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitVarId(VegasParser.VarIdContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link VegasParser#roleId}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitRoleId(VegasParser.RoleIdContext ctx);
 }

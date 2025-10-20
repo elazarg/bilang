@@ -1,4 +1,5 @@
-package vegas.generated;// Generated from C:/Users/elazar/workspace/bilang/Vegas.g4 by ANTLR 4.13.2
+// Generated from C:/Users/elazar/workspace/vegas/Vegas.g4 by ANTLR 4.13.2
+package vegas.generated;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**
@@ -45,7 +46,7 @@ public class VegasBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements 
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitTypeId(VegasParser.TypeIdContext ctx) { return visitChildren(ctx); }
+	@Override public T visitIdTypeExp(VegasParser.IdTypeExpContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -221,4 +222,25 @@ public class VegasBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements 
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitVarDec(VegasParser.VarDecContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitTypeId(VegasParser.TypeIdContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitVarId(VegasParser.VarIdContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitRoleId(VegasParser.RoleIdContext ctx) { return visitChildren(ctx); }
 }

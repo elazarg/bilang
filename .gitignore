@@ -1,19 +1,41 @@
-.vscode/settings.json
+
 __pycache__
 
 .idea
-.vscode/
 test-diffs/
-/.DS_Store
 target/
-vegas/src/generated/*
 vegas/bin/*
 vegas/gambit/*.efg
 scala.iml
 *.sbt
 
+# ANTLR intermediate files
+*.tokens
+*.interp
+.antlr/
+
 coq/#*.v#
 coq/*.aux
 coq/*.glob
 coq/*.vo
+
+# Node / build
+node_modules/
+out/
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+.pnpm-store/
+.eslintcache
+
+# VS Code dev + artifacts
+.vscode/*.log
+.vscode/*.db
+.vscode/*.cache
+.vscode-test/
+*.vsix
+
+# OS junk
 .DS_Store
+Thumbs.db

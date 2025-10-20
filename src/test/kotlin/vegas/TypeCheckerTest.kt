@@ -19,7 +19,7 @@ private object B {
 
     // variables / members
     fun v(name: String) = Var(name)
-    fun m(role: String, field: String) = Member(role, field)
+    fun m(role: Role, field: String) = Member(role, Var(field))
 
     fun not(e: Exp) = UnOp("!", e)
     fun isDef(e: Exp) = UnOp("isDefined", e)
@@ -30,35 +30,37 @@ private object B {
 
     // let (expression & outcome)
     fun letE(name: String, t: TypeExp, init: Exp, body: Exp) =
-        Exp.Let(name to t, init, body)
+        Exp.Let(VarDec(Var(name), t), init, body)
 
     fun letO(name: String, t: TypeExp, init: Exp, body: Outcome) =
-        Outcome.Let(name to t, init, body)
+        Outcome.Let(VarDec(Var(name), t), init, body)
 
     // param declarations
-    fun i(name: String) = name to INT
-    fun bl(name: String) = name to BOOL
+    fun dec(name: String, t: String) = VarDec(Var(name), TypeId(t))
+    fun dec(name: String, t: TypeExp) = VarDec(Var(name), t)
+    fun i(name: String) = VarDec(Var(name), INT)
+    fun bl(name: String) = VarDec(Var(name), BOOL)
     fun opt(t: TypeExp) = Opt(t)
     fun hidden(t: TypeExp) = Hidden(t)
 
     // queries and binds
-    private fun q(role: String, params: List<VarDec> = emptyList(), deposit: Int = 0, where: Exp = b(true)) =
+    private fun q(role: Role, params: List<VarDec> = emptyList(), deposit: Int = 0, where: Exp = b(true)) =
         Query(role = role, params = params, deposit = n(deposit), where = where)
 
-    fun join(role: String, params: List<VarDec> = emptyList(), deposit: Int = 0, where: Exp = b(true)) =
+    fun join(role: Role, params: List<VarDec> = emptyList(), deposit: Int = 0, where: Exp = b(true)) =
         Ext.Bind(Kind.JOIN, listOf(q(role, params, deposit, where)), Ext.Value(Value(emptyMap())))
 
-    fun yieldTo(role: String, params: List<VarDec>, where: Exp = b(true)) =
+    fun yieldTo(role: Role, params: List<VarDec>, where: Exp = b(true)) =
         Ext.Bind(Kind.YIELD, listOf(q(role, params, 0, where)), Ext.Value(Value(emptyMap())))
 
-    fun reveal(role: String, params: List<VarDec>, where: Exp = b(true)) =
+    fun reveal(role: Role, params: List<VarDec>, where: Exp = b(true)) =
         Ext.Bind(Kind.REVEAL, listOf(q(role, params, 0, where)), Ext.Value(Value(emptyMap())))
 
-    fun joinChance(role: String, where: Exp = b(true)) =
+    fun joinChance(role: Role, where: Exp = b(true)) =
         Ext.Bind(Kind.JOIN_CHANCE, listOf(q(role, emptyList(), 0, where)), Ext.Value(Value(emptyMap())))
 
     // payouts
-    fun pay(vararg outs: Pair<String, Exp>) = Value(mapOf(*outs))
+    fun pay(vararg outs: Pair<Role, Exp>) = Value(mapOf(*outs))
 
     /**
      * Program builder per request:
@@ -67,7 +69,7 @@ private object B {
      * Threads binds left->right and attaches an optional final Value.
      */
     fun program(
-        types: Map<String, TypeExp>,
+        types: Map<TypeId, TypeExp>,
         vararg binds: Ext,
         value: Value? = null,
         name: String = "TestProgram"
@@ -108,6 +110,17 @@ infix fun Exp.neq(r: Exp) = BinOp("!=", this, r)
 infix fun Exp.iff(r: Exp) = BinOp("<->", this, r)
 infix fun Exp.xnor(r: Exp) = BinOp("<-!->", this, r)
 
+val Q = Role("Q")
+val P = Role("P")
+val P1 = Role("P1")
+val P2 = Role("P2")
+val P3 = Role("P3")
+val H = Role("H")
+val Host = Role("Host")
+val Guest = Role("Guest")
+val Alice = Role("Alice")
+val Bob = Role("Bob")
+
 class TypeCheckerTest : FreeSpec({
 
     "Type System - Basic Types" - {
@@ -116,30 +129,30 @@ class TypeCheckerTest : FreeSpec({
 
             withData(
                 ValidCase(
-                    B.program(B.join("P"), B.yieldTo("P", listOf(B.i("x")))),
+                    B.program(B.join(P), B.yieldTo(P, listOf(B.i("x")))),
                     "integer parameter"
                 ),
                 ValidCase(
-                    B.program(B.join("P"), B.yieldTo("P", listOf(B.bl("b")))),
+                    B.program(B.join(P), B.yieldTo(P, listOf(B.bl("b")))),
                     "boolean parameter"
                 ),
                 ValidCase(
-                    B.program(B.join("P"), B.yieldTo("P", listOf(B.i("x"), B.bl("b")))),
+                    B.program(B.join(P), B.yieldTo(P, listOf(B.i("x"), B.bl("b")))),
                     "multiple parameters"
                 ),
                 ValidCase(
-                    B.program(B.join("P", deposit = 100)),
+                    B.program(B.join(P, deposit = 100)),
                     "integer deposit"
                 ),
                 ValidCase(
-                    B.program(B.join("P"), value = B.pay("P" to B.n(42))),
+                    B.program(B.join(P), value = B.pay(P to B.n(42))),
                     "integer payout"
                 ),
                 ValidCase(
                     B.program(
-                        B.join("P"),
-                        B.yieldTo("P", listOf(B.i("x"))),
-                        value = B.pay("P" to B.m("P", "x"))
+                        B.join(P),
+                        B.yieldTo(P, listOf(B.i("x"))),
+                        value = B.pay(P to B.m(P, "x"))
                     ),
                     "member access returning int"
                 )
@@ -157,27 +170,27 @@ class TypeCheckerTest : FreeSpec({
             withData(
                 TypeMismatchCase(
                     B.program(
-                        B.join("P"),
-                        B.yieldTo("P", listOf(B.i("x"))),
-                        value = B.pay("P" to (B.m("P", "x") and B.b(true)))
+                        B.join(P),
+                        B.yieldTo(P, listOf(B.i("x"))),
+                        value = B.pay(P to (B.m(P, "x") and B.b(true)))
                     ),
                     "Incompatible"
                 ),
                 TypeMismatchCase(
                     B.program(
-                        B.join("P"),
-                        B.yieldTo("P", listOf(B.bl("b"))),
-                        value = B.pay("P" to (B.m("P", "b") plus B.n(1)))
+                        B.join(P),
+                        B.yieldTo(P, listOf(B.bl("b"))),
+                        value = B.pay(P to (B.m(P, "b") plus B.n(1)))
                     ),
                     "Incompatible"
                 ),
                 TypeMismatchCase(
                     B.program(
-                        B.join("P"),
-                        B.yieldTo("P", listOf(B.i("x"))),
+                        B.join(P),
+                        B.yieldTo(P, listOf(B.i("x"))),
                         value = B.pay(
-                            "P" to B.ite(
-                                B.m("P", "x") gt B.b(true),  // int > bool → error
+                            P to B.ite(
+                                B.m(P, "x") gt B.b(true),  // int > bool → error
                                 B.n(1),
                                 B.n(0)
                             )
@@ -187,8 +200,8 @@ class TypeCheckerTest : FreeSpec({
                 ),
                 TypeMismatchCase(
                     B.program(
-                        B.join("P"),
-                        value = B.pay("P" to B.b(true))  // outcome must be int
+                        B.join(P),
+                        value = B.pay(P to B.b(true))  // outcome must be int
                     ),
                     "Outcome value must be an int"
                 )
@@ -208,24 +221,26 @@ class TypeCheckerTest : FreeSpec({
             withData(
                 // type door = {0,1,2}; join P(); yield P(d: door)
                 B.program(
-                    types = mapOf("door" to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
-                    B.join("P"),
-                    B.yieldTo("P", listOf("d" to TypeId("door")))
+                    types = mapOf(TypeId("door") to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
+                    B.join(P),
+                    B.yieldTo(
+                        P, listOf(B.dec("d", TypeId("door")))
+                    )
                 ),
                 // type coin = {0,1}; join P(); yield P(flip: coin)
                 B.program(
-                    types = mapOf("coin" to Subset(setOf(B.n(0), B.n(1)))),
-                    B.join("P"),
-                    B.yieldTo("P", listOf("flip" to TypeId("coin")))
+                    types = mapOf(TypeId("coin") to Subset(setOf(B.n(0), B.n(1)))),
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.dec("flip", TypeId("coin"))))
                 ),
                 // type small, big sets; yield both
                 B.program(
                     types = mapOf(
-                        "small" to Subset(setOf(B.n(1), B.n(2), B.n(3))),
-                        "big" to Subset(setOf(B.n(10), B.n(20), B.n(30)))
+                        TypeId("small") to Subset(setOf(B.n(1), B.n(2), B.n(3))),
+                        TypeId("big") to Subset(setOf(B.n(10), B.n(20), B.n(30)))
                     ),
-                    B.join("P"),
-                    B.yieldTo("P", listOf("s" to TypeId("small"), "b" to TypeId("big")))
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.dec("s", TypeId("small")), B.dec("b", TypeId("big"))))
                 )
             ) { prog ->
                 shouldNotThrow<StaticError> { typeCheck(prog) }
@@ -235,14 +250,14 @@ class TypeCheckerTest : FreeSpec({
         "should handle range types correctly" - {
             withData(
                 B.program(
-                    types = mapOf("digit" to Range(B.n(0), B.n(9))),
-                    B.join("P"),
-                    B.yieldTo("P", listOf("d" to TypeId("digit")))
+                    types = mapOf(TypeId("digit") to Range(B.n(0), B.n(9))),
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.dec("d", TypeId("digit"))))
                 ),
                 B.program(
-                    types = mapOf("percent" to Range(B.n(0), B.n(100))),
-                    B.join("P"),
-                    B.yieldTo("P", listOf("p" to TypeId("percent")))
+                    types = mapOf(TypeId("percent") to Range(B.n(0), B.n(100))),
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.dec("p", TypeId("percent"))))
                 )
             ) { prog ->
                 shouldNotThrow<StaticError> { typeCheck(prog) }
@@ -254,30 +269,30 @@ class TypeCheckerTest : FreeSpec({
             "accepts valid where constraints" {
                 val validCases = listOf(
                     B.program(
-                        types = mapOf("door" to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
-                        B.join("P"),
+                        types = mapOf(TypeId("door") to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
+                        B.join(P),
                         B.yieldTo(
-                            "P",
-                            listOf("d" to TypeId("door")),
-                            where = B.m("P", "d") neq B.n(1)
+                            P,
+                            listOf(B.dec("d", TypeId("door"))),
+                            where = B.m(P, "d") neq B.n(1)
                         )
                     ),
                     B.program(
-                        types = mapOf("coin" to Subset(setOf(B.n(0), B.n(1)))),
-                        B.join("P"),
+                        types = mapOf(TypeId("coin") to Subset(setOf(B.n(0), B.n(1)))),
+                        B.join(P),
                         B.yieldTo(
-                            "P",
-                            listOf("c" to TypeId("coin")),
-                            where = (B.m("P", "c") eq B.n(0)) or (B.m("P", "c") eq B.n(1))
+                            P,
+                            listOf(B.dec("c", TypeId("coin"))),
+                            where = (B.m(P, "c") eq B.n(0)) or (B.m(P, "c") eq B.n(1))
                         )
                     ),
                     B.program(
-                        types = mapOf("range" to Range(B.n(1), B.n(10))),
-                        B.join("P"),
+                        types = mapOf(TypeId("range") to Range(B.n(1), B.n(10))),
+                        B.join(P),
                         B.yieldTo(
-                            "P",
-                            listOf("r" to TypeId("range")),
-                            where = B.m("P", "r") gt B.n(5)
+                            P,
+                            listOf(B.dec("r", TypeId("range"))),
+                            where = B.m(P, "r") gt B.n(5)
                         )
                     )
                 )
@@ -288,8 +303,8 @@ class TypeCheckerTest : FreeSpec({
 
             "rejects invalid where constraints" {
                 val bad = B.program(
-                    B.join("P"),
-                    B.yieldTo("P", listOf(B.i("x")), where = B.m("P", "x")) // non-boolean where
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.i("x")), where = B.m(P, "x")) // non-boolean where
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
                 ex.message shouldContain "Where clause failed"
@@ -303,24 +318,24 @@ class TypeCheckerTest : FreeSpec({
             withData(
                 // join H(); yield H(secret: hidden int)
                 B.program(
-                    B.join("H"),
-                    B.yieldTo("H", listOf("secret" to B.hidden(INT)))
+                    B.join(H),
+                    B.yieldTo(H, listOf(B.dec("secret", B.hidden(INT))))
                 ),
                 // type door = {0,1,2}; join H(); yield H(car: hidden door)
                 B.program(
-                    types = mapOf("door" to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
-                    B.join("H"),
-                    B.yieldTo("H", listOf("car" to B.hidden(TypeId("door"))))
+                    types = mapOf(TypeId("door") to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
+                    B.join(H),
+                    B.yieldTo(H, listOf(B.dec("car", B.hidden(TypeId("door")))))
                 ),
                 // join H(); yield H(x: hidden int, y: int)
                 B.program(
-                    B.join("H"),
-                    B.yieldTo("H", listOf("x" to B.hidden(INT), "y" to INT))
+                    B.join(H),
+                    B.yieldTo(H, listOf(B.dec("x", B.hidden(INT)), B.dec("y", INT)))
                 ),
                 // join H(); yield H(a: hidden bool, b: hidden bool)
                 B.program(
-                    B.join("H"),
-                    B.yieldTo("H", listOf("a" to B.hidden(BOOL), "b" to B.hidden(BOOL)))
+                    B.join(H),
+                    B.yieldTo(H, listOf(B.dec("a", B.hidden(BOOL)), B.dec("b", B.hidden(BOOL))))
                 )
             ) { prog ->
                 shouldNotThrow<StaticError> { typeCheck(prog) }
@@ -333,22 +348,22 @@ class TypeCheckerTest : FreeSpec({
                 val validReveals = listOf(
                     // join H(); yield H(s: hidden int); reveal H(s: int)
                     B.program(
-                        B.join("H"),
-                        B.yieldTo("H", listOf("s" to B.hidden(INT))),
-                        B.reveal("H", listOf("s" to INT))
+                        B.join(H),
+                        B.yieldTo(H, listOf(B.dec("s", B.hidden(INT)))),
+                        B.reveal(H, listOf(B.dec("s", INT)))
                     ),
                     // type door = {0,1,2}; join H(); yield H(car: hidden door); reveal H(car: door)
                     B.program(
-                        types = mapOf("door" to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
-                        B.join("H"),
-                        B.yieldTo("H", listOf("car" to B.hidden(TypeId("door")))),
-                        B.reveal("H", listOf("car" to TypeId("door")))
+                        types = mapOf(TypeId("door") to Subset(setOf(B.n(0), B.n(1), B.n(2)))),
+                        B.join(H),
+                        B.yieldTo(H, listOf(B.dec("car", B.hidden(TypeId("door"))))),
+                        B.reveal(H, listOf(B.dec("car", TypeId("door"))))
                     ),
                     // join H(); yield H(a: hidden int, b: hidden bool); reveal H(a: int, b: bool)
                     B.program(
-                        B.join("H"),
-                        B.yieldTo("H", listOf("a" to B.hidden(INT), "b" to B.hidden(BOOL))),
-                        B.reveal("H", listOf("a" to INT, "b" to BOOL))
+                        B.join(H),
+                        B.yieldTo(H, listOf(B.dec("a", B.hidden(INT)), B.dec("b", B.hidden(BOOL)))),
+                        B.reveal(H, listOf(B.dec("a", INT), B.dec("b", BOOL)))
                     )
                 )
                 validReveals.forEach { p ->
@@ -358,9 +373,9 @@ class TypeCheckerTest : FreeSpec({
 
             "rejects revealing non-hidden values" {
                 val bad = B.program(
-                    B.join("H"),
-                    B.yieldTo("H", listOf("public" to INT)),
-                    B.reveal("H", listOf("public" to INT))
+                    B.join(H),
+                    B.yieldTo(H, listOf(B.i("public"))),
+                    B.reveal(H, listOf(B.i("public")))
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
                 ex.message shouldContain "must be hidden"
@@ -368,9 +383,9 @@ class TypeCheckerTest : FreeSpec({
 
             "rejects type mismatches in reveal" {
                 val bad = B.program(
-                    B.join("H"),
-                    B.yieldTo("H", listOf("s" to B.hidden(INT))),
-                    B.reveal("H", listOf("s" to BOOL)) // mismatch: int vs bool
+                    B.join(H),
+                    B.yieldTo(H, listOf(B.dec("s", B.hidden(INT)))),
+                    B.reveal(H, listOf(B.bl("s"))) // mismatch: int vs bool
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
                 // just assert that an error message was produced (type mismatch)
@@ -384,9 +399,9 @@ class TypeCheckerTest : FreeSpec({
 
             "accepts valid role usage" {
                 val validRoles = listOf(
-                    B.program(B.join("Host"), B.join("Guest")),
-                    B.program(B.join("Player1", deposit = 100), B.join("Player2", deposit = 200)),
-                    B.program(B.join("A"), B.join("B"), B.join("C"), B.join("D"))
+                    B.program(B.join(Host), B.join(Guest)),
+                    B.program(B.join(P, deposit = 100), B.join(Q, deposit = 200)),
+                    B.program(B.join(P), B.join(P1), B.join(P2), B.join(P3))
                 )
                 validRoles.forEach { prog ->
                     shouldNotThrow<StaticError> { typeCheck(prog) }
@@ -395,25 +410,25 @@ class TypeCheckerTest : FreeSpec({
 
             "accepts valid member access" {
                 val p = B.program(
-                    B.join("P"),
-                    B.yieldTo("P", listOf(B.i("x"), B.bl("y"))),
-                    value = B.pay("P" to B.ite(B.m("P", "x") eq B.n(5), B.n(100), B.n(0)))
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.i("x"), B.bl("y"))),
+                    value = B.pay(P to B.ite(B.m(P, "x") eq B.n(5), B.n(100), B.n(0)))
                 )
                 shouldNotThrow<StaticError> { typeCheck(p) }
             }
 
             "rejects accessing undefined roles" {
                 val bad = B.program(
-                    B.yieldTo("UnknownRole", listOf(B.i("x")))
+                    B.yieldTo(Role("UnknownRole"), listOf(B.i("x")))
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
-                ex.message shouldContain "is undefined"
+                ex.message shouldContain "UnknownRole is not a role"
             }
 
             "rejects accessing undefined members" {
                 val bad = B.program(
-                    B.join("P"),
-                    value = B.pay("P" to B.m("P", "undefined"))
+                    B.join(P),
+                    value = B.pay(P to B.m(P, "undefined"))
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
                 ex.message shouldContain "undefined"
@@ -424,23 +439,23 @@ class TypeCheckerTest : FreeSpec({
 
             "member access requires role in scope" {
                 val bad = B.program(
-                    B.join("P"),
-                    B.yieldTo("Q", listOf(B.i("x"))), // Q never joined
-                    value = B.pay("P" to B.m("Q", "x"))
+                    B.join(P),
+                    B.yieldTo(Q, listOf(B.i("x"))), // Q never joined
+                    value = B.pay(P to B.m(Q, "x"))
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
-                ex.message shouldContain "is undefined"
+                ex.message shouldContain "Q is not a role"
             }
 
             "cross-role member access in multi-player games" {
                 val p = B.program(
-                    B.join("P1"), B.join("P2"),
-                    B.yieldTo("P1", listOf(B.i("x"))),
-                    B.yieldTo("P2", listOf(B.i("y"))),
+                    B.join(P1), B.join(P2),
+                    B.yieldTo(P1, listOf(B.i("x"))),
+                    B.yieldTo(P2, listOf(B.i("y"))),
                     value = Value(
                         mapOf(
-                            "P1" to B.ite(B.m("P2", "y") gt B.m("P1", "x"), B.n(100), B.n(0)),
-                            "P2" to B.ite(B.m("P1", "x") gt B.m("P2", "y"), B.n(100), B.n(0))
+                            P1 to B.ite(B.m(P2, "y") gt B.m(P1, "x"), B.n(100), B.n(0)),
+                            P2 to B.ite(B.m(P1, "x") gt B.m(P2, "y"), B.n(100), B.n(0))
                         )
                     )
                 )
@@ -463,8 +478,8 @@ class TypeCheckerTest : FreeSpec({
                 ArithmeticCase(B.b(true) minus B.b(false), false),
             ) { case ->
                 val prog = B.program(
-                    B.join("P"),
-                    value = B.pay("P" to case.expr)
+                    B.join(P),
+                    value = B.pay(P to case.expr)
                 )
                 if (case.valid) {
                     shouldNotThrow<StaticError> { typeCheck(prog) }
@@ -485,8 +500,8 @@ class TypeCheckerTest : FreeSpec({
                 )
                 valid.forEach { cmp ->
                     val p = B.program(
-                        B.join("P"),
-                        value = B.pay("P" to B.ite(cmp, B.n(1), B.n(0)))
+                        B.join(P),
+                        value = B.pay(P to B.ite(cmp, B.n(1), B.n(0)))
                     )
                     shouldNotThrow<StaticError> { typeCheck(p) }
                 }
@@ -500,8 +515,8 @@ class TypeCheckerTest : FreeSpec({
                 )
                 invalid.forEach { cmp ->
                     val p = B.program(
-                        B.join("P"),
-                        value = B.pay("P" to B.ite(cmp, B.n(1), B.n(0)))
+                        B.join(P),
+                        value = B.pay(P to B.ite(cmp, B.n(1), B.n(0)))
                     )
                     shouldThrow<StaticError> { typeCheck(p) }
                 }
@@ -519,8 +534,8 @@ class TypeCheckerTest : FreeSpec({
                 )
                 valid.forEach { bexpr ->
                     val p = B.program(
-                        B.join("P"),
-                        value = B.pay("P" to B.ite(bexpr, B.n(1), B.n(0)))
+                        B.join(P),
+                        value = B.pay(P to B.ite(bexpr, B.n(1), B.n(0)))
                     )
                     shouldNotThrow<StaticError> { typeCheck(p) }
                 }
@@ -534,8 +549,8 @@ class TypeCheckerTest : FreeSpec({
                 )
                 invalid.forEach { bexpr ->
                     val p = B.program(
-                        B.join("P"),
-                        value = B.pay("P" to B.ite(bexpr, B.n(1), B.n(0)))
+                        B.join(P),
+                        value = B.pay(P to B.ite(bexpr, B.n(1), B.n(0)))
                     )
                     val ex = shouldThrow<StaticError> { typeCheck(p) }
                     ex.message shouldContain "Incompatible"
@@ -554,8 +569,8 @@ class TypeCheckerTest : FreeSpec({
                 )
                 valid.forEach { eqexpr ->
                     val p = B.program(
-                        B.join("P"),
-                        value = B.pay("P" to B.ite(eqexpr, B.n(1), B.n(0)))
+                        B.join(P),
+                        value = B.pay(P to B.ite(eqexpr, B.n(1), B.n(0)))
                     )
                     shouldNotThrow<StaticError> { typeCheck(p) }
                 }
@@ -563,16 +578,16 @@ class TypeCheckerTest : FreeSpec({
 
             "special iff operators (<->, <-!->)" {
                 val p1 = B.program(
-                    B.join("P"),
-                    B.yieldTo("P", listOf(B.bl("a"), B.bl("b"))),
-                    value = B.pay("P" to B.ite(B.m("P", "a") iff B.m("P", "b"), B.n(100), B.n(0)))
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.bl("a"), B.bl("b"))),
+                    value = B.pay(P to B.ite(B.m(P, "a") iff B.m(P, "b"), B.n(100), B.n(0)))
                 )
                 shouldNotThrow<StaticError> { typeCheck(p1) }
 
                 val p2 = B.program(
-                    B.join("P"),
-                    B.yieldTo("P", listOf(B.bl("a"), B.bl("b"))),
-                    value = B.pay("P" to B.ite(B.m("P","a") xnor B.m("P","b"), B.n(100), B.n(0)))
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.bl("a"), B.bl("b"))),
+                    value = B.pay(P to B.ite(B.m(P, "a") xnor B.m(P, "b"), B.n(100), B.n(0)))
                 )
                 shouldNotThrow<StaticError> { typeCheck(p2) }
             }
@@ -582,12 +597,12 @@ class TypeCheckerTest : FreeSpec({
 
             "isDefined and isUndefined" {
                 val p1 = B.program(
-                    B.join("P"), B.join("Q"),
-                    B.yieldTo("P", listOf("x" to B.opt(INT))), // <-- make x optional
+                    B.join(P), B.join(Q),
+                    B.yieldTo(P, listOf(B.dec("x", B.opt(INT)))), // <-- make x optional
                     value = Value(
                         mapOf(
-                            "P" to B.ite(B.isDef(B.m("P", "x")), B.n(100), B.n(0)), // int on both branches
-                            "Q" to B.ite(B.isDef(B.m("P", "x")), B.n(0),   B.n(100))
+                            P to B.ite(B.isDef(B.m(P, "x")), B.n(100), B.n(0)), // int on both branches
+                            Q to B.ite(B.isDef(B.m(P, "x")), B.n(0), B.n(100))
                         )
                     )
                 )
@@ -595,10 +610,10 @@ class TypeCheckerTest : FreeSpec({
 
                 // Cannot return P.opt (opt(int)) as an int payout without an explicit unwrap/default.
                 val p2a = B.program(
-                    B.join("P"),
-                    B.yieldTo("P", listOf("opt" to B.opt(INT))),
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.dec("opt", B.opt(INT)))),
                     value = B.pay(
-                        "P" to B.ite(B.isUndef(B.m("P", "opt")), B.n(-100), B.n(0)) // both int
+                        P to B.ite(B.isUndef(B.m(P, "opt")), B.n(-100), B.n(0)) // both int
                     )
                 )
                 shouldNotThrow<StaticError> { typeCheck(p2a) }
@@ -619,8 +634,8 @@ class TypeCheckerTest : FreeSpec({
 
                 validConditionals.forEach { expr ->
                     val p = B.program(
-                        B.join("P"),
-                        value = B.pay("P" to expr)
+                        B.join(P),
+                        value = B.pay(P to expr)
                     )
                     shouldNotThrow<StaticError> { typeCheck(p) }
                 }
@@ -628,8 +643,8 @@ class TypeCheckerTest : FreeSpec({
 
             "rejects non-boolean conditions" {
                 val bad = B.program(
-                    B.join("P"),
-                    value = B.pay("P" to B.ite(B.n(5), B.n(10), B.n(20)))
+                    B.join(P),
+                    value = B.pay(P to B.ite(B.n(5), B.n(10), B.n(20)))
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
                 ex.message shouldContain "Expected bool, actual int"
@@ -637,14 +652,14 @@ class TypeCheckerTest : FreeSpec({
 
             "reject non-numerical outcome" {
                 val types = mapOf(
-                    "small" to Subset(setOf(B.n(1), B.n(2), B.n(3))),
-                    "big" to Subset(setOf(B.n(10), B.n(20), B.n(30)))
+                    TypeId("small") to Subset(setOf(B.n(1), B.n(2), B.n(3))),
+                    TypeId("big") to Subset(setOf(B.n(10), B.n(20), B.n(30)))
                 )
                 val bad = B.program(
                     types,
-                    B.join("P"),
-                    B.yieldTo("P", listOf(B.bl("b"), "s" to TypeId("small"), "g" to TypeId("big"))),
-                    value = B.pay("P" to B.ite(B.m("P", "b"), B.m("P", "s"), B.m("P", "g")))
+                    B.join(P),
+                    B.yieldTo(P, listOf(B.bl("b"), B.dec("s", TypeId("small")), B.dec("g", TypeId("big")))),
+                    value = B.pay(P to B.ite(B.m(P, "b"), B.m(P, "s"), B.m(P, "g")))
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
                 ex.message shouldContain "Outcome value must be an int"
@@ -653,14 +668,14 @@ class TypeCheckerTest : FreeSpec({
 
         "should handle nested conditionals" {
             val nested = B.ite(
-                B.m("P", "x") gt B.n(10),
-                B.ite(B.m("P", "y") gt B.n(5), B.n(100), B.n(50)),
-                B.ite(B.m("P", "y") gt B.n(5), B.n(25), B.n(0))
+                B.m(P, "x") gt B.n(10),
+                B.ite(B.m(P, "y") gt B.n(5), B.n(100), B.n(50)),
+                B.ite(B.m(P, "y") gt B.n(5), B.n(25), B.n(0))
             )
             val p = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.i("x"), B.i("y"))),
-                value = B.pay("P" to nested)
+                B.join(P),
+                B.yieldTo(P, listOf(B.i("x"), B.i("y"))),
+                value = B.pay(P to nested)
             )
             shouldNotThrow<StaticError> { typeCheck(p) }
         }
@@ -670,12 +685,12 @@ class TypeCheckerTest : FreeSpec({
 
         "should handle let bindings in expressions" {
             val p = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.i("x"))),
+                B.join(P),
+                B.yieldTo(P, listOf(B.i("x"))),
                 value = B.pay(
-                    "P" to B.letE(
+                    P to B.letE(
                         "y", INT,
-                        B.m("P", "x") plus B.n(10),
+                        B.m(P, "x") plus B.n(10),
                         B.v("y") times B.n(2)
                     )
                 )
@@ -685,15 +700,15 @@ class TypeCheckerTest : FreeSpec({
 
         "should handle let bindings in outcomes" {
             val p = B.program(
-                B.join("P"), B.join("Q"),
-                B.yieldTo("P", listOf(B.i("x"))),
+                B.join(P), B.join(Q),
+                B.yieldTo(P, listOf(B.i("x"))),
                 value = B.letO(
                     "total", INT,
-                    B.m("P", "x") times B.n(100),
+                    B.m(P, "x") times B.n(100),
                     Value(
                         mapOf(
-                            "P" to B.v("total"),
-                            "Q" to BinOp("-", B.n(0), B.v("total"))
+                            P to B.v("total"),
+                            Q to BinOp("-", B.n(0), B.v("total"))
                         )
                     )
                 ).let { desugar(it) } // convert Outcome.Let → Value
@@ -703,9 +718,9 @@ class TypeCheckerTest : FreeSpec({
 
         "should reject type mismatches in let initialization" {
             val bad = B.program(
-                B.join("P"),
+                B.join(P),
                 value = B.pay(
-                    "P" to B.letE("x", INT, B.b(true), B.v("x") plus B.n(5))
+                    P to B.letE("x", INT, B.b(true), B.v("x") plus B.n(5))
                 )
             )
             val ex = shouldThrow<StaticError> { typeCheck(bad) }
@@ -714,10 +729,10 @@ class TypeCheckerTest : FreeSpec({
 
         "let bindings should shadow outer bindings" {
             val p = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.i("x"))),
+                B.join(P),
+                B.yieldTo(P, listOf(B.i("x"))),
                 value = B.pay(
-                    "P" to B.letE(
+                    P to B.letE(
                         "x", INT, B.n(10),
                         B.letE("x", INT, B.n(20), B.v("x"))
                     )
@@ -732,10 +747,10 @@ class TypeCheckerTest : FreeSpec({
         "should type check built-in functions" {
             // Based on TypeChecker.kt, only 'alldiff' and 'abs' are implemented
             val p = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.i("x"))),
+                B.join(P),
+                B.yieldTo(P, listOf(B.i("x"))),
                 value = B.pay(
-                    "P" to Call(B.v("abs"), listOf(B.m("P", "x") minus B.n(10)))
+                    P to Call(B.v("abs"), listOf(B.m(P, "x") minus B.n(10)))
                 )
             )
             shouldNotThrow<StaticError> { typeCheck(p) }
@@ -743,9 +758,9 @@ class TypeCheckerTest : FreeSpec({
 
         "should reject unknown functions" {
             val bad = B.program(
-                B.join("P"),
+                B.join(P),
                 value = B.pay(
-                    "P" to Call(B.v("unknown_function"), listOf(B.n(5)))
+                    P to Call(B.v("unknown_function"), listOf(B.n(5)))
                 )
             )
             shouldThrow<IllegalArgumentException> { typeCheck(bad) }
@@ -757,9 +772,9 @@ class TypeCheckerTest : FreeSpec({
         "accepts alldiff over integers (constants and members)" {
             // constants only
             val pConst = B.program(
-                B.join("P"),
+                B.join(P),
                 value = B.pay(
-                    "P" to B.ite(
+                    P to B.ite(
                         Call(B.v("alldiff"), listOf(B.n(1), B.n(2), B.n(3))),
                         B.n(100), B.n(0)
                     )
@@ -769,13 +784,13 @@ class TypeCheckerTest : FreeSpec({
 
             // role members
             val pMembers = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.i("a"), B.i("b"), B.i("c"))),
+                B.join(P),
+                B.yieldTo(P, listOf(B.i("a"), B.i("b"), B.i("c"))),
                 value = B.pay(
-                    "P" to B.ite(
+                    P to B.ite(
                         Call(
                             B.v("alldiff"),
-                            listOf(B.m("P", "a"), B.m("P", "b"), B.m("P", "c"))
+                            listOf(B.m(P, "a"), B.m(P, "b"), B.m(P, "c"))
                         ),
                         B.n(100), B.n(0)
                     )
@@ -787,11 +802,11 @@ class TypeCheckerTest : FreeSpec({
         "rejects alldiff with mixed or non-integer arguments" {
             // one boolean among ints
             val badMixed = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.i("x"), B.bl("b"))),
+                B.join(P),
+                B.yieldTo(P, listOf(B.i("x"), B.bl("b"))),
                 value = B.pay(
-                    "P" to B.ite(
-                        Call(B.v("alldiff"), listOf(B.m("P", "x"), B.n(5), B.m("P", "b"))),
+                    P to B.ite(
+                        Call(B.v("alldiff"), listOf(B.m(P, "x"), B.n(5), B.m(P, "b"))),
                         B.n(1), B.n(0)
                     )
                 )
@@ -800,11 +815,11 @@ class TypeCheckerTest : FreeSpec({
 
             // booleans only
             val badBool = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.bl("p"), B.bl("q"))),
+                B.join(P),
+                B.yieldTo(P, listOf(B.bl("p"), B.bl("q"))),
                 value = B.pay(
-                    "P" to B.ite(
-                        Call(B.v("alldiff"), listOf(B.m("P", "p"), B.m("P", "q"))),
+                    P to B.ite(
+                        Call(B.v("alldiff"), listOf(B.m(P, "p"), B.m(P, "q"))),
                         B.n(1), B.n(0)
                     )
                 )
@@ -818,35 +833,37 @@ class TypeCheckerTest : FreeSpec({
 
         "Monty Hall game type checking" {
             val types = mapOf(
-                "door" to Subset(setOf(B.n(0), B.n(1), B.n(2)))
+                TypeId("door") to Subset(setOf(B.n(0), B.n(1), B.n(2)))
             )
             val p = B.program(
                 types,
-                B.join("Host", deposit = 100),
-                B.join("Guest", deposit = 100),
-                B.yieldTo("Host", listOf("car" to B.hidden(TypeId("door")))),
-                B.yieldTo("Guest", listOf("choice" to TypeId("door"))),
+                B.join(Host, deposit = 100),
+                B.join(Guest, deposit = 100),
+                B.yieldTo(Host, listOf(B.dec("car", B.hidden(TypeId("door"))))),
                 B.yieldTo(
-                    "Host",
-                    listOf("goat" to TypeId("door")),
-                    where = (B.m("Host", "goat") neq B.m("Guest", "choice")) and
-                            (B.m("Host", "goat") neq B.m("Host", "car"))
+                    Guest, listOf(B.dec("choice", TypeId("door")))
                 ),
-                B.yieldTo("Guest", listOf("switch" to BOOL)),
-                B.reveal("Host", listOf("car" to TypeId("door"))),
+                B.yieldTo(
+                    Host,
+                    listOf(B.dec("goat", TypeId("door"))),
+                    where = (B.m(Host, "goat") neq B.m(Guest, "choice")) and
+                            (B.m(Host, "goat") neq B.m(Host, "car"))
+                ),
+                B.yieldTo(Guest, listOf(B.dec("switch", BOOL))),
+                B.reveal(Host, listOf(B.dec("car", TypeId("door")))),
                 value = Value(
                     mapOf(
-                        "Guest" to B.ite(
-                            (B.isDef(B.m("Host", "car")) and B.isDef(B.m("Guest", "switch"))),
+                        Guest to B.ite(
+                            (B.isDef(B.m(Host, "car")) and B.isDef(B.m(Guest, "switch"))),
                             B.ite(
-                                (B.m("Guest", "choice") neq B.m("Host", "car")) iff B.m("Guest", "switch"),
+                                (B.m(Guest, "choice") neq B.m(Host, "car")) iff B.m(Guest, "switch"),
                                 B.n(20),
                                 B.n(-20)
                             ),
                             B.n(-100)
                         ),
-                        "Host" to B.ite(
-                            (B.isDef(B.m("Host", "car")) and B.isDef(B.m("Guest", "switch"))),
+                        Host to B.ite(
+                            (B.isDef(B.m(Host, "car")) and B.isDef(B.m(Guest, "switch"))),
                             B.n(0),
                             B.n(-100)
                         )
@@ -858,33 +875,33 @@ class TypeCheckerTest : FreeSpec({
 
         "Prisoner's Dilemma type checking" {
             val p = B.program(
-                B.join("Alice", deposit = 100),
-                B.join("Bob", deposit = 100),
-                B.yieldTo("Alice", listOf("cooperate" to BOOL)),
-                B.yieldTo("Bob", listOf("cooperate" to BOOL)),
+                B.join(Alice, deposit = 100),
+                B.join(Bob, deposit = 100),
+                B.yieldTo(Alice, listOf(B.dec("cooperate", BOOL))),
+                B.yieldTo(Bob, listOf(B.dec("cooperate", BOOL))),
                 value = Value(
                     mapOf(
-                        "Alice" to B.ite(
-                            B.m("Alice", "cooperate") and B.m("Bob", "cooperate"),
+                        Alice to B.ite(
+                            B.m(Alice, "cooperate") and B.m(Bob, "cooperate"),
                             B.n(3),
                             B.ite(
-                                B.m("Alice", "cooperate") and B.not(B.m("Bob", "cooperate")),
+                                B.m(Alice, "cooperate") and B.not(B.m(Bob, "cooperate")),
                                 B.n(0),
                                 B.ite(
-                                    B.not(B.m("Alice", "cooperate")) and B.m("Bob", "cooperate"),
+                                    B.not(B.m(Alice, "cooperate")) and B.m(Bob, "cooperate"),
                                     B.n(5),
                                     B.n(1)
                                 )
                             )
                         ),
-                        "Bob" to B.ite(
-                            B.m("Alice", "cooperate") and B.m("Bob", "cooperate"),
+                        Bob to B.ite(
+                            B.m(Alice, "cooperate") and B.m(Bob, "cooperate"),
                             B.n(3),
                             B.ite(
-                                B.not(B.m("Alice", "cooperate")) and B.m("Bob", "cooperate"),
+                                B.not(B.m(Alice, "cooperate")) and B.m(Bob, "cooperate"),
                                 B.n(0),
                                 B.ite(
-                                    B.m("Alice", "cooperate") and B.not(B.m("Bob", "cooperate")),
+                                    B.m(Alice, "cooperate") and B.not(B.m(Bob, "cooperate")),
                                     B.n(5),
                                     B.n(1)
                                 )
@@ -898,30 +915,30 @@ class TypeCheckerTest : FreeSpec({
 
         "Multi-player lottery with many players" {
             val types = mapOf(
-                "choice" to Subset(setOf(B.n(1), B.n(2), B.n(3), B.n(4), B.n(5)))
+                TypeId("choice") to Subset(setOf(B.n(1), B.n(2), B.n(3), B.n(4), B.n(5)))
             )
             val p = B.program(
                 types,
-                B.join("P1", deposit = 50),
-                B.join("P2", deposit = 50),
-                B.join("P3", deposit = 50),
-                B.yieldTo("P1", listOf("c" to TypeId("choice"))),
-                B.yieldTo("P2", listOf("c" to TypeId("choice"))),
-                B.yieldTo("P3", listOf("c" to TypeId("choice"))),
+                B.join(P1, deposit = 50),
+                B.join(P2, deposit = 50),
+                B.join(P3, deposit = 50),
+                B.yieldTo(P1, listOf(B.dec("c", TypeId("choice")))),
+                B.yieldTo(P2, listOf(B.dec("c", TypeId("choice")))),
+                B.yieldTo(P3, listOf(B.dec("c", TypeId("choice")))),
                 value = Value(
                     mapOf(
-                        "P1" to B.ite(
-                            (B.m("P1", "c") neq B.m("P2", "c")) and (B.m("P1", "c") neq B.m("P3", "c")),
+                        P1 to B.ite(
+                            (B.m(P1, "c") neq B.m(P2, "c")) and (B.m(P1, "c") neq B.m(P3, "c")),
                             B.n(150),
                             B.n(0)
                         ),
-                        "P2" to B.ite(
-                            (B.m("P2", "c") neq B.m("P1", "c")) and (B.m("P2", "c") neq B.m("P3", "c")),
+                        P2 to B.ite(
+                            (B.m(P2, "c") neq B.m(P1, "c")) and (B.m(P2, "c") neq B.m(P3, "c")),
                             B.n(150),
                             B.n(0)
                         ),
-                        "P3" to B.ite(
-                            (B.m("P3", "c") neq B.m("P1", "c")) and (B.m("P3", "c") neq B.m("P2", "c")),
+                        P3 to B.ite(
+                            (B.m(P3, "c") neq B.m(P1, "c")) and (B.m(P3, "c") neq B.m(P2, "c")),
                             B.n(150),
                             B.n(0)
                         )
@@ -948,37 +965,37 @@ class TypeCheckerTest : FreeSpec({
             withData(
                 ErrorMessageCase(
                     B.program(
-                        B.join("P"),
-                        B.yieldTo("P", listOf(B.bl("x"))),
-                        value = B.pay("P" to (B.m("P", "x") plus B.n(1)))
+                        B.join(P),
+                        B.yieldTo(P, listOf(B.bl("x"))),
+                        value = B.pay(P to (B.m(P, "x") plus B.n(1)))
                     ),
                     listOf("bool", "int", "Incompatible")
                 ),
                 ErrorMessageCase(
                     B.program(
-                        B.yieldTo("UnknownRole", listOf(B.i("x")))
+                        B.yieldTo(Role("UnknownRole"), listOf(B.i("x")))
                     ),
-                    listOf("UnknownRole", "undefined")
+                    listOf("UnknownRole is not a role")
                 ),
                 ErrorMessageCase(
                     B.program(
-                        B.join("P"),
-                        B.yieldTo("P", listOf(B.bl("x"))),
-                        B.reveal("P", listOf("x" to INT)) // must be hidden
+                        B.join(P),
+                        B.yieldTo(P, listOf(B.bl("x"))),
+                        B.reveal(P, listOf(B.dec("x", INT))) // must be hidden
                     ),
                     listOf("must be hidden")
                 ),
                 ErrorMessageCase(
                     B.program(
-                        B.join("P"),
-                        value = B.pay("P" to B.m("P", "undefined"))
+                        B.join(P),
+                        value = B.pay(P to B.m(P, "undefined"))
                     ),
                     listOf("undefined")
                 ),
                 ErrorMessageCase(
                     B.program(
-                        B.join("P"),
-                        B.yieldTo("P", listOf(B.i("x")), where = B.m("P", "x"))
+                        B.join(P),
+                        B.yieldTo(P, listOf(B.i("x")), where = B.m(P, "x"))
                     ),
                     listOf("Where clause failed")
                 )
@@ -992,12 +1009,12 @@ class TypeCheckerTest : FreeSpec({
 
         "should handle deeply nested expressions" {
             val nested = B.ite(
-                B.m("P", "a") gt B.n(0),
+                B.m(P, "a") gt B.n(0),
                 B.ite(
-                    B.m("P", "b") gt B.n(0),
+                    B.m(P, "b") gt B.n(0),
                     B.ite(
-                        B.m("P", "c") gt B.n(0),
-                        B.ite(B.m("P", "d") gt B.n(0), B.n(1000), B.n(100)),
+                        B.m(P, "c") gt B.n(0),
+                        B.ite(B.m(P, "d") gt B.n(0), B.n(1000), B.n(100)),
                         B.n(10)
                     ),
                     B.n(1)
@@ -1005,20 +1022,20 @@ class TypeCheckerTest : FreeSpec({
                 B.n(0)
             )
             val p = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.i("a"), B.i("b"), B.i("c"), B.i("d"))),
-                value = B.pay("P" to nested)
+                B.join(P),
+                B.yieldTo(P, listOf(B.i("a"), B.i("b"), B.i("c"), B.i("d"))),
+                value = B.pay(P to nested)
             )
             shouldNotThrow<StaticError> { typeCheck(p) }
         }
 
         "should handle complex boolean expressions" {
-            val complex = (B.m("P", "a") and B.m("P", "b")) or
-                    (B.not(B.m("P", "c")) and (B.m("P", "a") iff B.m("P", "b")))
+            val complex = (B.m(P, "a") and B.m(P, "b")) or
+                    (B.not(B.m(P, "c")) and (B.m(P, "a") iff B.m(P, "b")))
             val p = B.program(
-                B.join("P"),
-                B.yieldTo("P", listOf(B.bl("a"), B.bl("b"), B.bl("c"))),
-                value = B.pay("P" to B.ite(complex, B.n(100), B.n(0)))
+                B.join(P),
+                B.yieldTo(P, listOf(B.bl("a"), B.bl("b"), B.bl("c"))),
+                value = B.pay(P to B.ite(complex, B.n(100), B.n(0)))
             )
             shouldNotThrow<StaticError> { typeCheck(p) }
         }

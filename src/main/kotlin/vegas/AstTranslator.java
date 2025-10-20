@@ -2,28 +2,68 @@ package vegas;
 
 import vegas.generated.VegasBaseVisitor;
 import vegas.generated.VegasParser.*;
-import kotlin.Pair;
 import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.net.URI;
+import java.util.Objects;
 
 import static java.util.stream.Collectors.*;
 
 class AstTranslator extends VegasBaseVisitor<Ast> {
+
+    private final URI uri; // document being translated
+
+    /** Optional: legacy no-arg ctor (use a synthetic URI) */
+    public AstTranslator() { this(URI.create("inmemory:unknown.vg")); }
+
+    public AstTranslator(URI uri) {
+        this.uri = Objects.requireNonNull(uri);
+    }
+    /* ---------- Span helpers ---------- */
+
+    private static int oneBasedCol(Token t) {
+        // ANTLR charPositionInLine is 0-based; convert to 1-based.
+        return t.getCharPositionInLine() + 1;
+    }
+
+    private static int endColInclusive(Token stop) {
+        // Best effort: end column as (startCol + token text length - 1)
+        // If text is null (rare), fall back to startCol.
+        String txt = stop.getText();
+        int len = (txt != null && !txt.isEmpty()) ? txt.length() : 1;
+        return oneBasedCol(stop) + Math.max(len - 1, 0);
+    }
+
+    private Span spanOf(ParserRuleContext ctx) {
+        Token s = ctx.getStart();
+        Token e = ctx.getStop();
+        if (e == null) {
+            // Some rules may not have a stop (error nodes); approximate as single-point span.
+            return new Span(uri, s.getLine(), oneBasedCol(s), s.getLine(), oneBasedCol(s));
+        }
+        return new Span(uri, s.getLine(), oneBasedCol(s), e.getLine(), endColInclusive(e));
+    }
+
+    private <T extends Ast> T withSpan(T node, ParserRuleContext ctx) {
+        SourceLoc.INSTANCE.set(node, spanOf(ctx));
+        return node;
+    }
 
     @Override
     public ExpProgram visitProgram(ProgramContext ctx) {
         return new ExpProgram("", "", map(ctx.typeDec()), ext(ctx.ext()));
     }
 
-    private Map<String, TypeExp> map(List<TypeDecContext> ctxs) {
-        return ctxs.stream().collect(toMap(ctx -> ctx.name.getText(), this::makeType));
+    private Map<TypeExp.TypeId, TypeExp> map(List<TypeDecContext> ctxs) {
+        return ctxs.stream().collect(toMap(ctx -> visitTypeId(ctx.typeId()), this::makeType));
     }
 
     private TypeExp makeType(TypeDecContext ctx) {
-        return (TypeExp) ctx.typeExp().accept(this);
+        return (TypeExp) withSpan(ctx.typeExp().accept(this), ctx);
     }
 
     @Override
@@ -31,22 +71,36 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
         return new TypeExp.Subset(ctx.vals.stream().map(this::num).collect(toSet()));
     }
 
-    private Exp.Const.Num num(Token v) {
-        String text = v == null ? "0" : v.getText();
-        return new Exp.Const.Num(Integer.parseInt(text));
-    }
-
     @Override
     public TypeExp.Range visitRangeTypeExp(RangeTypeExpContext ctx) {
         return new TypeExp.Range(num(ctx.start), num(ctx.end));
     }
 
+    @Override
+    public TypeExp.TypeId visitIdTypeExp(IdTypeExpContext t) {
+        return withSpan(new TypeExp.TypeId(t.getText()), t);
+    }
+
+    @Override
+    public TypeExp.TypeId visitTypeId(TypeIdContext t) {
+        return withSpan(new TypeExp.TypeId(t.getText()), t);
+    }
+
+    private Exp.Const.Num num(Token v) {
+        String text = v == null ? "0" : v.getText();
+        return new Exp.Const.Num(Integer.parseInt(text));
+    }
+
+    private Role role(RoleIdContext roleId) {
+        return withSpan(new Role(roleId.getText()), roleId);
+    }
+
     private Exp exp(ExpContext ctx) {
-        return (Exp) ctx.accept(this);
+        return (Exp) withSpan(ctx.accept(this), ctx);
     }
 
     private Ext ext(ExtContext ctx) {
-        return (Ext) ctx.accept(this);
+        return (Ext) withSpan(ctx.accept(this), ctx);
     }
 
     @Override
@@ -60,7 +114,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     private Query query(QueryContext ctx) {
-        return new Query(var(ctx.role), list(ctx.decls, this::vardec), num(ctx.deposit), where(ctx.cond));
+        return withSpan(new Query(role(ctx.roleId()), list(ctx.decls, this::vardec), num(ctx.deposit), where(ctx.cond)), ctx);
     }
 
     private Exp where(ExpContext cond) {
@@ -69,7 +123,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
 
     @Override
     public Ext.Value visitWithdrawExt(WithdrawExtContext ctx) {
-        return new Ext.Value(vegas.AstKt.desugar(outcome(ctx.outcome())));
+        return new Ext.Value(outcome(ctx.outcome()));
     }
 
     @Override
@@ -93,7 +147,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
             case "false":
                 assert false;
         }
-        return new Exp.Var(name);
+        return var(ctx);
     }
 
     @Override
@@ -103,7 +157,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
 
     @Override
     public Exp.Member visitMemberExp(MemberExpContext ctx) {
-        return new Exp.Member(ctx.role.getText(), ctx.field.getText());
+        return new Exp.Member(role(ctx.role), var(ctx.field));
     }
 
     @Override
@@ -169,13 +223,17 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
         return num(ctx.INT().getSymbol());
     }
 
-    private String var(Token target) {
-        return target.getText();
+    private Exp.Var var(IdExpContext v) {
+        return withSpan(new Exp.Var(v.getText()), v);
+    }
+
+    private Exp.Var var(VarIdContext v) {
+        return withSpan(new Exp.Var(v.getText()), v);
     }
 
     @Override
     public Outcome visitOutcomeExp(OutcomeExpContext ctx) {
-        Map<String, Exp> m = ctx.items.stream().collect(toMap(e -> e.ID().getText(), e -> exp(e.exp())));
+        Map<Role, Exp> m = ctx.items.stream().collect(toMap(e -> role(e.role), e -> exp(e.exp())));
         return new Outcome.Value(m);
     }
 
@@ -190,7 +248,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     private Outcome outcome(OutcomeContext ctx) {
-        return (Outcome) ctx.accept(this);
+        return (Outcome) withSpan(ctx.accept(this), ctx);
     }
 
     private <T1, T2> List<T2> list(List<T1> iterable, Function<T1, T2> f) {
@@ -207,16 +265,16 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
         };
     }
 
-    private Pair<String, TypeExp> vardec(VarDecContext ctx) {
+    private VarDec vardec(VarDecContext ctx) {
         TypeExp type = type(ctx);
-        return new Pair<>(var(ctx.name), (ctx.hidden != null) ? new TypeExp.Hidden(type) : type);
+        return new VarDec(var(ctx.varId()), (ctx.hidden != null) ? withSpan(new TypeExp.Hidden(type), ctx.typeExp()) : type);
     }
 
     private TypeExp type(VarDecContext ctx) {
         return switch (ctx.type.getText()) {
             case "bool" -> TypeExp.BOOL.INSTANCE;
             case "int" -> TypeExp.INT.INSTANCE;
-            default -> new TypeExp.TypeId(ctx.type.getText());
+            default -> withSpan(new TypeExp.TypeId(ctx.type.getText()), ctx.typeExp());
         };
     }
 }

@@ -2,20 +2,19 @@ grammar Vegas;
 
 program : typeDec* ext EOF ;
 
-typeDec : 'type' name=ID '=' typeExp ;
+typeDec : 'type' name=typeId '=' typeExp ;
 
 typeExp
     : '{' vals+=INT (',' vals+=INT)* '}'  # SubsetTypeExp
     | '{' start=INT '..' end=INT '}'      # RangeTypeExp
-    | name=ID                             # TypeId
+    | name=typeId                         # IdTypeExp
     ;
 
-// only sensible combination is independent yield
 ext : kind=('join' | 'yield' | 'reveal' | 'random') query+ ';' ext  # ReceiveExt
     | 'withdraw' outcome                                            # WithdrawExt
     ;
 
-query : role=ID ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('$' deposit=INT)? ('where' cond=exp)? ;
+query : role=roleId ('(' (decls+=varDec (',' decls+=varDec)*)? ')')? ('$' deposit=INT)? ('where' cond=exp)? ;
 
 outcome
     : <assoc=right> cond=exp '?' ifTrue=outcome ':' ifFalse=outcome # IfOutcome
@@ -24,12 +23,12 @@ outcome
     | '{' items+=item+ '}'                                          # OutcomeExp
     ;
 
-item : (ID '->' exp ';'?) ;
+item : (role=roleId '->' exp ';'?) ;
 
 exp
     : '(' exp ')'                                            # ParenExp
-    | role=ID '.' field=ID                                   # MemberExp
-    | callee=ID '(' (args+=exp (',' args+=exp)*)?  ')'       # CallExp
+    | role=roleId '.' field=varId                            # MemberExp
+    | callee=varId '(' (args+=exp (',' args+=exp)*)?  ')'    # CallExp
     | op=('-' | '!') exp                                     # UnOpExp
     | left=exp op=('*' | '/') right=exp                      # BinOpMultExp
     | left=exp op=('+' | '-') right=exp                      # BinOpAddExp
@@ -39,17 +38,21 @@ exp
     | left=exp op=('&&' | '||') right=exp                    # BinOpBoolExp
     | <assoc=right> cond=exp '?' ifTrue=exp ':' ifFalse=exp  # IfExp
     | ('true'|'false')                                       # BoolLiteralExp
-    | name=ID                                                # IdExp
+    | name=varId                                             # IdExp
     | INT                                                    # NumLiteralExp
     | ADDRESS                                                # AddressLiteralExp
     | 'let!' dec=varDec '=' init=exp 'in' body=exp           # LetExp
     ;
 
+varDec : name=varId ':' hidden='hidden'? type=typeExp;
 
-varDec : name=ID ':' hidden='hidden'? type=ID;
+typeId: LOWER_ID ;
+varId : LOWER_ID;
+roleId: ROLE_ID;
 
 // LEXER
-ID: [a-zA-Z_][a-zA-Z_0-9]*;
+ROLE_ID: [A-Z][a-zA-Z_0-9]*;
+LOWER_ID: [a-z][a-zA-Z_0-9]*;
 INT: ([1-9][0-9]* | [0]) ;
 ADDRESS: '0x'([1-9a-fA-F][0-9a-fA-F]* | [0]) ;
 STRING: '"' ( ~('"'|'\\') )* '"' ;
