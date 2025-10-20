@@ -9,7 +9,6 @@ import vegas.typeCheck
 import org.eclipse.lsp4j.SemanticTokens
 import org.eclipse.lsp4j.SemanticTokensParams
 import vegas.generated.VegasLexer
-import vegas.generated.VegasParser
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import vegas.Span
@@ -83,12 +82,9 @@ class VegasTextDocumentService(private val server: VegasLanguageServer) : TextDo
         val chars = CharStreams.fromString(content)
         val lexer = VegasLexer(chars)
         val tokens = CommonTokenStream(lexer)
-        val parser = VegasParser(tokens)
-        val tree = parser.program()
+        tokens.fill()
 
-        val visitor = SemanticTokenVisitor(server.tokenTypes)
-        visitor.visit(tree)
-
-        return CompletableFuture.completedFuture(SemanticTokens(visitor.encodedTokens))
+        val encoded = encodeToken(tokens.tokens, server.tokenTypes)
+        return CompletableFuture.completedFuture(SemanticTokens(encoded))
     }
 }

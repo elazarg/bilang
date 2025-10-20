@@ -26,9 +26,8 @@ class VegasLanguageServer : LanguageServer, LanguageClientAware {
         capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
         capabilities.setHoverProvider(true)
 
-        // Add the semantic highlighting capability
         val legend = SemanticTokensLegend(tokenTypes, tokenModifiers)
-        capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions(legend, true) // `true` for full document sync
+        capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions(legend, true)
 
         val result = InitializeResult(capabilities)
         return java.util.concurrent.CompletableFuture.completedFuture(result)
@@ -46,7 +45,6 @@ class VegasLanguageServer : LanguageServer, LanguageClientAware {
         return textDocumentService
     }
 
-    // This is the corrected implementation
     override fun getWorkspaceService(): WorkspaceService {
         return workspaceService
     }
@@ -58,6 +56,7 @@ class VegasLanguageServer : LanguageServer, LanguageClientAware {
     fun getClient(): LanguageClient {
         return client
     }
+
     val tokenTypes = listOf(
         SemanticTokenTypes.Keyword,
         SemanticTokenTypes.Variable,
@@ -74,7 +73,11 @@ class VegasLanguageServer : LanguageServer, LanguageClientAware {
 fun main() {
     val server = VegasLanguageServer()
     val executor = Executors.newSingleThreadExecutor()
-    val launcher = LSPLauncher.createServerLauncher(server, System.`in`, System.out, executor) { it }
+    val launcher = LSPLauncher.createServerLauncher(
+        server, System.`in`, System.out, executor
+    ) { it }
+
     server.connect(launcher.remoteProxy)
-    launcher.startListening()
+
+    launcher.startListening().get()
 }
