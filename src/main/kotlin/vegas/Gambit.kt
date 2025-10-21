@@ -490,7 +490,6 @@ class EfgWriter(
         val nodeName = "\"\""
 
         val line = if (node.isChance) {
-            val owner = ""
             val infosetNum = node.infosetId.number
             val infosetName = "\"\""
             val actions = node.choices.joinToString(" ") { choice ->

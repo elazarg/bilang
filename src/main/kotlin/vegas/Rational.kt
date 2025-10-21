@@ -48,11 +48,8 @@ data class Rational(val numerator: Int, val denominator: Int = 1) {
         return Rational(numerator * other.denominator, denominator * other.numerator).normalize()
     }
 
-    fun normalizePublic(): Rational = normalize()
-
     companion object {
         fun of(n: Int, d: Int): Rational = Rational(n, d).normalize()
-        fun one(): Rational = Rational(1, 1)
         private tailrec fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
     }
 }
