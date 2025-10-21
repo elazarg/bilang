@@ -28,6 +28,11 @@ sealed class GameTree {
                 require(choices.all { it.probability != null }) {
                     "Chance nodes must have probabilities"
                 }
+                // Validate probabilities sum to 1
+                val sum = choices.mapNotNull { it.probability }.fold(Rational(0, 1)) { acc, r -> acc + r }
+                require(sum == Rational(1, 1)) {
+                    "Chance node probabilities must sum to 1, got $sum"
+                }
             }
         }
     }
@@ -356,7 +361,18 @@ class GameTreeBuilder(
         is TypeExp.Subset -> type.values.toList()
         TypeExp.BOOL -> listOf(Bool(true), Bool(false))
         is TypeExp.Hidden -> enumerateValues(type.type).map { Hidden(it) }
-        is TypeExp.TypeId -> enumerateValues(types.getValue(type))
+        is TypeExp.TypeId -> types[type]
+            ?.let { enumerateValues(it) }
+            ?: throw IllegalStateException("Unknown type: ${type.name}")
+        TypeExp.INT -> throw NotImplementedError(
+            "Cannot enumerate infinite type INT. Use Subset or Range instead."
+        )
+        is TypeExp.Range -> {
+            require(type.max.n - type.min.n < 1000) {
+                "Range too large: [${type.min.n}, ${type.max.n}]"
+            }
+            (type.min.n..type.max.n).map { Num(it) }
+        }
         else -> throw NotImplementedError("Cannot enumerate $type")
     }
 }
@@ -435,7 +451,9 @@ data class GameState(
     }
 
     fun getValue(role: Role, field: Var): Const =
-        heap.getValue(role to field)
+        heap[role to field] ?: throw IllegalStateException(
+            "Variable ${field.name} not found for role ${role.name}"
+        )
 
     /**
      * Evaluate an expression in the current state.
