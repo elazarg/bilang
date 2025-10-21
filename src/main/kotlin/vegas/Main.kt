@@ -35,7 +35,7 @@ private fun run(name: String) {
     println("roles: " + findRoles(program.game))
     doTypecheck(program)
     writeFile("examples/smt/$name.z3") { smt(program) }
-    writeFile("examples/gambit/$name.efg") { Extensive(program).toEfg() }
+    writeFile("examples/gambit/$name.efg") { buildExtensiveFormGame(program).toEfg() }
     writeFile("examples/scribble/$name.scr") { programToScribble(program).prettyPrintAll() }
     writeFile("examples/solidity/$name.sol") { genGame(program) }
     println("Done")

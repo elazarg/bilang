@@ -588,11 +588,3 @@ fun buildExtensiveFormGame(program: ExpProgram): ExtensiveFormGame {
         tree = tree
     )
 }
-
-// Maintain backward compatibility
-class Extensive(prog: ExpProgram) {
-    private val efg = buildExtensiveFormGame(prog)
-
-    fun toEfg(): String = efg.toEfg()
-    override fun toString(): String = efg.toString()
-}

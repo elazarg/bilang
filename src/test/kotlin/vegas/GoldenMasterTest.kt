@@ -46,7 +46,7 @@ class GoldenMasterTest : FreeSpec({
     val testCases = exampleFiles.flatMap { example ->
         listOf(
             TestCase(example, "sol", "solidity") { prog -> genGame(prog) },
-            TestCase(example, "efg", "gambit") { prog -> Extensive(prog).toEfg() },
+            TestCase(example, "efg", "gambit") { prog -> buildExtensiveFormGame(prog).toEfg() },
             TestCase(example, "z3", "smt") { prog -> smt(prog) }
         ).filter { t -> t.extension !in example.disableBackend }
     }
@@ -105,7 +105,7 @@ class GoldenMasterTest : FreeSpec({
 
         "Gambit generation should preserve game structure" {
             val program = parseExample("Prisoners")
-            val efg = Extensive(program).toEfg()
+            val efg = buildExtensiveFormGame(program).toEfg()
 
             efg shouldContain "EFG 2 R"
         }
