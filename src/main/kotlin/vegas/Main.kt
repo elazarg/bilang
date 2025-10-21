@@ -32,20 +32,6 @@ fun parseFile(inputFilename: String): ExpProgram {
     return AstTranslator(path.toUri()).visitProgram(ast)
 }
 
-private fun run(name: String) {
-    val inputFilename = "examples/$name.vg"
-    println("Analyzing $inputFilename ...")
-    val program = parseFile(inputFilename).copy(name = name, desc = name)
-    println("roles: " + findRoles(program.game))
-    doTypecheck(program)
-    writeFile("examples/smt/$name.z3") { smt(program) }
-    writeFile("examples/gambit/$name.efg") { buildExtensiveFormGame(program).toEfg() }
-    writeFile("examples/scribble/$name.scr") { programToScribble(program).prettyPrintAll() }
-    writeFile("examples/solidity/$name.sol") { genGame(program) }
-    println("Done")
-    println()
-}
-
 private fun doTypecheck(program: ExpProgram) {
     try {
         typeCheck(program)
