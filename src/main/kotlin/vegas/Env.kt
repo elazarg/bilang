@@ -1,5 +1,8 @@
 package vegas
 
+import vegas.frontend.Exp
+import vegas.frontend.Role
+
 
 data class Env<T>(val g: Map<Exp.Var, T>, val r: Map<Role, T>, val h: Map<Pair<Role, Exp.Var>, T>) {
     constructor(): this(mapOf(), mapOf(), mapOf())

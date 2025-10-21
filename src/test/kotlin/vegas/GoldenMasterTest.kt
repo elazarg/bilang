@@ -4,12 +4,13 @@ import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.datatest.withData
-import vegas.generated.VegasLexer
-import vegas.generated.VegasParser
-import org.antlr.v4.runtime.CharStreams
-import org.antlr.v4.runtime.CommonTokenStream
+import vegas.backend.gambit.generateExtensiveFormGame
+import vegas.backend.solidity.generateSolidity
+import vegas.backend.smt.generateSMT
+import vegas.ir.compileToIR
+import vegas.frontend.parseFile
+import vegas.frontend.ProgramAst
 import java.io.File
-import java.nio.file.Paths
 
 data class Example(
     val name: String,
@@ -20,7 +21,7 @@ data class TestCase(
     val example: Example,
     val extension: String,
     val backend: String,
-    val generator: (ExpProgram) -> String
+    val generator: (ProgramAst) -> String
 ) {
     override fun toString() = "$example.$extension ($backend)"
 }
@@ -45,9 +46,9 @@ class GoldenMasterTest : FreeSpec({
 
     val testCases = exampleFiles.flatMap { example ->
         listOf(
-            TestCase(example, "sol", "solidity") { prog -> genGame(prog) },
-            TestCase(example, "efg", "gambit") { prog -> buildExtensiveFormGame(prog).toEfg() },
-            TestCase(example, "z3", "smt") { prog -> smt(prog) }
+            TestCase(example, "sol", "solidity") { prog -> generateSolidity(compileToIR(prog)) },
+            TestCase(example, "efg", "gambit") { prog -> generateExtensiveFormGame(compileToIR(prog)) },
+            TestCase(example, "z3", "smt") { prog -> generateSMT(prog) }
         ).filter { t -> t.extension !in example.disableBackend }
     }
 
@@ -96,23 +97,25 @@ class GoldenMasterTest : FreeSpec({
         "Solidity generation should be deterministic" {
             val example = "MontyHall"
             val program = parseExample(example)
+            val ir = compileToIR(program)
 
-            val output1 = genGame(program)
-            val output2 = genGame(program)
+            val output1 = generateSolidity(ir)
+            val output2 = generateSolidity(ir)
 
             sanitizeOutput(output1, "solidity") shouldBe sanitizeOutput(output2, "solidity")
         }
 
         "Gambit generation should preserve game structure" {
             val program = parseExample("Prisoners")
-            val efg = buildExtensiveFormGame(program).toEfg()
+            val ir = compileToIR(program)
+            val efg = generateExtensiveFormGame(ir)
 
             efg shouldContain "EFG 2 R"
         }
 
         "SMT generation should be valid SMT-LIB" {
             val program = parseExample("Simple")
-            val smtOutput = smt(program)
+            val smtOutput = generateSMT(program)
 
             smtOutput shouldContain "(check-sat)"
             smtOutput shouldContain "(get-model)"
@@ -130,12 +133,8 @@ private fun generateOutput(testCase: TestCase): String {
     return testCase.generator(program)
 }
 
-private fun parseExample(example: String): ExpProgram {
-    val inputPath = Paths.get("examples/$example.vg")
-    val chars = CharStreams.fromPath(inputPath)
-    val tokens = CommonTokenStream(VegasLexer(chars))
-    val ast = VegasParser(tokens).program()
-    return AstTranslator().visitProgram(ast).copy(name = example, desc = example)
+private fun parseExample(example: String): ProgramAst {
+    return parseFile("examples/$example.vg").copy(name = example, desc = example)
 }
 
 private fun sanitizeOutput(content: String, backend: String): String =

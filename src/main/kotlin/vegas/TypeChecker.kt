@@ -1,6 +1,18 @@
 package vegas
 
-import vegas.TypeExp.*
+import vegas.frontend.Ast
+import vegas.frontend.Exp
+import vegas.frontend.ProgramAst
+import vegas.frontend.Ext
+import vegas.frontend.Kind
+import vegas.frontend.Outcome
+import vegas.frontend.Query
+import vegas.frontend.Role
+import vegas.frontend.TypeExp.*
+import vegas.frontend.SourceLoc
+import vegas.frontend.Span
+import vegas.frontend.TypeExp
+import vegas.frontend.VarDec
 
 internal class StaticError(reason: String, val node: Ast) : RuntimeException(reason) {
     fun span(): Span? = SourceLoc.get(node)
@@ -51,7 +63,7 @@ fun requireStatic(b: Boolean, s: String, node: Ast) {
     if (!b) throw StaticError(s, node)
 }
 
-fun typeCheck(program: ExpProgram) {
+fun typeCheck(program: ProgramAst) {
     Checker(
         program.types + mapOf(
             Pair(TypeId("bool"), BOOL),

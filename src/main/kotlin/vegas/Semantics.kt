@@ -1,7 +1,8 @@
 package vegas
 
-import vegas.Exp.*
-import vegas.Exp.Const.*
+import vegas.frontend.Exp
+import vegas.frontend.Exp.*
+import vegas.frontend.Exp.Const.*
 
 fun eval(exp: Exp, env: Env<Const>): Const {
     fun rec(e: Exp): Const = when (e) {

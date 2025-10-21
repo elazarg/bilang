@@ -1,4 +1,4 @@
-package vegas;
+package vegas.frontend;
 
 import vegas.generated.VegasBaseVisitor;
 import vegas.generated.VegasParser.*;
@@ -54,8 +54,8 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     @Override
-    public ExpProgram visitProgram(ProgramContext ctx) {
-        return new ExpProgram("", "", map(ctx.typeDec()), ext(ctx.ext()));
+    public ProgramAst visitProgram(ProgramContext ctx) {
+        return new ProgramAst("", "", map(ctx.typeDec()), ext(ctx.ext()));
     }
 
     private Map<TypeExp.TypeId, TypeExp> map(List<TypeDecContext> ctxs) {

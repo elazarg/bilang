@@ -1,15 +1,31 @@
-package vegas
+package vegas.backend.scribble
 
+import vegas.frontend.ProgramAst
+import vegas.frontend.Ext
+import vegas.frontend.Kind
+import vegas.frontend.Outcome
+import vegas.frontend.Role
+import vegas.frontend.TypeExp
+import vegas.frontend.VarDec
+import vegas.frontend.findRoles
+import vegas.ir.desugar
+import vegas.join
+import vegas.map
+import vegas.names
+import vegas.types
 import kotlin.String
 
 sealed class Sast {
 
-    data class Protocol(val name: String, val types: Map<String, String>, val roles: Set<Role>, val block: Block) : Sast()
+    data class Protocol(val name: String, val types: Map<String, String>, val roles: Set<Role>, val block: Block) :
+        Sast()
 
     data class Block(val stmts: List<Action>) : Sast()
 
     sealed class Action : Sast() {
-        data class Send(val label: String, val params: List<Pair<String, String>>, val from: Role, val to: Set<Role>?) : Action()
+        data class Send(val label: String, val params: List<Pair<String, String>>, val from: Role, val to: Set<Role>?) :
+            Action()
+
         data class Connect(val to: Role) : Action()
         data class Choice(val at: Role, val choices: List<Block>) : Action()
         data class Rec(val label: String, val actions: Block) : Action()
@@ -19,7 +35,7 @@ sealed class Sast {
 }
 
 fun Sast.Protocol.prettyPrintAll(): String {
-    val typedecls = types.map {"""type <java> "java.lang.${it.value}" from "rt.jar" as ${it.key};"""}.join("\n")
+    val typedecls = types.map { """type <java> "java.lang.${it.value}" from "rt.jar" as ${it.key};""" }.join("\n")
     val items = listOf("module Game;", typedecls, prettyPrint()) + (roles + SERVER).map { prettyPrint(it) }
     return items.join("\n\n")
 }
@@ -38,12 +54,16 @@ fun Sast.prettyPrint(role: Role? = null, indent: Int = 0, connected: Set<Role> =
                 else -> "local protocol ${name}_$role(role Server, role $role)"
             } + pretty(block)
         }
+
         is Sast.Block -> stmts
-                .map { it.prettyPrint(role, indent + 1, if (it is Sast.Action.Connect) connected + it.to else connected) }
-                .filter { it.isNotBlank() }
-                .joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
+            .map { it.prettyPrint(role, indent + 1, if (it is Sast.Action.Connect) connected + it.to else connected) }
+            .filter { it.isNotBlank() }
+            .joinToString(";\n", "{\n", ";\n${"    ".repeat(indent)}}\n")
+
         is Sast.Action.Send -> {
-            var res = if (params.isEmpty()) "$label()" else "${label}_${params.names().join("_")}(${params.types().join(", ")})"
+            var res = if (params.isEmpty()) "$label()" else "${label}_${params.names().join("_")}(${
+                params.types().join(", ")
+            })"
             if (role == null || to == null || role in to)
                 res += " from $from"
             if (to != null && (role == null || from == role))
@@ -51,25 +71,29 @@ fun Sast.prettyPrint(role: Role? = null, indent: Int = 0, connected: Set<Role> =
             if (" to " in res || " from " in res) res
             else ""
         }
+
         is Sast.Action.Connect ->
             when (role) {
                 null -> "connect Server to $to"
                 to -> "accept Server"
                 else -> ""
             }
+
         is Sast.Action.Choice -> {
             val blocks = choices.join(" or ") { pretty(it) }
             "choice at $at $blocks"
         }
+
         is Sast.Action.Rec -> "rec " + pretty(actions)
         is Sast.Action.Continue -> "continue $label"
     }
     return "    ".repeat(indent) + code
 }
 
-fun programToScribble(p: ExpProgram): Sast.Protocol {
+fun generateScribble(p: ProgramAst): Sast.Protocol {
     val roles = findRoles(p.game).toSet()
-    val types = p.types.map { (k, v) -> k.name to javaTypeOf(v) } + ("int" to "Integer") + ("bool" to "Boolean") + ("hidden" to "Integer")
+    val types =
+        p.types.map { (k, v) -> k.name to javaTypeOf(v) } + ("int" to "Integer") + ("bool" to "Boolean") + ("hidden" to "Integer")
 
     return Sast.Protocol(p.name, types.toMap(), roles, Sast.Block(gameToScribble(p.game, roles)))
 }
@@ -80,13 +104,13 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
         val role = ext.q.role
 
         fun send(label: String, decls: List<Pair<String, String>>, to: Set<Role> = setOf(SERVER)) =
-                Sast.Action.Send(label, decls, role, to)
+            Sast.Action.Send(label, decls, role, to)
 
         fun sendToServer(): List<Sast.Action.Send> {
             val (priv, pub) = params.partition { (_, type) -> type is TypeExp.Hidden }.map { declsOf(it) }
             return listOfNotNull(
-                    send("Hidden", priv).takeUnless { priv.isEmpty() },
-                    send("Public", pub).takeUnless { pub.isEmpty() }
+                send("Hidden", priv).takeUnless { priv.isEmpty() },
+                send("Public", pub).takeUnless { pub.isEmpty() }
             )
         }
 
@@ -97,7 +121,12 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
             Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
         }
 
-        val broadcast = Sast.Action.Send("Broadcast", declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }), SERVER, roles - role)
+        val broadcast = Sast.Action.Send(
+            "Broadcast",
+            declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }),
+            SERVER,
+            roles - role
+        )
 
         send + broadcast + gameToScribble(ext.ext, roles)
     }
@@ -110,11 +139,11 @@ private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when
 }
 
 private fun rankOrder(it: Sast.Action): Int =
-        if (it is Sast.Action.Send) when (it.label) {
-            "Hidden" -> 1
-            "Reveal" -> 2
-            else -> 3
-        } else 0
+    if (it is Sast.Action.Send) when (it.label) {
+        "Hidden" -> 1
+        "Reveal" -> 2
+        else -> 3
+    } else 0
 
 private fun declsOf(params: List<VarDec>) = params.map { (v, type) -> Pair(v.name, typeOf(type)) }
 

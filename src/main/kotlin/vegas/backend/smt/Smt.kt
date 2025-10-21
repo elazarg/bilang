@@ -1,9 +1,18 @@
-package vegas
+package vegas.backend.smt
 
-import vegas.Exp.*
-import vegas.Exp.Const.*
+import vegas.StaticError
+import vegas.frontend.Exp
+import vegas.frontend.Exp.*
+import vegas.frontend.Exp.Const.*
+import vegas.frontend.ProgramAst
+import vegas.frontend.Ext
+import vegas.frontend.Query
+import vegas.frontend.Role
+import vegas.frontend.TypeExp
+import vegas.ir.desugar
+import vegas.join
 
-fun smt(g: ExpProgram) = """
+fun generateSMT(g: ProgramAst) = """
     |${defineTypes(g.types.mapKeys { it.key.name })}
     |
     |${ext(g.game)}

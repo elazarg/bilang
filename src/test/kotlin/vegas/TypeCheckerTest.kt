@@ -1,15 +1,25 @@
 package vegas
 
-import vegas.Exp.*
-import vegas.Outcome.*
-import vegas.TypeExp.*
+import vegas.frontend.Exp.*
+import vegas.frontend.Outcome.*
+import vegas.frontend.TypeExp.*
 import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.string.shouldContain
+import vegas.frontend.Exp
+import vegas.frontend.ProgramAst
+import vegas.frontend.Ext
+import vegas.frontend.Kind
+import vegas.frontend.Outcome
+import vegas.frontend.Query
+import vegas.frontend.Role
+import vegas.frontend.TypeExp
+import vegas.frontend.VarDec
+import vegas.ir.desugar
 
-// -------- Test-local builders (readable, minimal) --------
+// -------- Test-local builders --------
 private object B {
     // literals
     fun n(i: Int) = Const.Num(i)
@@ -73,7 +83,7 @@ private object B {
         vararg binds: Ext,
         value: Value? = null,
         name: String = "TestProgram"
-    ): ExpProgram {
+    ): ProgramAst {
         val end: Ext = Ext.Value(value ?: Value(emptyMap()))
         val game = binds.reversed().fold(end) { acc, e ->
             when (e) {
@@ -82,14 +92,14 @@ private object B {
                 is Ext.Value -> error("Value belongs in 'value' param")
             }
         }
-        return ExpProgram(name, desc = "", types = types, game = game)
+        return ProgramAst(name, desc = "", types = types, game = game)
     }
 
     fun program(
         vararg binds: Ext,
         value: Value? = null,
         name: String = "TestProgram"
-    ): ExpProgram {
+    ): ProgramAst {
         return program(emptyMap(), binds = binds, value = value, name = name)
     }
 }
@@ -125,7 +135,7 @@ class TypeCheckerTest : FreeSpec({
 
     "Type System - Basic Types" - {
         "should accept valid primitive types" - {
-            data class ValidCase(val prog: ExpProgram, val description: String)
+            data class ValidCase(val prog: ProgramAst, val description: String)
 
             withData(
                 ValidCase(
@@ -165,7 +175,7 @@ class TypeCheckerTest : FreeSpec({
 
 
         "should reject type mismatches in basic expressions" - {
-            data class TypeMismatchCase(val prog: ExpProgram, val expectedError: String)
+            data class TypeMismatchCase(val prog: ProgramAst, val expectedError: String)
 
             withData(
                 TypeMismatchCase(
@@ -958,7 +968,7 @@ class TypeCheckerTest : FreeSpec({
 
         "should provide helpful error messages" - {
             data class ErrorMessageCase(
-                val prog: ExpProgram,
+                val prog: ProgramAst,
                 val expectedKeywords: List<String>
             )
 
