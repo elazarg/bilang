@@ -163,6 +163,12 @@ class GameTreeBuilder(
      */
     private fun buildDecision(query: Query, continuation: Ext, state: GameState): GameTree {
         val role = query.role
+
+        // If this role is the chance role, chance logic must be used (uniform probs unless specified).
+        if (state.isChance(role)) {
+            return buildChanceNode(query, continuation, state)
+        }
+
         val packets = enumerateValidPackets(query, state)
         val infosetId = infosetManager.getInfosetNumber(role, state.visibleTo(role))
 
@@ -217,34 +223,37 @@ class GameTreeBuilder(
         val role = query.role
         val infosetId = infosetManager.getInfosetNumber(role, state.visibleTo(role))
 
-        // Reveal branch: reveal the hidden values
         val revealedState = state.revealHidden(query)
-        val revealPacket = query.params.associate { (v, _) ->
-            v to revealedState.getValue(role, v)
-        }
+        val revealPacket = query.params.associate { (v, _) -> v to revealedState.getValue(role, v) }
+
+        val isChanceRole = state.isChance(role)
+
         val revealChoice = GameTree.Choice(
             action = revealPacket,
-            subtree = buildTree(continuation, revealedState)
+            subtree = buildTree(continuation, revealedState),
+            probability = if (isChanceRole) Rational(1) else null
         )
 
-        // For non-chance nodes, also include quit option
-        val choices = if (state.isChance(role)) {
-            listOf(revealChoice)
-        } else {
-            val quitState = state.withQuit(query)
-            val quitPacket = query.params.associate { (v, _) -> v to UNDEFINED }
-            val quitChoice = GameTree.Choice(
-                action = quitPacket,
-                subtree = buildTree(continuation, quitState)
-            )
-            listOf(revealChoice, quitChoice)
-        }
+        val choices =
+            if (isChanceRole) {
+                // Chance role: only the reveal branch, with prob 1
+                listOf(revealChoice)
+            } else {
+                // Non-chance role: also allow to quit
+                val quitState = state.withQuit(query)
+                val quitPacket = query.params.associate { (v, _) -> v to UNDEFINED }
+                val quitChoice = GameTree.Choice(
+                    action = quitPacket,
+                    subtree = buildTree(continuation, quitState)
+                )
+                listOf(revealChoice, quitChoice)
+            }
 
         return GameTree.Decision(
             owner = role,
             infosetId = InfosetId(role, state.visibleTo(role)).apply { number = infosetId },
             choices = choices,
-            isChance = state.isChance(role)
+            isChance = isChanceRole
         )
     }
 
