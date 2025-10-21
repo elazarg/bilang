@@ -5,259 +5,594 @@ import vegas.Exp.Const.*
 
 typealias OutcomeType = Num
 
-sealed class Tree {
-    data class Node(val owner: Role, val env: Env<Const>, val infoset: Int, val edges: List<Map<Var, Const>>, val children: List<Tree>) : Tree()
-
-    data class Leaf(val outcome: Map<Role, OutcomeType>) : Tree()
-}
-
-class Extensive(private val name: String, private val desc: String, private val players: List<Role>, private val game: Tree) {
-    constructor(prog: ExpProgram) :
-            this(prog.name, prog.desc, findRoles(prog.game), TreeMaker(prog.types).fromExp(prog.game))
-
-    fun toEfg(): String = (
-        listOf("EFG 2 R ${quote(name)} ${stringList(players.map { it.name })}", quote(desc), "")
-                + ExtensivePrinter().toEfg(game, players)
-    ).joinToString("\n")
-
-    override fun toString(): String = game.toString()
-
-}
-
-class TreeMaker(private val types: Map<TypeExp.TypeId, TypeExp>) {
-    private val infosetCounters = mutableMapOf<Role, Int>()
-    private val infosetIds = mutableMapOf<Pair<Role, Env<Const>>, Int>()
-
-    private fun nextInfosetId(role: Role, env: Env<Const>): Int {
-        val key = role to env.eraseHidden(role)
-        return infosetIds.getOrPut(key) {
-            val next = infosetCounters.getOrDefault(role, 0) + 1
-            infosetCounters[role] = next
-            next
-        }
-    }
-
-    fun fromExp(ext: Ext, env: Env<Const> = Env()): Tree = when (ext) {
-        is Ext.BindSingle -> {
-            val q = ext.q
-            val subExt = ext.ext
-            val role = q.role
-            when (ext.kind) {
-                Kind.JOIN -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(role))
-                             else independent(subExt, listOf(q), env.addRole(role))
-
-                Kind.JOIN_CHANCE -> if (q.params.isEmpty()) fromExp(subExt, env.addRole(role, chance=true))
-                                    else independent(subExt, listOf(q), env.addRole(role, chance=true))
-
-                Kind.YIELD -> independent(subExt, listOf(q), env)
-
-                Kind.REVEAL -> {
-                    val revealed = env.mapHidden(q){it.value}
-                    val names = q.params.map {it.v}
-                    val revealedPacket = names.associateWith { revealed.getValue(role, it) }
-                    val quit = env.mapHidden(q) { UNDEFINED }
-                    val quitPacket = names.associateWith { UNDEFINED }
-                    val infoset = nextInfosetId(role, env)
-                    val edges = if (env.isChance(role))
-                        listOf(revealedPacket)
-                    else
-                        listOf(revealedPacket, quitPacket)
-                    val children = if (env.isChance(role))
-                        listOf(fromExp(subExt, revealed))
-                    else
-                        listOf(fromExp(subExt, revealed), fromExp(subExt, quit))
-                    Tree.Node(role, revealed, infoset, edges, children)
+/**
+ * Represents an extensive form game tree with better type safety and clearer semantics.
+ */
+sealed class GameTree {
+    /**
+     * A decision/chance node in the game tree.
+     * @property owner The role making the decision
+     * @property infosetId Unique identifier for the information set
+     * @property choices Available actions and their successor nodes
+     * @property isChance Whether this is a chance node
+     */
+    data class Decision(
+        val owner: Role,
+        val infosetId: InfosetId,
+        val choices: List<Choice>,
+        val isChance: Boolean = false
+    ) : GameTree() {
+        init {
+            require(choices.isNotEmpty()) { "Decision node must have at least one choice" }
+            if (isChance) {
+                require(choices.all { it.probability != null }) {
+                    "Chance nodes must have probabilities"
                 }
             }
         }
-        is Ext.Bind -> when (ext.kind) {
-            Kind.YIELD -> independent(ext.ext, ext.qs, env)
+    }
+
+    /**
+     * A terminal node with payoffs.
+     */
+    data class Terminal(
+        val payoffs: Map<Role, OutcomeType>
+    ) : GameTree()
+
+    /**
+     * A single choice/action with its outcome.
+     */
+    data class Choice(
+        val action: Map<Var, Const>,
+        val subtree: GameTree,
+        val probability: Rational? = null  // Only for chance nodes
+    )
+}
+
+/**
+ * Unique identifier for an information set, based on the role and
+ * the visible information available to that role.
+ */
+data class InfosetId(
+    val role: Role,
+    val visibleState: Map<Pair<Role, Var>, Const>
+) {
+    // Sequential numbering within each role
+    var number: Int = 0
+}
+
+// ============================================================================
+// Information Set Management
+// ============================================================================
+
+/**
+ * Manages information set identification and numbering.
+ */
+class InfosetManager {
+    private val infosetMap = mutableMapOf<InfosetId, Int>()
+    private val counters = mutableMapOf<Role, Int>()
+
+    /**
+     * Get or create an information set ID for the given role and visible state.
+     */
+    fun getInfosetNumber(role: Role, visibleState: Map<Pair<Role, Var>, Const>): Int {
+        val key = InfosetId(role, visibleState)
+        return infosetMap.getOrPut(key) {
+            val count = counters.getOrDefault(role, 0) + 1
+            counters[role] = count
+            count
+        }
+    }
+
+    fun reset() {
+        infosetMap.clear()
+        counters.clear()
+    }
+}
+
+// ============================================================================
+// Game Tree Builder
+// ============================================================================
+
+/**
+ * Builds a game tree from Vegas AST with improved clarity and correctness.
+ */
+class GameTreeBuilder(
+    private val types: Map<TypeExp.TypeId, TypeExp>
+) {
+    private val infosetManager = InfosetManager()
+
+    /**
+     * Build a game tree from the Vegas game specification.
+     */
+    fun build(game: Ext): GameTree {
+        infosetManager.reset()
+        return buildTree(game, GameState.empty())
+    }
+
+    private fun buildTree(ext: Ext, state: GameState): GameTree {
+        return when (ext) {
+            is Ext.BindSingle -> buildFromSingleBind(ext, state)
+            is Ext.Bind -> buildFromMultiBind(ext, state)
+            is Ext.Value -> buildTerminal(ext.outcome, state)
+        }
+    }
+
+    private fun buildFromSingleBind(ext: Ext.BindSingle, state: GameState): GameTree {
+        val query = ext.q
+        val role = query.role
+
+        return when (ext.kind) {
             Kind.JOIN -> {
-                // Join then yield. Is this correct?
-                val newEnv = ext.qs.fold(env) { acc, t -> acc.addRole(t.role) }
-                independent(ext.ext, ext.qs.filter { it.params.isNotEmpty() }, newEnv)
+                val newState = state.addRole(role)
+                if (query.params.isEmpty()) {
+                    buildTree(ext.ext, newState)
+                } else {
+                    buildDecision(query, ext.ext, newState)
+                }
             }
-            Kind.JOIN_CHANCE -> TODO()
-            Kind.REVEAL -> TODO()
+
+            Kind.JOIN_CHANCE -> {
+                val newState = state.addRole(role, isChance = true)
+                if (query.params.isEmpty()) {
+                    buildTree(ext.ext, newState)
+                } else {
+                    buildChanceNode(query, ext.ext, newState)
+                }
+            }
+
+            Kind.YIELD -> buildDecision(query, ext.ext, state)
+
+            Kind.REVEAL -> buildRevealNode(query, ext.ext, state)
         }
-        is Ext.Value -> Tree.Leaf(desugar(ext.outcome).ts.mapValues { (_, exp) -> eval(exp, env) as OutcomeType })
     }
 
-    private fun enumeratePackets(q: Query, env: Env<Const>): List<Map<Var, Const>> {
-        fun combineValues(f: (TypeExp) -> List<Const>) =
-            q.params.associate { (v, type) -> Pair(v, f(type)) }.product()
-
-        val undefs = if (env.isChance(q.role)) listOf() else combineValues { listOf<Const>(UNDEFINED) }
-        return if (env.quitted(q.role)) undefs
-            else (combineValues { enumerateValues(it) }.filter {
-                value -> eval(q.where, env.updateHeap(q, value)) == Bool(true)
-            } + undefs)
-    }
-
-    private fun independent(next: Ext, qs: List<Query>, origEnv: Env<Const>): Tree {
-        fun independentRec(qs: List<Query>, env: Env<Const>): Tree {
-            if (qs.isEmpty())
-                return fromExp(next, env)
-            val q = qs.first()
-            val infoset = nextInfosetId(q.role, env)
-            val edges = enumeratePackets(q, origEnv)
-            val children = edges.map { e -> independentRec(qs.drop(1), env.updateHeap(q, e)) }
-            return Tree.Node(q.role, env, infoset, edges, children)
+    private fun buildFromMultiBind(ext: Ext.Bind, state: GameState): GameTree {
+        return when (ext.kind) {
+            Kind.JOIN -> {
+                val newState = ext.qs.fold(state) { acc, q -> acc.addRole(q.role) }
+                buildIndependentDecisions(ext.qs.filter { it.params.isNotEmpty() }, ext.ext, newState)
+            }
+            Kind.YIELD -> buildIndependentDecisions(ext.qs, ext.ext, state)
+            else -> throw NotImplementedError("Multi-bind not implemented for ${ext.kind}")
         }
-        return independentRec(qs, origEnv)
     }
 
-    private fun enumerateValues(t: TypeExp): List<Const> = when (t) {
-        is TypeExp.Subset -> t.values.toList()
+    /**
+     * Build a decision node where the role chooses from available actions.
+     */
+    private fun buildDecision(query: Query, continuation: Ext, state: GameState): GameTree {
+        val role = query.role
+        val packets = enumerateValidPackets(query, state)
+        val infosetId = infosetManager.getInfosetNumber(role, state.visibleTo(role))
+
+        val choices = packets.map { packet ->
+            val newState = state.withChoices(query, packet)
+            GameTree.Choice(
+                action = packet,
+                subtree = buildTree(continuation, newState)
+            )
+        }
+
+        return GameTree.Decision(
+            owner = role,
+            infosetId = InfosetId(role, state.visibleTo(role)).apply { number = infosetId },
+            choices = choices,
+            isChance = false
+        )
+    }
+
+    /**
+     * Build a chance node with probabilities.
+     */
+    private fun buildChanceNode(query: Query, continuation: Ext, state: GameState): GameTree {
+        val role = query.role
+        val packets = enumerateValidPackets(query, state, includeQuit = false)
+        val infosetId = infosetManager.getInfosetNumber(role, state.visibleTo(role))
+
+        // Uniform distribution for chance nodes
+        val prob = Rational(1, packets.size)
+
+        val choices = packets.map { packet ->
+            val newState = state.withChoices(query, packet)
+            GameTree.Choice(
+                action = packet,
+                subtree = buildTree(continuation, newState),
+                probability = prob
+            )
+        }
+
+        return GameTree.Decision(
+            owner = role,
+            infosetId = InfosetId(role, state.visibleTo(role)).apply { number = infosetId },
+            choices = choices,
+            isChance = true
+        )
+    }
+
+    /**
+     * Build a reveal node where hidden information is disclosed.
+     */
+    private fun buildRevealNode(query: Query, continuation: Ext, state: GameState): GameTree {
+        val role = query.role
+        val infosetId = infosetManager.getInfosetNumber(role, state.visibleTo(role))
+
+        // Reveal branch: reveal the hidden values
+        val revealedState = state.revealHidden(query)
+        val revealPacket = query.params.associate { (v, _) ->
+            v to revealedState.getValue(role, v)
+        }
+        val revealChoice = GameTree.Choice(
+            action = revealPacket,
+            subtree = buildTree(continuation, revealedState)
+        )
+
+        // For non-chance nodes, also include quit option
+        val choices = if (state.isChance(role)) {
+            listOf(revealChoice)
+        } else {
+            val quitState = state.withQuit(query)
+            val quitPacket = query.params.associate { (v, _) -> v to UNDEFINED }
+            val quitChoice = GameTree.Choice(
+                action = quitPacket,
+                subtree = buildTree(continuation, quitState)
+            )
+            listOf(revealChoice, quitChoice)
+        }
+
+        return GameTree.Decision(
+            owner = role,
+            infosetId = InfosetId(role, state.visibleTo(role)).apply { number = infosetId },
+            choices = choices,
+            isChance = state.isChance(role)
+        )
+    }
+
+    // Build independent simultaneous decisions for multiple roles.
+    // Infosets are computed once from the *same* pre-move state.
+    // Action enumeration (where-clauses) is also evaluated on that same pre-move state.
+    // Subtrees are built after accumulating choices, but infoset IDs never depend on later players' choices.
+    private fun buildIndependentDecisions(
+        queries: List<Query>,
+        continuation: Ext,
+        state: GameState
+    ): GameTree {
+        if (queries.isEmpty()) return buildTree(continuation, state)
+
+        // All roles moving now (simultaneously)
+        val simRoles: Set<Role> = queries.map { it.role }.toSet()
+
+        // 1) Precompute infosets for all roles from the SAME pre-move snapshot.
+        //    No choice is yet written to the heap, and we exclude simultaneous roles from visibility.
+        val preInfosets: Map<Query, InfosetId> =
+            queries.associateWith { q ->
+                val view = state.visibleTo(q.role, excludeRoles = simRoles)
+                val number = infosetManager.getInfosetNumber(q.role, view)
+                InfosetId(q.role, view).apply { this.number = number }
+            }
+
+        // 2) Pre-enumerate legal action packets for each role from the SAME pre-move snapshot.
+        //    This guarantees that where-clauses cannot depend on other simultaneous choices.
+        val preEdges: Map<Query, List<Map<Var, Const>>> =
+            queries.associateWith { q -> enumerateValidPackets(q, state) }
+
+        // 3) Build the cross-product of choices. We accumulate choices into the state,
+        //    but never recompute infosets (they remain the ones in `preInfosets`).
+        fun recurse(i: Int, accState: GameState): GameTree {
+            if (i == queries.size) {
+                // After all have moved, continue the game.
+                return buildTree(continuation, accState)
+            }
+
+            val q = queries[i]
+            val edges = preEdges.getValue(q)
+            val infosetId = preInfosets.getValue(q)
+
+            val choices = edges.map { packet ->
+                val nextState = accState.withChoices(q, packet)
+                GameTree.Choice(
+                    action = packet,
+                    subtree = recurse(i + 1, nextState)
+                )
+            }
+
+            return GameTree.Decision(
+                owner = q.role,
+                infosetId = infosetId,
+                choices = choices,
+                isChance = false
+            )
+        }
+
+        return recurse(0, state)
+    }
+
+
+    /**
+     * Build a terminal node with payoffs.
+     */
+    private fun buildTerminal(outcome: Outcome, state: GameState): GameTree.Terminal {
+        val desugared = desugar(outcome)
+        val payoffs = desugared.ts.mapValues { (_, exp) ->
+            state.eval(exp) as OutcomeType
+        }
+        return GameTree.Terminal(payoffs)
+    }
+
+    /**
+     * Enumerate all valid action packets satisfying the where clause.
+     */
+    private fun enumerateValidPackets(
+        query: Query,
+        state: GameState,
+        includeQuit: Boolean = true
+    ): List<Map<Var, Const>> {
+        val validPackets = query.params
+            .associate { (v, type) -> v to enumerateValues(type) }
+            .cartesianProduct()
+            .filter { packet -> state.eval(query.where, query, packet) == Bool(true) }
+
+        return if (includeQuit && !state.isChance(query.role) && !state.hasQuit(query.role)) {
+            val quitPacket = query.params.associate { (v, _) -> v to UNDEFINED }
+            validPackets + quitPacket
+        } else {
+            validPackets
+        }
+    }
+
+    /**
+     * Enumerate all possible values for a type.
+     */
+    private fun enumerateValues(type: TypeExp): List<Const> = when (type) {
+        is TypeExp.Subset -> type.values.toList()
         TypeExp.BOOL -> listOf(Bool(true), Bool(false))
-        is TypeExp.Hidden -> enumerateValues(t.type).map { hide(it) }
-        is TypeExp.TypeId -> enumerateValues(types.getValue(t))
-        else -> throw NotImplementedError("cannot enumerate $t; Only small, finite domains are supported")
+        is TypeExp.Hidden -> enumerateValues(type.type).map { Hidden(it) }
+        is TypeExp.TypeId -> enumerateValues(types.getValue(type))
+        else -> throw NotImplementedError("Cannot enumerate $type")
     }
 }
 
-private fun hide(v: Const): Const = when (v) {
-    UNDEFINED -> UNDEFINED
-    else -> Hidden(v)
-}
+// ============================================================================
+// Game State Management
+// ============================================================================
 
-fun eval(exp: Exp, env: Env<Const>): Const {
-    fun eval(exp: Exp) = eval(exp, env)
-    return when (exp) {
-        is Call -> when (exp.target.name) {
-            "alldiff" -> Bool(exp.args.map {eval(it)}.distinct().size == exp.args.size)
-            else -> TODO()
-        }
-        is UnOp -> when (exp.op) {
-            "-" -> Num(-(eval(exp.operand) as Num).n)
-            "!" -> Bool(!(eval(exp.operand) as Bool).truth)
-            "isUndefined" -> Bool(eval(exp.operand) == UNDEFINED)
-            "isDefined" -> Bool(eval(exp.operand) != UNDEFINED)
-            else -> throw AssertionError()
-        }
-        is BinOp -> {
-            val (left, right) = Pair(eval(exp.left), eval(exp.right))
-            val res: Const = when {
-                exp.op == "==" -> Bool(left == right)
-                exp.op == "!=" -> Bool(left != right)
-                exp.op == "<->" -> Bool(left == right)
-                exp.op == "<-!->" -> Bool(left != right)
-                left is Num && right is Num -> when (exp.op) {
-                    "+" -> Num(left.n + right.n)
-                    "-" -> Num(left.n - right.n)
-                    "*" -> Num(left.n * right.n)
-                    "/" -> Num(left.n / right.n)
-                    "<" -> Bool(left.n < right.n)
-                    "<=" -> Bool(left.n <= right.n)
-                    ">" -> Bool(left.n > right.n)
-                    ">=" -> Bool(left.n >= right.n)
-                    else -> throw AssertionError()
-                }
-                left is Bool && right is Bool -> when (exp.op) {
-                    "&&" -> Bool(left.truth && right.truth)
-                    "||" -> Bool(left.truth || right.truth)
-                    else -> throw AssertionError()
-                }
-                else -> throw AssertionError("$left ${exp.op} $right")
-            }
-            res
-        }
-        is Var -> env.getValue(exp)
-        is Member -> env.getValue(exp.target, exp.field)
-        is Cond -> {
-            when (val cond = eval(exp.cond)) {
-                is Bool -> if (cond.truth) eval(exp.ifTrue) else eval(exp.ifFalse)
-                else -> throw AssertionError()
-            }
-        }
-        UNDEFINED -> UNDEFINED
-        is Address -> exp
-        is Num -> exp
-        is Bool -> exp
-        is Hidden -> exp
-        is Let -> eval(exp.exp, env + Pair(exp.dec.v, eval(exp.init)))
+/**
+ * Represents the state of the game during tree construction.
+ * Tracks role participation, variable bindings, and hidden information.
+ */
+data class GameState(
+    private val globals: Map<Var, Const> = emptyMap(),
+    private val roles: Map<Role, RoleState> = emptyMap(),
+    private val heap: Map<Pair<Role, Var>, Const> = emptyMap()
+) {
+    data class RoleState(
+        val address: Int,  // 0 for chance
+        val hasQuit: Boolean = false
+    )
+
+    companion object {
+        fun empty() = GameState()
     }
-}
 
-class ExtensivePrinter(private val outcomeToPayoff: (Role, OutcomeType) -> Int = {_, v -> v.n}) {
-    private var outcomeNumber: Int = 0
+    fun addRole(role: Role, isChance: Boolean = false): GameState {
+        val address = if (isChance) 0 else {
+            1 + (roles.values.maxOfOrNull { it.address } ?: 0)
+        }
+        return copy(roles = roles + (role to RoleState(address)))
+    }
 
-    fun toEfg(t: Tree, roleOrder: List<Role>): List<String> = when (t) {
-        is Tree.Node -> {
-            if (t.env.isChance(t.owner)) { // FIX: this should be known statically, not by env
-                val nodeName = ""
-                val infoset: Int = t.infoset
-                val infosetName = ""
-                val actionsAndProbabilities = ""  // e.g. '{ "true" 1/2 "false" 1/2 }'
-                val actionNamesForInfoset: String = t.edges.joinToString(" ", "{ ", " }") {
-                    v -> quote(v.values.joinToString("&") { valueToName(it) }) + " 1/" + t.edges.size
-                }
-                val payoffs = 0
-                listOf("c ${quote(nodeName)} $infoset ${quote(infosetName)} $actionsAndProbabilities $actionNamesForInfoset $payoffs") +
-                        t.children.flatMap { toEfg(it, roleOrder) }
+    fun isChance(role: Role): Boolean =
+        roles[role]?.address == 0
+
+    fun hasQuit(role: Role): Boolean =
+        roles[role]?.hasQuit == true
+
+    fun withChoices(query: Query, packet: Map<Var, Const>): GameState {
+        val newHeap = heap + packet.map { (v, const) -> (query.role to v) to const }
+        return copy(heap = newHeap)
+    }
+
+    fun withQuit(query: Query): GameState {
+        val quitHeap = query.params.associate { (v, _) ->
+            (query.role to v) to UNDEFINED
+        }
+        val newRoles = roles + (query.role to roles.getValue(query.role).copy(hasQuit = true))
+        return copy(heap = heap + quitHeap, roles = newRoles)
+    }
+
+    fun revealHidden(query: Query): GameState {
+        val revealed = heap.mapValues { (key, value) ->
+            if (key.first == query.role && value is Hidden) {
+                value.value
             } else {
-                val nodeName = ""
-                val owner: Int = roleOrder.indexOf(t.owner) + 1 // TODO: why not env.getValue(t.owner).n?
-                // TODO: remove last assignment
-                val infoset: Int = t.infoset
-                val infosetName = ""
-                val actionNamesForInfoset: String = stringList(t.edges.map { v -> v.values.joinToString("&") { valueToName(it) } })
-                val outcome = 0
-                val nameOfOutcome = ""
-                val payoffs = 0
-                listOf("p ${quote(nodeName)} $owner $infoset ${quote(infosetName)} $actionNamesForInfoset $payoffs") +
-                        t.children.flatMap { toEfg(it, roleOrder) }
+                value
             }
         }
-        is Tree.Leaf -> {
-            val name = ""
-            val outcome: Int = outcomeNumber // TODO: what is this exactly? must it be sequential?
-            // Seems like outcomes are "named outcomes" and should define the outcome uniquely
-            outcomeNumber += 1
-            val nameOfOutcome = ""
-            val payoffs = roleOrder.map { outcomeToPayoff(it, t.outcome.getValue(it)) }.joinToString(" ", "{ ", " }")
-            listOf("t ${quote(name)} $outcome ${quote(nameOfOutcome)} $payoffs")
+        return copy(heap = revealed)
+    }
+
+    /**
+     * Get the visible state for a specific role (excluding hidden info from others).
+     */
+    fun visibleTo(role: Role, excludeRoles: Set<Role> = emptySet()): Map<Pair<Role, Var>, Const> {
+        return heap.mapValues { (key, value) ->
+            val (r, _) = key
+            when {
+                r in excludeRoles -> Hidden(UNDEFINED)
+                r != role && value is Hidden -> Hidden(UNDEFINED)
+                else -> value
+            }
         }
     }
 
-    private fun valueToName(v: Const): String = when (v) {
-        is Bool -> v.truth.toString()
-        is Num -> v.n.toString()
-        is Hidden -> "Hidden(${valueToName(v.value)})"
+    fun getValue(role: Role, field: Var): Const =
+        heap.getValue(role to field)
+
+    /**
+     * Evaluate an expression in the current state.
+     */
+    fun eval(exp: Exp, query: Query? = null, packet: Map<Var, Const> = emptyMap()): Const {
+        val env = Env(globals, roles.keys.associateWith { Address(roles.getValue(it).address) }, heap)
+        val extendedEnv = if (query != null) {
+            env.copy(h = env.h + packet.map { (v, c) -> (query.role to v) to c })
+        } else {
+            env
+        }
+        return eval(exp, extendedEnv)
+    }
+}
+
+// ============================================================================
+// EFG Format Writer
+// ============================================================================
+
+/**
+ * Writes game trees in Gambit's EFG format with proper formatting.
+ */
+class EfgWriter(
+    private val gameName: String,
+    private val gameDescription: String,
+    private val players: List<Role>
+) {
+    private var outcomeCounter = 1
+
+    fun write(tree: GameTree): String {
+        outcomeCounter = 1
+        val header = buildHeader()
+        val nodes = writeTree(tree)
+        return "$header\n\n${nodes.joinToString("\n")}"
+    }
+
+    private fun buildHeader(): String {
+        val playerList = players.joinToString(" ") { "\"${it.name}\"" }
+        return """EFG 2 R "$gameName" { $playerList }
+"$gameDescription""""
+    }
+
+    private fun writeTree(tree: GameTree): List<String> {
+        return when (tree) {
+            is GameTree.Decision -> writeDecision(tree)
+            is GameTree.Terminal -> listOf(writeTerminal(tree))
+        }
+    }
+
+    private fun writeDecision(node: GameTree.Decision): List<String> {
+        val nodeType = if (node.isChance) "c" else "p"
+        val nodeName = "\"\""
+
+        val line = if (node.isChance) {
+            val owner = ""
+            val infosetNum = node.infosetId.number
+            val infosetName = "\"\""
+            val actions = node.choices.joinToString(" ") { choice ->
+                val actionName = formatActionName(choice.action)
+                val prob = choice.probability ?: Rational(1)
+                "\"$actionName\" ${formatRational(prob)}"
+            }
+            "$nodeType $nodeName $infosetNum $infosetName { $actions } 0"
+        } else {
+            val owner = players.indexOf(node.owner) + 1
+            val infosetNum = node.infosetId.number
+            val infosetName = "\"\""
+            val actions = node.choices.joinToString(" ") { choice ->
+                val actionName = formatActionName(choice.action)
+                "\"$actionName\""
+            }
+            "$nodeType $nodeName $owner $infosetNum $infosetName { $actions } 0"
+        }
+
+        val subtrees = node.choices.flatMap { writeTree(it.subtree) }
+        return listOf(line) + subtrees
+    }
+
+    private fun writeTerminal(node: GameTree.Terminal): String {
+        val nodeName = "\"\""
+        val outcomeNum = outcomeCounter++
+        val outcomeName = "\"\""
+        val payoffs = players.joinToString(" ") { role ->
+            node.payoffs[role]?.n?.toString() ?: "0"
+        }
+        return "t $nodeName $outcomeNum $outcomeName { $payoffs }"
+    }
+
+    private fun formatActionName(action: Map<Var, Const>): String {
+        return action.values.joinToString("&") { formatValue(it) }
+    }
+
+    private fun formatValue(const: Const): String = when (const) {
+        is Bool -> const.truth.toString()
+        is Num -> const.n.toString()
+        is Hidden -> "Hidden(${formatValue(const.value)})"
         UNDEFINED -> "None"
-        else -> throw Exception(v.toString())
+        else -> const.toString()
+    }
+
+    private fun formatRational(r: Rational): String {
+        return if (r.denominator == 1) {
+            r.numerator.toString()
+        } else {
+            "${r.numerator}/${r.denominator}"
+        }
     }
 }
 
-private fun quote(name: String) = '"' + name + '"'
+// ============================================================================
+// Utility Extensions
+// ============================================================================
 
-private fun stringList(ss: Iterable<String>) = ss.joinToString(" ", "{ ", " }") { quote(it) }
-
-// Env extensions
-
-private fun Env<Const>.mapHidden(q: Query, f: (Hidden) -> Const) = copy(h =
-    h.mapValues { (rv, k) ->
-        if (k is Hidden && rv.first == q.role
-                && rv.second in q.params.map { (v, _) -> v }) f(k) else k
-    }
-)
-
-private fun Env<Const>.eraseHidden(role: Role) = copy(h =
-    h.mapValues { (rv, k) ->
-        if (k is Hidden && rv.first != role) Hidden(UNDEFINED) else k
-    }
-)
-
-private fun Env<Const>.updateHeap(q: Query, newEnv: Map<Var, Const>): Env<Const> = copy(h =
-    h + newEnv.map { (v, k) -> Pair(Pair(q.role, v), k) }
-)
-
-private fun Env<Const>.addRole(role: Role, chance: Boolean = false): Env<Const> {
-    val address = if (chance) 0 else
-        (1 + (g.values.maxOfOrNull { (it as? Address)?.n ?: 0 } ?: 0))
-    return this withRole Pair(role, Address(address))
+/**
+ * Compute Cartesian product of variable assignments.
+ */
+private fun Map<Var, List<Const>>.cartesianProduct(): List<Map<Var, Const>> {
+    return entries
+        .map { (key, values) -> values.map { key to it } }
+        .fold(listOf(emptyList<Pair<Var, Const>>())) { acc, pairs ->
+            pairs.flatMap { pair -> acc.map { list -> list + pair } }
+        }
+        .map { it.toMap() }
 }
 
-private fun Env<Const>.quitted(role: Role): Boolean = h.any { (rv, k) -> rv.first == role && k == UNDEFINED }
+// ============================================================================
+// Main API
+// ============================================================================
 
-private fun Env<Const>.isChance(role: Role) = this.getValue(role) == Address(0)
+/**
+ * Main class for extensive form game generation.
+ */
+class ExtensiveFormGame(
+    private val name: String,
+    private val description: String,
+    private val players: List<Role>,
+    private val tree: GameTree
+) {
+    fun toEfg(): String {
+        val writer = EfgWriter(name, description, players)
+        return writer.write(tree)
+    }
+
+    override fun toString(): String = toEfg()
+}
+
+/**
+ * Build an extensive form game from a Vegas program.
+ */
+fun buildExtensiveFormGame(program: ExpProgram): ExtensiveFormGame {
+    val players = findRoles(program.game)
+    val builder = GameTreeBuilder(program.types)
+    val tree = builder.build(program.game)
+
+    return ExtensiveFormGame(
+        name = program.name.ifEmpty { "Game" },
+        description = program.desc.ifEmpty { "Generated by Vegas" },
+        players = players,
+        tree = tree
+    )
+}
+
+// Maintain backward compatibility
+class Extensive(prog: ExpProgram) {
+    private val efg = buildExtensiveFormGame(prog)
+
+    fun toEfg(): String = efg.toEfg()
+    override fun toString(): String = efg.toString()
+}
