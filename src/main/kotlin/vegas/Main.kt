@@ -2,19 +2,19 @@ package vegas
 
 import vegas.backend.scribble.prettyPrintAll
 import vegas.backend.scribble.generateScribble
-import vegas.backend.solidity.generateSolidity
+import vegas.backend.solidity.genSolidityFromIR
 import vegas.backend.gambit.generateExtensiveFormGame
 import vegas.backend.smt.generateSMT
 import vegas.frontend.parseFile
-import vegas.frontend.ProgramAst
-import vegas.frontend.findRoles
+import vegas.frontend.GameAst
+import vegas.frontend.findRoleIds
 import vegas.ir.compileToIR
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.system.exitProcess
 
-private fun doTypecheck(program: ProgramAst) {
+private fun doTypecheck(program: GameAst) {
     try {
         typeCheck(program)
     } catch (ex: NotImplementedError) {
@@ -80,13 +80,13 @@ private fun runFile(inputPath: Path, outputs: Outputs) {
     println("Analyzing $inputPath ...")
     val program = parseFile(inputPath.toString()).copy(name = baseName, desc = baseName)
 
-    println("roles: " + findRoles(program.game))
+    println("roles: " + findRoleIds(program.game))
     doTypecheck(program)
     val ir = compileToIR(program)
     if (outputs.z3) writeFile(outZ3.toString()) { generateSMT(program) }
     if (outputs.efg) writeFile(outEfg.toString()) { generateExtensiveFormGame(ir) }
     if (outputs.scr) writeFile(outScr.toString()) { generateScribble(program).prettyPrintAll() }
-    if (outputs.sol) writeFile(outSol.toString()) { generateSolidity(ir) }
+    if (outputs.sol) writeFile(outSol.toString()) { genSolidityFromIR(ir) }
 
     println("Done")
     println()

@@ -1,157 +1,104 @@
 package vegas.ir
 
-import vegas.Rational
-import vegas.frontend.Role
+import vegas.RoleId
+import vegas.VarId
+import vegas.FieldRef
 
-// ===== Core =====
-
-data class ProgramIR(
-    val name: String,
-    val roles: Set<Role>,
-    val blocks: List<Block>,            // total order: blocks[0], blocks[1], ...
-    val payoffs: Map<Role, Expr>
-) {
-    init { require(wellFormed()) { "Protocol fails well-formedness checks" } }
-    private fun wellFormed(): Boolean = WfChecks(this).runAll()
-}
-
-/**
- * A Block is a simultaneous-move step.
- * - All moves in the same block see the SAME pre-state snapshot.
- * - At most one move per role in a block.
- * - Evaluation order inside a block does not matter (commutes).
- */
-data class Block(
-    val id: BlockId,
-    val moves: List<Move>
-)
-
-// Unique ids (simple strings are fine; keep types nominal for safety).
-@JvmInline value class BlockId(val s: String)
-@JvmInline value class MoveId(val s: String)
-
-// ===== Moves & Parameters =====
-
-data class Move(
-    val id: MoveId,
-    val by: Role,             // a participant or Role.Chance
-    val kind: MoveKind,       // JOIN, SUBMIT, REVEAL, CHANCE
-    val params: List<Param>,  // input values this move provides (commit, submit, reveal)
-    val guard: Expr = Expr.Bool(true) // enabled iff guard(pre-state) == true
-)
-
-enum class MoveKind { JOIN, SUBMIT, REVEAL, CHANCE }
-
-/**
- * A parameter is just a name and a type.
- * Visibility is *inferred* from the type and the block index:
- *  - PUBLIC      : any non-Hidden type, once provided, is visible to all from next block onward
- *  - HIDDEN(T)   : commitment at commit block; value is known only to the owner until explicitly REVEALed
- *  - OPT(T)      : adds an undefined alternative; IsDef/IsUndef predicates expose definedness
- */
-data class Param(
-    val name: String,
-    val type: Type
-)
-
-// ===== Types (commit–reveal is a type) =====
-
+// ---------- types & domains ----------
 sealed class Type {
     object IntType : Type()
     object BoolType : Type()
-    data class Range(val lo: Int, val hi: Int) : Type()
-    data class Subset(val values: Set<Int>) : Type()
-    data class Enum(val name: String, val values: List<String>) : Type()
-    data class Hidden(val inner: Type) : Type()     // declared commitment
-    data class Opt(val inner: Type) : Type()
+    data class SetType(val values: Set<Int>) : Type()
 }
 
-// ===== Expressions (guards & payoffs) =====
+/**
+ * A Parameter represents data provided when executing an action.
+ *
+ * "visible" means reveal if "invisible" was already declared. A second "invisible" might be "reconsidered", or malformed.
+ */
+data class Parameter(
+    val name: VarId,
+    val type: Type,
+    val visible: Boolean,
+)
 
+// Expression are mostly straightforward
 sealed class Expr {
     // literals
     data class IntLit(val v: Int) : Expr()
-    data class Bool(val v: Boolean) : Expr()
+    data class BoolLit(val v: Boolean) : Expr()
 
-    // field reference: value of move.param produced in a *prior* block
-    data class Field(val move: MoveId, val param: String) : Expr()
+    data class Field(val field: FieldRef) : Expr()
 
-    // definedness (needed for Opt and commit-reveal flows)
-    data class IsDef(val of: Field) : Expr()
-    data class IsUndef(val of: Field) : Expr()
+    data class IsDefined(val field: FieldRef) : Expr()
 
     // arithmetic
     data class Add(val l: Expr, val r: Expr) : Expr()
     data class Sub(val l: Expr, val r: Expr) : Expr()
     data class Mul(val l: Expr, val r: Expr) : Expr()
-    data class Div(val l: Expr, val r: Expr) : Expr() // trunc toward zero
+    data class Div(val l: Expr, val r: Expr) : Expr()
+    data class Neg(val x: Expr) : Expr()
 
-    // comparisons & logic
+    // comparisons
     data class Eq(val l: Expr, val r: Expr) : Expr()
     data class Ne(val l: Expr, val r: Expr) : Expr()
     data class Lt(val l: Expr, val r: Expr) : Expr()
     data class Le(val l: Expr, val r: Expr) : Expr()
     data class Gt(val l: Expr, val r: Expr) : Expr()
     data class Ge(val l: Expr, val r: Expr) : Expr()
-    data class And(val l: Expr, val r: Expr) : Expr()
-    data class Or(val l: Expr, val r: Expr) : Expr()
-    data class Not(val x: Expr) : Expr()
 
-    // ternary
+    // boolean
+    data class And(val l: Expr, val r: Expr) : Expr()
+    data class Or (val l: Expr, val r: Expr) : Expr()
+    data class Not(val x: Expr) : Expr()
     data class Ite(val c: Expr, val t: Expr, val e: Expr) : Expr()
 }
 
-// ===== Chance support (optional weights) =====
-
 /**
- * If by == Role.Chance and the move has a single parameter of a finite type,
- * the backend may treat it as a chance node. Optional weights allow non-uniform chance.
+ * Requirements specify when an action can execute.
+ *
+ * after: Control dependencies (must-happen-before). Forms DAG.
+ * sees: Data dependencies (which fields this action's condition reads).
+ *       WF condition: Fields in condition must appear in sees.
+ * condition: Logical guard enabling action.
+ *
+ * UNDEFINED SEMANTICS:
+ * If condition references undefined field (action not yet complete),
+ * condition evaluates to false (action not enabled).
+ * All backends implement via "done flags": <action>_<param>_done.
  */
-data class ChanceWeights(
-    val move: MoveId,
-    val weights: Map<ConstValue, Rational> // sum==1; ConstValue comes from the param's finite domain
+data class Requirement(
+    val captures: Set<FieldRef>,        // fields this guard MAY read (must be from earlier phases)
+    val condition: Expr             // boolean; see "Guard scheduling"
 )
 
-// simple value holder for weights; align with Type domains at lowering time
-sealed class ConstValue {
-    data class IntV(val v: Int) : ConstValue()
-    data class BoolV(val v: Boolean) : ConstValue()
-    data class EnumV(val tag: String) : ConstValue()
-}
+/**
+ * A Signature is something a role does: join, submit data, commit or reveal hidden info.
+ */
+data class Signature(
+    val join: Boolean,              // true if this is the role's "join" step (binds address, deposits, etc.)
+    val parameters: List<Parameter>,
+    val requires: Requirement      // guard for this role's action (snapshot semantics)
+)
 
-// ===== Well-formedness (sketch) =====
+/** Exactly one Signature per RoleId in a Phase.
+ *
+ * SIMULTANEITY SEMANTICS:
+ * Simultaneous (independent) if neither depends on the other
+ * (no path in dependency graph). Simultaneous actions:
+ * - Compute infosets and legality from SAME pre-state snapshot
+ * - Can execute in any order (commute)
+ * - Belong to same information set if they can't observe each other's choices
+ * */
+typealias Phase = Map<RoleId, Signature>
 
-class WfChecks(private val p: ProgramIR) {
-    fun runAll(): Boolean =
-        blocksAreLinear() &&
-                atMostOneMovePerRolePerBlock() &&
-                fieldsOnlyFromPriorBlocks() &&
-                hiddenPayoffMustReveal() &&
-                guardsChainVisible() &&
-                arithmeticModelOk()
-
-    private fun blocksAreLinear() = true // by construction: List<Block> is a total order
-
-    private fun atMostOneMovePerRolePerBlock(): Boolean =
-        p.blocks.all { b -> b.moves.map { it.by }.distinct().size == b.moves.size }
-
-    /** Guards may reference only values visible on-chain at the start of the block:
-     *   - any non-Hidden param from *prior* blocks
-     *   - any Hidden param that has been REVEALed in a prior block
-     *   - IsDef/IsUndef are allowed if their done-bit is on-chain (always true here)
-     * Off-chain analysis may relax this; keep the on-chain rule as default.
-     */
-    private fun guardsChainVisible(): Boolean = true // implement by walking Expr and checking visibility lattice
-
-    /** Any Expr.Field used in payoffs must be PUBLIC at terminal:
-     *   - non-Hidden from some block (always public after its block)
-     *   - or Hidden that has a corresponding REVEAL move in a prior block
-     */
-    private fun hiddenPayoffMustReveal(): Boolean = true // implement: ensure a REVEAL exists before final block
-
-    /** Expressions may only reference prior blocks (no forward refs). */
-    private fun fieldsOnlyFromPriorBlocks(): Boolean = true // walk Exprs
-
-    /** Optional: static overflow/zero-div checks under target numeric model. */
-    private fun arithmeticModelOk(): Boolean = true
-}
+/**
+ * A GameIR describes a multi-party interaction where roles perform actions
+ * that may depend on each other, leading to payoffs for each role.
+ */
+data class GameIR(
+    val name: String,
+    val roles: Set<RoleId>,
+    val phases: List<Phase>,        // index is phase order; straight-path
+    val payoffs: Map<RoleId, Expr>    // evaluated at terminal
+)

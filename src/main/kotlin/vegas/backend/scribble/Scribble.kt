@@ -1,48 +1,38 @@
 package vegas.backend.scribble
 
-import vegas.frontend.ProgramAst
-import vegas.frontend.Ext
-import vegas.frontend.Kind
-import vegas.frontend.Outcome
-import vegas.frontend.Role
-import vegas.frontend.TypeExp
-import vegas.frontend.VarDec
-import vegas.frontend.findRoles
-import vegas.ir.desugar
+
+import vegas.RoleId
 import vegas.join
-import vegas.map
 import vegas.names
 import vegas.types
-import kotlin.String
 
 sealed class Sast {
-
-    data class Protocol(val name: String, val types: Map<String, String>, val roles: Set<Role>, val block: Block) :
+    data class Protocol(val name: String, val types: Map<String, String>, val roles: Set<RoleId>, val block: Block) :
         Sast()
 
     data class Block(val stmts: List<Action>) : Sast()
 
     sealed class Action : Sast() {
-        data class Send(val label: String, val params: List<Pair<String, String>>, val from: Role, val to: Set<Role>?) :
+        data class Send(val label: String, val params: List<Pair<String, String>>, val from: RoleId, val to: Set<RoleId>?) :
             Action()
 
-        data class Connect(val to: Role) : Action()
-        data class Choice(val at: Role, val choices: List<Block>) : Action()
+        data class Connect(val to: RoleId) : Action()
+        data class Choice(val at: RoleId, val choices: List<Block>) : Action()
         data class Rec(val label: String, val actions: Block) : Action()
         data class Continue(val label: String) : Action()
     }
 
 }
 
+val SERVER = RoleId("Server")
+
 fun Sast.Protocol.prettyPrintAll(): String {
     val typedecls = types.map { """type <java> "java.lang.${it.value}" from "rt.jar" as ${it.key};""" }.join("\n")
-    val items = listOf("module Game;", typedecls, prettyPrint()) + (roles + SERVER).map { prettyPrint(it) }
+    val items = listOf("module GameIR;", typedecls, prettyPrint()) + (roles + SERVER).map { prettyPrint(it) }
     return items.join("\n\n")
 }
 
-private val SERVER = Role("Server")
-
-fun Sast.prettyPrint(role: Role? = null, indent: Int = 0, connected: Set<Role> = setOf()): String {
+fun Sast.prettyPrint(role: RoleId? = null, indent: Int = 0, connected: Set<RoleId> = setOf()): String {
     fun pretty(x: Sast) = x.prettyPrint(role, indent, connected)
     val code = when (this) {
         is Sast.Protocol -> {
@@ -88,85 +78,4 @@ fun Sast.prettyPrint(role: Role? = null, indent: Int = 0, connected: Set<Role> =
         is Sast.Action.Continue -> "continue $label"
     }
     return "    ".repeat(indent) + code
-}
-
-fun generateScribble(p: ProgramAst): Sast.Protocol {
-    val roles = findRoles(p.game).toSet()
-    val types =
-        p.types.map { (k, v) -> k.name to javaTypeOf(v) } + ("int" to "Integer") + ("bool" to "Boolean") + ("hidden" to "Integer")
-
-    return Sast.Protocol(p.name, types.toMap(), roles, Sast.Block(gameToScribble(p.game, roles)))
-}
-
-private fun gameToScribble(ext: Ext, roles: Set<Role>): List<Sast.Action> = when (ext) {
-    is Ext.BindSingle -> {
-        val params = ext.q.params
-        val role = ext.q.role
-
-        fun send(label: String, decls: List<Pair<String, String>>, to: Set<Role> = setOf(SERVER)) =
-            Sast.Action.Send(label, decls, role, to)
-
-        fun sendToServer(): List<Sast.Action.Send> {
-            val (priv, pub) = params.partition { (_, type) -> type is TypeExp.Hidden }.map { declsOf(it) }
-            return listOfNotNull(
-                send("Hidden", priv).takeUnless { priv.isEmpty() },
-                send("Public", pub).takeUnless { pub.isEmpty() }
-            )
-        }
-
-        val send = when (ext.kind) {
-            Kind.JOIN -> listOf(Sast.Action.Connect(role)) + sendToServer()
-            Kind.JOIN_CHANCE -> listOf(Sast.Action.Connect(role)) + sendToServer()
-            Kind.YIELD -> sendToServer()
-            Kind.REVEAL -> listOf(send("Reveal", declsOf(params)))
-        }
-
-        val broadcast = Sast.Action.Send(
-            "Broadcast",
-            declsOf(params.filterNot { (_, type) -> type is TypeExp.Hidden }),
-            SERVER,
-            roles - role
-        )
-
-        send + broadcast + gameToScribble(ext.ext, roles)
-    }
-
-    is Ext.Bind -> ext.qs.flatMap { query ->
-        gameToScribble(Ext.BindSingle(ext.kind, query, Ext.Value(Outcome.Value(mapOf()))), roles)
-    }.sortedBy { rankOrder(it) } + gameToScribble(ext.ext, roles)
-
-    is Ext.Value -> desugar(ext.outcome).ts.keys.map { Sast.Action.Send("Withdraw", listOf(), it, setOf(SERVER)) }
-}
-
-private fun rankOrder(it: Sast.Action): Int =
-    if (it is Sast.Action.Send) when (it.label) {
-        "Hidden" -> 1
-        "Reveal" -> 2
-        else -> 3
-    } else 0
-
-private fun declsOf(params: List<VarDec>) = params.map { (v, type) -> Pair(v.name, typeOf(type)) }
-
-private fun typeOf(t: TypeExp): String = when (t) {
-    TypeExp.INT -> "int"
-    TypeExp.BOOL -> "bool"
-    TypeExp.ADDRESS -> "address"
-    TypeExp.EMPTY -> throw AssertionError()
-    is TypeExp.Hidden -> "hidden" //_${typeOf(t.type)}"
-    is TypeExp.TypeId -> t.name
-    is TypeExp.Subset -> "subset_${t.values.join("_")}"
-    is TypeExp.Range -> "range_${t.min}_${t.max}"
-    is TypeExp.Opt -> "opt_${t.type}"
-}
-
-private fun javaTypeOf(t: TypeExp): String = when (t) {
-    TypeExp.INT -> "Integer"
-    TypeExp.BOOL -> "Boolean"
-    TypeExp.ADDRESS -> "Integer"
-    TypeExp.EMPTY -> throw AssertionError()
-    is TypeExp.Hidden -> "Integer"
-    is TypeExp.TypeId -> t.name
-    is TypeExp.Subset -> "Integer"
-    is TypeExp.Range -> "Integer"
-    is TypeExp.Opt -> "Object"
 }

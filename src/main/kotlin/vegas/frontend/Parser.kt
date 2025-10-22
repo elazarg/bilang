@@ -8,7 +8,7 @@ import java.net.URI
 import java.nio.file.Paths
 
 
-fun parseCode(code: String, uri: URI = URI.create("inmemory:repl.vg")): ProgramAst {
+fun parseCode(code: String, uri: URI = URI.create("inmemory:repl.vg")): GameAst {
     // Ensure there's always a withdraw statement
     val fullCode = if (!code.contains("withdraw")) "$code; withdraw {}" else code
 
@@ -20,7 +20,7 @@ fun parseCode(code: String, uri: URI = URI.create("inmemory:repl.vg")): ProgramA
     return AstTranslator(uri).visitProgram(ast)
 }
 
-fun parseFile(inputFilename: String): ProgramAst {
+fun parseFile(inputFilename: String): GameAst {
     val path = Paths.get(inputFilename)
     val chars = CharStreams.fromPath(path) // source name = path.toString()
     val tokens = CommonTokenStream(VegasLexer(chars))

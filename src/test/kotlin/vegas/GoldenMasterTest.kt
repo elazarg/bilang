@@ -5,11 +5,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.datatest.withData
 import vegas.backend.gambit.generateExtensiveFormGame
-import vegas.backend.solidity.generateSolidity
+import vegas.backend.solidity.genSolidityFromIR
 import vegas.backend.smt.generateSMT
 import vegas.ir.compileToIR
 import vegas.frontend.parseFile
-import vegas.frontend.ProgramAst
+import vegas.frontend.GameAst
 import java.io.File
 
 data class Example(
@@ -21,7 +21,7 @@ data class TestCase(
     val example: Example,
     val extension: String,
     val backend: String,
-    val generator: (ProgramAst) -> String
+    val generator: (GameAst) -> String
 ) {
     override fun toString() = "$example.$extension ($backend)"
 }
@@ -46,7 +46,7 @@ class GoldenMasterTest : FreeSpec({
 
     val testCases = exampleFiles.flatMap { example ->
         listOf(
-            TestCase(example, "sol", "solidity") { prog -> generateSolidity(compileToIR(prog)) },
+            TestCase(example, "sol", "solidity") { prog -> genSolidityFromIR(compileToIR(prog)) },
             TestCase(example, "efg", "gambit") { prog -> generateExtensiveFormGame(compileToIR(prog)) },
             TestCase(example, "z3", "smt") { prog -> generateSMT(prog) }
         ).filter { t -> t.extension !in example.disableBackend }
@@ -99,8 +99,8 @@ class GoldenMasterTest : FreeSpec({
             val program = parseExample(example)
             val ir = compileToIR(program)
 
-            val output1 = generateSolidity(ir)
-            val output2 = generateSolidity(ir)
+            val output1 = genSolidityFromIR(ir)
+            val output2 = genSolidityFromIR(ir)
 
             sanitizeOutput(output1, "solidity") shouldBe sanitizeOutput(output2, "solidity")
         }
@@ -133,7 +133,7 @@ private fun generateOutput(testCase: TestCase): String {
     return testCase.generator(program)
 }
 
-private fun parseExample(example: String): ProgramAst {
+private fun parseExample(example: String): GameAst {
     return parseFile("examples/$example.vg").copy(name = example, desc = example)
 }
 

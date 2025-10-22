@@ -2,7 +2,7 @@ package vegas.lsp
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.TextDocumentService
-import vegas.frontend.ProgramAst
+import vegas.frontend.GameAst
 import vegas.StaticError
 import vegas.typeCheck
 import org.eclipse.lsp4j.SemanticTokens
@@ -50,7 +50,7 @@ class VegasTextDocumentService(private val server: VegasLanguageServer) : TextDo
         val content = documentManager[uri] ?: return
         val diagnostics = mutableListOf<Diagnostic>()
         try {
-            val program: ProgramAst = parseCode(content)
+            val program: GameAst = parseCode(content)
             typeCheck(program)
         } catch (e: StaticError) {
             diagnostics.add(Diagnostic(spanToRange(e.span()), e.message, DiagnosticSeverity.Error, "vegas"))

@@ -6,9 +6,9 @@ import vegas.frontend.Exp.Const.*
 
 fun eval(exp: Exp, env: Env<Const>): Const {
     fun rec(e: Exp): Const = when (e) {
-        is Call -> when (e.target.name) {
+        is Call -> when (e.target.id.name) {
             "alldiff" -> Bool(e.args.map { rec(it) }.distinct().size == e.args.size)
-            else -> throw NotImplementedError("Unknown function: ${e.target.name}")
+            else -> throw NotImplementedError("Unknown function: ${e.target.id.name}")
         }
 
         is UnOp -> {
@@ -52,8 +52,8 @@ fun eval(exp: Exp, env: Env<Const>): Const {
             }
         }
 
-        is Var -> env.getValue(e)
-        is Member -> env.getValue(e.target, e.field)
+        is Var -> env.getValue(e.id)
+        is Field -> env.getValue(e.fieldRef)
 
         is Cond -> when (val c = rec(e.cond)) {
             is Bool -> if (c.truth) rec(e.ifTrue) else rec(e.ifFalse)
@@ -62,7 +62,7 @@ fun eval(exp: Exp, env: Env<Const>): Const {
 
         is Let -> {
             val v = rec(e.init)
-            eval(e.exp, env + (e.dec.v to v))
+            eval(e.exp, env + (e.dec.v.id to v))
         }
 
         is Num, is Bool, is Hidden, is Address -> e

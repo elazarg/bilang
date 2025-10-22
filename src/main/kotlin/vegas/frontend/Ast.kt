@@ -1,12 +1,22 @@
 package vegas.frontend
 
+import vegas.RoleId
+import vegas.VarId
+import vegas.FieldRef
+
 sealed class Ast
 
 interface Step
 
-data class Role(val name: String) : Ast() {
-    override fun toString(): String = name
-    companion object { val Chance = Role("_Chance") }
+data class Role(val id: RoleId) : Ast() {
+    override fun toString(): String = id.toString()
+    val name = id.name
+
+    companion object {
+        @JvmStatic
+        fun of(name: String) = Role(RoleId(name))
+        val Chance = Role(RoleId("_Chance"))
+    }
 }
 
 sealed class Ext : Ast() {
@@ -22,11 +32,20 @@ sealed class Exp : Ast() {
     data class UnOp(val op: String, val operand: Exp) : Exp()
     data class BinOp(val op: String, val left: Exp, val right: Exp) : Exp()
 
-    data class Var(val name: String) : Exp() {
-        override fun toString(): String = name
+    data class Var(val id: VarId) : Exp() {
+        override fun toString(): String = id.toString()
+        companion object {
+            @JvmStatic
+            fun of(name: String) = Var(VarId(name))
+        }
     }
 
-    data class Member(val target: Role, val field: Var) : Exp()
+    data class Field(val fieldRef: FieldRef) : Exp() {
+        companion object {
+            @JvmStatic
+            fun of(role: Role, param: Var) = Field(FieldRef(role.id, param.id))
+        }
+    }
     data class Cond(val cond: Exp, val ifTrue: Exp, val ifFalse: Exp) : Exp()
 
     sealed class Const : Exp() {
@@ -71,11 +90,23 @@ sealed class TypeExp : Ast() {
     data class Opt(val type: TypeExp) : TypeExp()
 }
 
-data class ProgramAst(val name: String, val desc: String, val types: Map<TypeExp.TypeId, TypeExp>, val game: Ext) :
+data class GameAst(val name: String, val desc: String, val types: Map<TypeExp.TypeId, TypeExp>, val game: Ext) :
     Ast()
 
-internal fun findRoles(ext: Ext): List<Role> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role } else setOf()) + findRoles(ext.ext)
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role) else setOf()) + findRoles(ext.ext)
-    is Ext.Value -> listOf()
+internal fun findRoleIds(ext: Ext): Set<RoleId> = when (ext) {
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role.id }.toSet() else setOf()) + findRoleIds(ext.ext)
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) setOf(ext.q.role.id) else setOf()) + findRoleIds(ext.ext)
+    is Ext.Value -> setOf()
+}
+
+internal fun findRoleIdsWithChance(ext: Ext): Set<RoleId> = when (ext) {
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role.id }.toSet() else setOf()) + findRoleIdsWithChance(
+        ext.ext
+    )
+
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) setOf(ext.q.role.id) else setOf()) + findRoleIdsWithChance(
+        ext.ext
+    )
+
+    is Ext.Value -> setOf()
 }
