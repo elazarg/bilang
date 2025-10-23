@@ -8,7 +8,7 @@ import vegas.backend.smt.generateSMT
 import vegas.frontend.parseFile
 import vegas.frontend.GameAst
 import vegas.frontend.findRoleIds
-import vegas.ir.compileToIR
+import vegas.frontend.compileToIR
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.file.Path

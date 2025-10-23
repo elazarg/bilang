@@ -1,10 +1,10 @@
-package vegas.ir
+package vegas.frontend
 
 import vegas.FieldRef
 import vegas.RoleId
 import vegas.frontend.Exp as AstExpr
 import vegas.frontend.TypeExp as AstType
-import vegas.frontend.*
+import vegas.ir.*
 
 /**
  * Compile AST to IR.

@@ -7,7 +7,7 @@ import io.kotest.datatest.withData
 import vegas.backend.gambit.generateExtensiveFormGame
 import vegas.backend.solidity.genSolidityFromIR
 import vegas.backend.smt.generateSMT
-import vegas.ir.compileToIR
+import vegas.frontend.compileToIR
 import vegas.frontend.parseFile
 import vegas.frontend.GameAst
 import java.io.File
