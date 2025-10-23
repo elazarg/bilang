@@ -57,7 +57,11 @@ private fun collectPhases(ext: Ext, typeEnv: Map<AstType.TypeId, AstType>): List
 
 private fun lowerQuery(query: Query, kind: Kind, typeEnv: Map<AstType.TypeId, AstType>): Signature {
     return Signature(
-        join = (kind == Kind.JOIN || kind == Kind.JOIN_CHANCE),
+        join = when (kind) {
+            Kind.JOIN -> Join(Expr.IntVal(query.deposit.n))
+            Kind.JOIN_CHANCE -> Join(Expr.IntVal(query.deposit.n))
+            else -> null
+        },
         parameters = query.params.map { vardec ->
             Parameter(
                 name = vardec.v.id,
@@ -148,9 +152,9 @@ private fun collectCaptures(exp: AstExpr): Set<FieldRef> {
 private fun lowerExpr(exp: AstExpr, typeEnv: Map<AstType.TypeId, AstType>): Expr {
     return when (exp) {
         // Literals
-        is AstExpr.Const.Num -> Expr.IntLit(exp.n)
-        is AstExpr.Const.Bool -> Expr.BoolLit(exp.truth)
-        is AstExpr.Const.Address -> Expr.IntLit(exp.n)
+        is AstExpr.Const.Num -> Expr.IntVal(exp.n)
+        is AstExpr.Const.Bool -> Expr.BoolVal(exp.truth)
+        is AstExpr.Const.Address -> Expr.IntVal(exp.n)
         is AstExpr.Const.Hidden -> lowerExpr(exp.value, typeEnv)
         AstExpr.Const.UNDEFINED -> error("UNDEFINED should not appear in IR")
 
@@ -226,7 +230,7 @@ private fun lowerExpr(exp: AstExpr, typeEnv: Map<AstType.TypeId, AstType>): Expr
                 val args = exp.args.map { lowerExpr(it, typeEnv) }
 
                 if (args.size < 2) {
-                    Expr.BoolLit(true) // alldiff of 0 or 1 elements is trivially true
+                    Expr.BoolVal(true) // alldiff of 0 or 1 elements is trivially true
                 } else {
                     val pairs = args.indices.flatMap { i ->
                         ((i + 1) until args.size).map { j ->
@@ -241,7 +245,7 @@ private fun lowerExpr(exp: AstExpr, typeEnv: Map<AstType.TypeId, AstType>): Expr
                 // abs(x) -> x >= 0 ? x : -x
                 val arg = lowerExpr(exp.args.single(), typeEnv)
                 Expr.Ite(
-                    Expr.Ge(arg, Expr.IntLit(0)),
+                    Expr.Ge(arg, Expr.IntVal(0)),
                     arg,
                     Expr.Neg(arg)
                 )
@@ -286,8 +290,8 @@ private fun desugarOutcome(outcome: Outcome, typeEnv: Map<AstType.TypeId, AstTyp
             // Merge: for each role, create ite expression
             val allRoles = ifTrue.keys + ifFalse.keys
             allRoles.associateWith { role ->
-                val t = ifTrue[role] ?: Expr.IntLit(0) // Default to 0 if role not in branch
-                val f = ifFalse[role] ?: Expr.IntLit(0)
+                val t = ifTrue[role] ?: Expr.IntVal(0) // Default to 0 if role not in branch
+                val f = ifFalse[role] ?: Expr.IntVal(0)
                 Expr.Ite(cond, t, f)
             }
         }

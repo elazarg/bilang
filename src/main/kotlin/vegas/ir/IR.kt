@@ -25,8 +25,8 @@ data class Parameter(
 // Expression are mostly straightforward
 sealed class Expr {
     // literals
-    data class IntLit(val v: Int) : Expr()
-    data class BoolLit(val v: Boolean) : Expr()
+    data class IntVal(val v: Int) : Expr()
+    data class BoolVal(val v: Boolean) : Expr()
 
     data class Field(val field: FieldRef) : Expr()
 
@@ -72,11 +72,15 @@ data class Requirement(
     val condition: Expr             // boolean; see "Guard scheduling"
 )
 
+data class Join(
+    val deposit: Expr.IntVal,
+)
+
 /**
  * A Signature is something a role does: join, submit data, commit or reveal hidden info.
  */
 data class Signature(
-    val join: Boolean,              // true if this is the role's "join" step (binds address, deposits, etc.)
+    val join: Join?,              // non-null if this is the role's "join" step
     val parameters: List<Parameter>,
     val requires: Requirement      // guard for this role's action (snapshot semantics)
 )

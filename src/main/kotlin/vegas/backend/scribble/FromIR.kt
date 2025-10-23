@@ -75,7 +75,7 @@ private fun signatureToScribble(
     }
 
     // Connect action for joins
-    if (sig.join) {
+    if (sig.join != null) {
         actions.add(Sast.Action.Connect(role))
     }
 

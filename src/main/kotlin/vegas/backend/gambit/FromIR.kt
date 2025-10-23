@@ -247,8 +247,8 @@ private data class IrState(
 
     /** Evaluate IR.Expr under current heap. Undefined/hidden fields yield false in boolean context (guard semantics). */
     fun eval(e: Expr): IrVal = when (e) {
-        is Expr.IntLit -> IrVal.IntVal(e.v)
-        is Expr.BoolLit -> IrVal.BoolVal(e.v)
+        is Expr.IntVal -> IrVal.IntVal(e.v)
+        is Expr.BoolVal -> IrVal.BoolVal(e.v)
         is Expr.Field -> heap[e.field] ?: IrVal.Undefined
         is Expr.IsDefined -> {
             val v = heap[e.field]
@@ -291,19 +291,3 @@ private data class IrState(
         return roles.first()
     }
 }
-
-// Outcome conversion util
-private fun IrVal.toOutcome(): OutcomeType =
-    when (this) {
-        is IrVal.IntVal -> Num(v)
-        is IrVal.BoolVal -> Num(if (v) 1 else 0)
-        is IrVal.Hidden, IrVal.Undefined -> error("Payoff references hidden/undefined value")
-    }
-
-private fun IrVal.asConstForLabel(): vegas.frontend.Exp.Const =
-    when (this) {
-        is IrVal.IntVal -> Num(v)
-        is IrVal.BoolVal -> Bool(v)
-        is IrVal.Hidden -> Hidden(inner.asConstForLabel())
-        IrVal.Undefined -> UNDEFINED
-    }

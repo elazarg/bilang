@@ -52,14 +52,14 @@ fun splitGuardForPhase(sig: Signature, role: RoleId, phaseIdx: Int, idx: Index):
     }
     val decidable = !(usesSamePhase || usesUnrevealedHidden)
     return if (decidable) GuardSplit(sig.requires.condition, null)
-    else GuardSplit(Expr.BoolLit(true), sig.requires.condition)
+    else GuardSplit(Expr.BoolVal(true), sig.requires.condition)
 }
 
 /** Domain guard for SetType (reused at public set or reveal). */
 fun domainGuard(param: Parameter, field: FieldRef): Expr? =
     when (param.type) {
         is Type.SetType -> {
-            val tests = param.type.values.map { Expr.Eq(Expr.Field(field), Expr.IntLit(it)) }
+            val tests = param.type.values.map { Expr.Eq(Expr.Field(field), Expr.IntVal(it)) }
             tests.reduceOrNull<Expr, Expr> { acc, e -> Expr.Or(acc, e) }
         }
         is Type.IntType, is Type.BoolType -> null
@@ -133,7 +133,7 @@ fun collectFieldRefs(e: Expr): Set<FieldRef> {
         when (x) {
             is Expr.Field -> out += x.field
             is Expr.IsDefined -> out += x.field
-            is Expr.IntLit, is Expr.BoolLit -> {}
+            is Expr.IntVal, is Expr.BoolVal -> {}
             is Expr.Add -> { go(x.l); go(x.r) }
             is Expr.Sub -> { go(x.l); go(x.r) }
             is Expr.Mul -> { go(x.l); go(x.r) }
