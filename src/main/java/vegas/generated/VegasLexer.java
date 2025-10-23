@@ -1,4 +1,4 @@
-// Generated from C:/Users/elazar/workspace/vegas/Vegas.g4 by ANTLR 4.13.2
+// Generated from Vegas.g4 by ANTLR 4.13.2
 package vegas.generated;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;

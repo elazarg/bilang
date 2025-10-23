@@ -5,16 +5,26 @@ import vegas.VarId
 import vegas.FieldRef
 import vegas.ir.*
 
-fun genSolidityFromIR(g: GameIR) : String {
+val NO_ROLE = RoleId("None")
+
+/**
+ * Defines the context in which an IR expression is being translated.
+ * - WHERE_CLAUSE: Reading from function inputs and current storage.
+ * - PAYOFF: Reading from final, post-game storage.
+ */
+private enum class ExprContext { WHERE_CLAUSE, PAYOFF }
+
+fun genSolidityFromIR(g: GameIR): String {
     val solAst = irToSolidity(g)
     return renderSolidityContract(solAst)
 }
 
 /**
- * Main entry: translate IR to a SolidityContract AST that matches the current goldens.
+ * Main entry: translate IR to a SolidityContract AST.
  */
 fun irToSolidity(g: GameIR): SolidityContract {
     val history = ParamHistory(g)
+    val finalPhase = g.phases.size
 
     // ---- Constructor: set lastTs = block.timestamp
     val ctor = Constructor(
@@ -30,53 +40,21 @@ fun irToSolidity(g: GameIR): SolidityContract {
     // ---- Role enum (None + all roles)
     val roleEnum = EnumDecl(
         name = ROLE_ENUM,
-        values = listOf("None") + g.roles.map { it.name }
+        values = listOf(NO_ROLE.name) + g.roles.map { it.name }
     )
 
-    // ---- Storage (timing, role/balance, per-field state)
-    val storage = buildList {
-        // step timing
-        add(
-            StorageDecl(
-                type = SolType.Uint256,
-                visibility = Visibility.PUBLIC,
-                name = STEP_TIME_CONST,
-                constant = true,
-                value = uint(500) // keep as in golden
-            )
-        )
-        add(StorageDecl(SolType.Uint256, Visibility.PUBLIC, STEP_VAR))
-        add(StorageDecl(SolType.Uint256, Visibility.PUBLIC, LAST_TS_VAR))
-
-        // roles and balances
-        add(
-            StorageDecl(
-                type = SolType.Mapping(SolType.Address, SolType.EnumType(ROLE_ENUM)),
-                visibility = Visibility.PUBLIC,
-                name = ROLE_MAPPING
-            )
-        )
-        add(
-            StorageDecl(
-                type = SolType.Mapping(SolType.Address, SolType.Uint256),
-                visibility = Visibility.PUBLIC,
-                name = BALANCE_MAPPING
-            )
-        )
-
-        // Per-game storage (params, done flags, etc.)
-        addAll(buildGameStorage(g, history))
-    }
+    // ---- Storage (timing, role/balance, per-field state, payoff state)
+    val storage = buildGameStorage(g)
 
     // ---- Modifiers
-    val modifiers = listOf(
-        // modifier at_step(uint _step) { require(step == _step); /* timers commented per golden */ _; }
+    val modifiers = mutableListOf(
+        // modifier at_phase(uint _phase) { require(phase == _phase); /* timers removed */ _; }
         ModifierDecl(
-            name = "at_step",
-            params = listOf(Param(SolType.Uint256, "_step")),
+            name = "at_phase",
+            params = listOf(Param(SolType.Uint256, "_phase")),
             body = listOf(
-                require(v(STEP_VAR) eq v("_step"), "wrong step")
-                // (Your goldens keep STEP_TIME gate lines commented out.)
+                require(v(PHASE_VAR) eq v("_phase"), "wrong phase")
+                // (Timer logic removed to match goldens)
             )
         ),
         // modifier by(Role r) { require(role[msg.sender] == r, "bad role"); _; }
@@ -84,14 +62,23 @@ fun irToSolidity(g: GameIR): SolidityContract {
             name = "by",
             params = listOf(Param(SolType.EnumType(ROLE_ENUM), "r")),
             body = listOf(
-                require(index(ROLE_MAPPING, msgSender) eq enumVal(ROLE_ENUM, "r"), "bad role")
+                require(index(ROLE_MAPPING, msgSender) eq v("r"), "bad role")
+            )
+        ),
+        // modifier at_final_phase() { require(phase == FINAL_PHASE && !payoffs_distributed); _; }
+        ModifierDecl(
+            name = "at_final_phase",
+            params = emptyList(),
+            body = listOf(
+                require(v(PHASE_VAR) eq int(finalPhase), "game not over"),
+                require(not(v("payoffs_distributed")), "payoffs already sent")
             )
         )
     )
 
     // ---- Functions
     val functions = buildList {
-        // keccak helper (bool variant per your goldens; easy to extend if you add more arities/types)
+        // keccak helper (bool variant per goldens; can be extended)
         add(
             FunctionDecl(
                 name = "keccak",
@@ -111,18 +98,19 @@ fun irToSolidity(g: GameIR): SolidityContract {
             addAll(buildPhaseFunctions(g, phaseIdx, phase, history))
         }
 
-        // withdraw(): the exact flow your goldens implement (effects-first; low-level send tuple destructuring)
-        add(buildWithdraw())
+        // Payoff distribution function
+        add(buildPayoffFunction(g, history, finalPhase))
 
-        // (Any other game-specific functions can be added here.)
+        // withdraw()
+        add(buildWithdraw())
     }
 
-    // ---- Events (one per phase “broadcast” as in the goldens)
-    val events = g.phases.indices.map { i -> EventDecl("Broadcast$i") }
+    // ---- Events (one per phase “broadcast”)
+    val events = g.phases.indices.map { i -> EventDecl(broadcastEvent(i)) }
 
     // ---- Fallback (reject stray ETH)
     val fallback = FallbackDecl(
-        visibility = Visibility.PUBLIC, // rendered as `external` by ToText.kt per your current code path
+        visibility = Visibility.PUBLIC, // rendered as `external`
         stateMutability = StateMutability.PAYABLE,
         body = listOf(Statement.Revert("direct ETH not allowed"))
     )
@@ -141,9 +129,10 @@ fun irToSolidity(g: GameIR): SolidityContract {
 
 /* ============================== Helpers =============================== */
 
+private fun by(roleId: RoleId): ModifierCall = ModifierCall("by", listOf(role(roleId.name)))
+
 /**
  * Tracks where each (role,param) first appears (commit) and where it is revealed.
- * This lets us decide join/yield/reveal shapes and “done” flags.
  */
 private class ParamHistory(g: GameIR) {
     private data class Occ(val phase: Int, val visible: Boolean)
@@ -161,235 +150,440 @@ private class ParamHistory(g: GameIR) {
         }
     }
 
-    fun isReveal(role: RoleId, param: VarId, phase: Int): Boolean {
-        val xs = occ[FieldRef(role, param)] ?: return false
-        // First occurrence decides commit; later visible occurrence is reveal
-        val first = xs.minByOrNull { it.phase } ?: return false
-        return xs.any { it.phase == phase && it.visible && !first.visible && phase > first.phase }
+    /** Was the first time this param was defined a visible one? */
+    fun wasDefinedVisible(role: RoleId, param: VarId): Boolean {
+        val first = occ[FieldRef(role, param)]?.minByOrNull { it.phase }
+        return first?.visible == true
     }
 
-    fun needsCommitReveal(role: RoleId, sig: Signature, phase: Int): Boolean {
-        // A phase needs commit-reveal if it contains any hidden params whose reveal is later
-        return sig.parameters.any { p ->
-            !p.visible && isRevealedLater(role, p.name, phase)
-        }
-    }
-
+    /** Is this param hidden *in this phase* and revealed in a *future* phase? */
     private fun isRevealedLater(role: RoleId, param: VarId, phase: Int): Boolean {
         val xs = occ[FieldRef(role, param)] ?: return false
         val here = xs.find { it.phase == phase } ?: return false
         return !here.visible && xs.any { it.phase > phase && it.visible }
     }
+
+    /** Does this signature contain *any* param that is hidden now but revealed *later*? */
+    fun needsCommitReveal(role: RoleId, sig: Signature, phase: Int): Boolean {
+        return sig.parameters.any { p -> isRevealedLater(role, p.name, phase) }
+    }
+
+    /** Is this param being revealed *in this phase*? (i.e., visible now, but was hidden first) */
+    fun isReveal(role: RoleId, param: VarId, phase: Int): Boolean {
+        val xs = occ[FieldRef(role, param)] ?: return false
+        val first = xs.minByOrNull { it.phase } ?: return false
+        val here = xs.find { it.phase == phase } ?: return false
+        // It's a reveal if it's visible now, but its first definition was hidden
+        return here.visible && !first.visible && phase > first.phase
+    }
 }
 
-/** Build persistent storage for every param and its done-flags, per the current golden style. */
-private fun buildGameStorage(g: GameIR, history: ParamHistory): List<StorageDecl> = buildList {
+/** Build persistent storage for every param, done-flags, role addresses, and payoff state. */
+private fun buildGameStorage(g: GameIR): List<StorageDecl> = buildList {
+    // ---- Timing ----
+    add(
+        StorageDecl(
+            type = SolType.Uint256,
+            visibility = Visibility.PUBLIC,
+            name = PHASE_TIME_CONST,
+            constant = true,
+            value = uint(500) // (per golden)
+        )
+    )
+    add(StorageDecl(SolType.Uint256, Visibility.PUBLIC, PHASE_VAR))
+    add(StorageDecl(SolType.Uint256, Visibility.PUBLIC, LAST_TS_VAR))
+
+    // ---- Roles and Balances ----
+    add(
+        StorageDecl(
+            type = SolType.Mapping(SolType.Address, SolType.EnumType(ROLE_ENUM)),
+            visibility = Visibility.PUBLIC,
+            name = ROLE_MAPPING
+        )
+    )
+    add(
+        StorageDecl(
+            type = SolType.Mapping(SolType.Address, SolType.Int256),
+            visibility = Visibility.PUBLIC,
+            name = BALANCE_MAPPING
+        )
+    )
+    // Add storage for player addresses
+    g.roles.forEach { role ->
+        add(StorageDecl(SolType.Address, Visibility.PUBLIC, roleAddr(role)))
+    }
+    // Add flag to ensure payoffs are only sent once
+    add(StorageDecl(SolType.Bool, Visibility.PUBLIC, "payoffs_distributed"))
+
+
+    // ---- Game State Storage ----
+    val definedFields = mutableSetOf<FieldRef>()
     g.phases.forEachIndexed { phaseIdx, phase ->
         phase.forEach { (role, sig) ->
-            // Per-role “joined” flag (when role participates at least once; mirrors goldens)
+            // Per-role “joined” flag (for first join)
             if (sig.join != null) {
-                add(StorageDecl(SolType.Bool, Visibility.PUBLIC, "done${role.name}"))
+                add(StorageDecl(SolType.Bool, Visibility.PUBLIC, roleDone(role)))
             }
-            // For each parameter, create storage + done flags; hidden slot is uint256 (commit hash)
+            // For each parameter, create storage + done flags
             sig.parameters.forEach { p ->
-                val hidden = !p.visible
-                val t = if (hidden) SolType.Uint256 else translateType(p.type)
-                add(StorageDecl(t, Visibility.PUBLIC, storageParam(role, p.name, hidden)))
-                add(StorageDecl(SolType.Bool, Visibility.PUBLIC, doneFlag(role, p.name, hidden)))
+                val field = FieldRef(role, p.name)
+                // Storage for the value (hidden or visible)
+                if (!definedFields.contains(field)) {
+                    // This is the first time we see this field.
+                    // If it's hidden, we need *both* hidden and visible slots.
+                    // If it's visible, we just need visible slot.
+                    if (!p.visible) {
+                        add(StorageDecl(SolType.Uint256, Visibility.PUBLIC, storageParam(role, p.name, true)))
+                        add(StorageDecl(SolType.Bool, Visibility.PUBLIC, doneFlag(role, p.name, true)))
+                        add(StorageDecl(translateType(p.type), Visibility.PUBLIC, storageParam(role, p.name, false)))
+                        add(StorageDecl(SolType.Bool, Visibility.PUBLIC, doneFlag(role, p.name, false)))
+                    } else {
+                        add(StorageDecl(translateType(p.type), Visibility.PUBLIC, storageParam(role, p.name, false)))
+                        add(StorageDecl(SolType.Bool, Visibility.PUBLIC, doneFlag(role, p.name, false)))
+                    }
+                    definedFields.add(field)
+                }
             }
-            // Per-phase done marker (prevent double action)
-            add(StorageDecl(SolType.Bool, Visibility.PUBLIC, "done_${role.name}_$phaseIdx"))
+            // Per-phase action-taken marker
+            add(StorageDecl(SolType.Bool, Visibility.PUBLIC, phaseDone(role, phaseIdx)))
         }
     }
 }
 
-/** Per-phase functions: joins / yields / reveal + the Broadcast/nextStep pair. */
+/** Per-phase functions: joins / yields / reveal + ONE Broadcast/nextPhase pair. */
 private fun buildPhaseFunctions(
     g: GameIR,
     phaseIdx: Int,
     phase: Phase,
     history: ParamHistory
 ): List<FunctionDecl> = buildList {
-    // Start phase comment & end phase comments are handled by renderer via event + nextStep.
+
+    // 1. Generate all role-specific functions for this phase
     phase.forEach { (role, sig) ->
+        // Is this *this* signature a reveal phase for at least one param?
+        val isReveal = sig.parameters.any { p -> history.isReveal(role, p.name, phaseIdx) }
+        // Is this *this* signature a commit phase?
         val needsCR = history.needsCommitReveal(role, sig, phaseIdx)
+
+        // Determine the correct function name
+        val funcName = if (sig.join != null) {
+            joinFunc(role)
+        } else if (isReveal) {
+            revealFunc(role, phaseIdx)
+        } else {
+            yieldFunc(role, phaseIdx)
+        }
+
         when {
-            sig.join != null && sig.parameters.isEmpty() -> add(buildSimpleJoin(role, sig, phaseIdx))
-            sig.join != null && !needsCR -> add(buildJoinVisible(role, sig, phaseIdx))
-            sig.join != null && needsCR -> {
-                add(buildCommit(role, phaseIdx))
-                add(buildHalfStep(phaseIdx))
-                add(buildReveal(role, sig, phaseIdx)) // join reveal
+            // Case 1: A 'reveal' phase
+            isReveal -> add(buildReveal(role, sig, phaseIdx, funcName, g, history))
+
+            // Case 2: A 'commit' phase
+            needsCR -> add(buildCommit(role, sig, phaseIdx, funcName, g, history))
+
+            // --- From here, we know !isReveal AND !needsCR ---
+
+            // Case 3: It's a JOIN phase (and not a commit/reveal)
+            sig.join != null -> {
+                if (sig.parameters.isEmpty()) {
+                    // Case 3a: Simple join (no params)
+                    add(buildSimpleJoin(role, sig, phaseIdx, g, history))
+                } else {
+                    // Case 3b: Join with visible params
+                    add(buildJoinVisible(role, sig, phaseIdx, g, history))
+                }
             }
 
-            sig.join == null && !needsCR -> add(buildYield(role, sig, phaseIdx))
-            sig.join == null && needsCR -> {
-                add(buildCommit(role, phaseIdx))
-                add(buildHalfStep(phaseIdx))
-                add(buildReveal(role, sig, phaseIdx))
+            // Case 4: It's a YIELD phase (sig.join == null) (and not a commit/reveal)
+            else -> {
+                add(buildYield(role, sig, phaseIdx, funcName, g, history))
             }
         }
     }
 
-    // Phase broadcast + nextStep
-    add(buildHalfStep(phaseIdx))
+    // 2. AFTER all role functions, add ONE phase-advancing function
+    add(buildNextPhase(phaseIdx, phase))
 }
 
+
 /** join with no parameters (just stake + role assignment) */
-private fun buildSimpleJoin(role: RoleId, sig: Signature, phaseIdx: Int): FunctionDecl {
+private fun buildSimpleJoin(
+    role: RoleId,
+    sig: Signature,
+    phaseIdx: Int,
+    g: GameIR,
+    history: ParamHistory
+): FunctionDecl {
     val deposit = sig.join?.deposit?.v ?: 0
     return FunctionDecl(
-        name = "join_${role.name}",
+        name = joinFunc(role),
         params = emptyList(),
         visibility = Visibility.PUBLIC,
         stateMutability = if (deposit > 0) StateMutability.PAYABLE else StateMutability.NONPAYABLE,
         modifiers = listOf(
-            ModifierCall("by", listOf(enumVal(ROLE_ENUM, "None"))),
-            ModifierCall("at_step", listOf(int(phaseIdx)))
+            by(NO_ROLE),
+            atPhase(phaseIdx)
         ),
         body = buildList {
-            add(require(not(v("done${role.name}")), "already joined"))
-            add(assign(index(ROLE_MAPPING, msgSender), enumVal(ROLE_ENUM, role.name)))
-            if (deposit > 0) {
-                add(requireDeposit(deposit)); add(setBalance())
-            }
-            add(require(bool(true), "where")) // your current goldens keep “where” as true for now
-            add(assign(v("done${role.name}"), bool(true)))
+            addAll(buildJoinLogic(role, sig)) // Refactored
+            // Add translated 'where' clause
+            addAll(translateWhere(sig.requires.condition, g, history, role, phaseIdx))
+            // add(assign(v(roleDone(role)), bool(true))) // <-- Moved to helper
+            add(assign(v(phaseDone(role, phaseIdx)), bool(true)))
         }
     )
 }
 
 /** join with visible parameters (no commit) */
-private fun buildJoinVisible(role: RoleId, sig: Signature, phaseIdx: Int): FunctionDecl {
+private fun buildJoinVisible(
+    role: RoleId,
+    sig: Signature,
+    phaseIdx: Int,
+    g: GameIR,
+    history: ParamHistory
+): FunctionDecl {
     val deposit = sig.join?.deposit?.v ?: 0
     val inputs = sig.parameters.map { Param(translateType(it.type), inputParam(it.name, false)) }
     return FunctionDecl(
-        name = "join_${role.name}",
+        name = joinFunc(role),
         params = inputs,
         visibility = Visibility.PUBLIC,
         stateMutability = if (deposit > 0) StateMutability.PAYABLE else StateMutability.NONPAYABLE,
         modifiers = listOf(
-            ModifierCall("by", listOf(enumVal(ROLE_ENUM, "None"))),
-            ModifierCall("at_step", listOf(int(phaseIdx)))
+            by(NO_ROLE),
+            atPhase(phaseIdx)
         ),
         body = buildList {
-            add(require(not(v("done${role.name}")), "already joined"))
-            add(assign(index(ROLE_MAPPING, msgSender), enumVal(ROLE_ENUM, role.name)))
-            if (deposit > 0) {
-                add(requireDeposit(deposit)); add(setBalance())
-            }
+            addAll(buildJoinLogic(role, sig)) // Refactored
             addAll(translateDomainGuards(sig.parameters))           // visible domain guards
-            addAll(translateWhere(sig.requires.condition))
+            addAll(translateWhere(sig.requires.condition, g, history, role, phaseIdx))
             addAll(translateAssignments(role, sig.parameters))      // store + done flags
-            add(assign(v("done_${role.name}_$phaseIdx"), bool(true)))
+            // add(assign(v(roleDone(role)), bool(true))) // <-- Moved to helper
+            add(assign(v(phaseDone(role, phaseIdx)), bool(true)))
         }
     )
 }
 
 /** yield with visible params */
-private fun buildYield(role: RoleId, sig: Signature, phaseIdx: Int): FunctionDecl {
+private fun buildYield(
+    role: RoleId,
+    sig: Signature,
+    phaseIdx: Int,
+    funcName: String,
+    g: GameIR,
+    history: ParamHistory
+): FunctionDecl {
     val inputs = sig.parameters.map { Param(translateType(it.type), inputParam(it.name, false)) }
     return FunctionDecl(
-        name = "yield_${role.name}$phaseIdx",
+        name = funcName,
         params = inputs,
         visibility = Visibility.PUBLIC,
         stateMutability = StateMutability.NONPAYABLE,
         modifiers = listOf(
-            ModifierCall("by", listOf(enumVal(ROLE_ENUM, role.name))),
-            ModifierCall("at_step", listOf(int(phaseIdx)))
+            by(role),
+            atPhase(phaseIdx)
         ),
         body = buildList {
-            add(require(not(v("done_${role.name}_$phaseIdx")), "done"))
+            add(require(not(v(phaseDone(role, phaseIdx))), "done"))
             addAll(translateDomainGuards(sig.parameters))
-            addAll(translateWhere(sig.requires.condition))
+            addAll(translateWhere(sig.requires.condition, g, history, role, phaseIdx))
             addAll(translateAssignments(role, sig.parameters))
-            add(assign(v("done_${role.name}_$phaseIdx"), bool(true)))
+            add(assign(v(phaseDone(role, phaseIdx)), bool(true)))
         }
     )
 }
 
-/** commit step: hidden inputs hashed by caller beforehand; we store as uint256 per current goldens */
-private fun buildCommit(role: RoleId, phaseIdx: Int): FunctionDecl {
-    // one uint256 input per hidden field at this phase; name `_hidden_<param>`
-    // We don’t enforce domain here (hash isn’t in the domain).
-    return FunctionDecl(
-        name = "yield_${role.name}$phaseIdx",
-        params = listOf(
-            Param(
-                SolType.Uint256,
-                "_hidden_car"
+/** commit phase: dynamically builds inputs and assignments from signature */
+private fun buildCommit(
+    role: RoleId,
+    sig: Signature,
+    phaseIdx: Int,
+    funcName: String,
+    g: GameIR,
+    history: ParamHistory
+): FunctionDecl {
+    // Only params that are hidden *now*
+    val hiddenParams = sig.parameters.filter { !it.visible }
+
+    val inputs = hiddenParams.map { p ->
+        // All hidden inputs are passed as uint256 (hashes)
+        Param(SolType.Uint256, inputParam(p.name, hidden = true))
+    }
+
+    val body = buildList {
+        add(require(not(v(phaseDone(role, phaseIdx))), "done"))
+
+        // Add translated 'where' clause (can read from inputs)
+        addAll(translateWhere(sig.requires.condition, g, history, role, phaseIdx))
+
+        // Assign all hidden params from inputs to storage
+        hiddenParams.forEach { p ->
+            val pName = p.name
+            add(
+                assign(
+                    v(storageParam(role, pName, hidden = true)), // e.g., Alice_car_hidden
+                    v(inputParam(pName, hidden = true))       // e.g., _hidden_car
+                )
             )
-        ), // NOTE: minimal demo; real code should derive from signature@phase
+            add(
+                assign(
+                    v(doneFlag(role, pName, hidden = true)),     // e.g., Alice_car_hidden_done
+                    bool(true)
+                )
+            )
+        }
+        add(assign(v(phaseDone(role, phaseIdx)), bool(true)))
+    }.toMutableList()
+
+    // Check for join (e.g. MontyHall)
+    val deposit = sig.join?.deposit?.v ?: 0
+    val byRole = if (sig.join != null) NO_ROLE else role
+    val joinModifiers = listOf(
+        by(byRole),
+        atPhase(phaseIdx)
+    )
+    if (sig.join != null) {
+        // Prepend all join logic
+        body.addAll(0, buildJoinLogic(role, sig))
+    }
+
+
+    return FunctionDecl(
+        name = funcName,
+        params = inputs,
         visibility = Visibility.PUBLIC,
-        stateMutability = StateMutability.NONPAYABLE,
-        modifiers = listOf(
-            ModifierCall("by", listOf(enumVal(ROLE_ENUM, role.name))),
-            ModifierCall("at_step", listOf(int(phaseIdx)))
-        ),
-        body = listOf(
-            require(not(v("done_${role.name}_$phaseIdx")), "done"),
-            // require(true, "where") -- per golden
-            assign(v(storageParam(role, VarId("car"), true)), v("_hidden_car")),
-            assign(v(doneFlag(role, VarId("car"), true)), bool(true)),
-            assign(v("done_${role.name}_$phaseIdx"), bool(true))
-        )
+        stateMutability = if (deposit > 0) StateMutability.PAYABLE else StateMutability.NONPAYABLE,
+        modifiers = joinModifiers,
+        body = body
     )
 }
 
-/** “half step” (after commit) that just emits BroadcastN and moves the step forward */
-private fun buildHalfStep(phaseIdx: Int): FunctionDecl =
-    FunctionDecl(
-        name = "__nextStep$phaseIdx",
+/** reveal phase: dynamically build inputs, checks, and assignments */
+private fun buildReveal(
+    role: RoleId,
+    sig: Signature,
+    phaseIdx: Int,
+    funcName: String,
+    g: GameIR,
+    history: ParamHistory
+): FunctionDecl {
+    // These are the clear-text parameters being revealed *in this phase*
+    val clearParams = sig.parameters.filter { it.visible }
+
+    val inputs = buildList {
+        clearParams.forEach { p ->
+            add(Param(translateType(p.type), inputParam(p.name, hidden = false)))
+        }
+        // Add salt (assuming one salt for all reveals in this phase)
+        // TODO: This could be more robust, e.g., per-param salts
+        add(Param(SolType.Uint256, "salt"))
+    }
+
+    val body = buildList {
+        add(require(not(v(phaseDone(role, phaseIdx))), "done"))
+
+        // Verify commitment(s)
+        clearParams.forEach { p ->
+            // Check this is *actually* a reveal (was hidden before)
+            if (history.isReveal(role, p.name, phaseIdx)) {
+                val computed = SolExpr.Keccak256(
+                    SolExpr.AbiEncodePacked(
+                        listOf(
+                            v(inputParam(p.name, false)), // _param_car
+                            v("salt")
+                        )
+                    )
+                )
+                val stored = v(storageParam(role, p.name, hidden = true)) // Alice_car_hidden
+                add(require(computed eq SolExpr.Cast(SolType.Bytes32, stored), "bad reveal"))
+            }
+        }
+
+        // Check domain guards on clear-text values
+        addAll(translateDomainGuards(clearParams))
+        // Check 'where' clause on clear-text values
+        addAll(translateWhere(sig.requires.condition, g, history, role, phaseIdx))
+
+        // Assign clear-text values to visible storage
+        addAll(translateAssignments(role, clearParams))
+        add(assign(v(phaseDone(role, phaseIdx)), bool(true)))
+    }
+    return FunctionDecl(
+        name = funcName,
+        params = inputs,
+        visibility = Visibility.PUBLIC,
+        stateMutability = StateMutability.NONPAYABLE,
+        modifiers = listOf(
+            by(role),
+            atPhase(phaseIdx)
+        ),
+        body = body
+    )
+}
+
+private fun atPhase(phaseIdx: Int): ModifierCall = ModifierCall("at_phase", listOf(int(phaseIdx)))
+
+/** Single phase-advancing function, called after all role actions in a phase are done. */
+private fun buildNextPhase(phaseIdx: Int, phase: Phase): FunctionDecl {
+    val guards = phase.keys.map { role ->
+        require(v(phaseDone(role, phaseIdx)), "${role.name} not done")
+    }
+
+    return FunctionDecl(
+        name = nextPhaseFunc(phaseIdx),
         params = emptyList(),
         visibility = Visibility.PUBLIC,
         stateMutability = StateMutability.NONPAYABLE,
-        modifiers = emptyList(),
+        modifiers = emptyList(), // No 'at_phase' modifier, it checks its own phase
         body = listOf(
-            require(v(STEP_VAR) eq int(phaseIdx), "wrong step"),
-            Statement.Emit("Broadcast$phaseIdx", emptyList()),
-            assign(v(STEP_VAR), int(phaseIdx + 1)),
+            require(v(PHASE_VAR) eq int(phaseIdx), "wrong phase")
+        ) + guards + listOf( // Add all role-done guards
+            Statement.Emit(broadcastEvent(phaseIdx), emptyList()),
+            assign(v(PHASE_VAR), int(phaseIdx + 1)),
             assign(v(LAST_TS_VAR), SolExpr.Member(SolExpr.Var("block"), "timestamp"))
         )
     )
+}
 
-/** reveal step: verify keccak(value,salt) == bytes32(commit), store clear value, set done flags */
-private fun buildReveal(role: RoleId, sig: Signature, phaseIdx: Int): FunctionDecl {
-    val clearParams = sig.parameters.filter { it.visible }
-    val inputs = buildList {
-        inputs@ for (p in clearParams) add(Param(translateType(p.type), inputParam(p.name, false)))
-        // simple scheme: single salt shared by reveals; matches your current helper
-        add(Param(SolType.Uint256, "salt"))
+/** Function to calculate and assign payoffs to balances based on final state. */
+private fun buildPayoffFunction(g: GameIR, history: ParamHistory, finalPhase: Int): FunctionDecl {
+    val body = buildList<Statement> {
+        // Mark payoffs as distributed (effects-first)
+        add(assign(v("payoffs_distributed"), bool(true)))
+
+        // Calculate and assign payoffs to each role's balance
+        g.roles.forEach { role ->
+            val payoffExpr = g.payoffs[role] ?: return@forEach // Skip roles with no payoff
+
+            val solPayoff = translateIrExpr(
+                payoffExpr,
+                g,
+                history,
+                role, // 'currentRole' doesn't matter much for payoff context
+                finalPhase,
+                ExprContext.PAYOFF
+            )
+
+            val roleAddr = v(roleAddr(role))
+            // Assume payoffs are absolute, not deltas
+            add(assign(index(BALANCE_MAPPING, roleAddr), solPayoff))
+        }
     }
+
     return FunctionDecl(
-        name = "reveal_${role.name}$phaseIdx",
-        params = inputs,
+        name = "distributePayoffs",
+        params = emptyList(),
         visibility = Visibility.PUBLIC,
         stateMutability = StateMutability.NONPAYABLE,
-        modifiers = listOf(
-            ModifierCall("by", listOf(enumVal(ROLE_ENUM, role.name))),
-            ModifierCall("at_step", listOf(int(phaseIdx)))
-        ),
-        body = buildList {
-            add(require(not(v("done_${role.name}_$phaseIdx")), "done"))
-            // verify commitment(s) vs bytes32(stored)
-            sig.parameters.filter { it.visible }.forEach { p ->
-                val computed =
-                    SolExpr.Keccak256(SolExpr.AbiEncodePacked(listOf(v(inputParam(p.name, false)), v("salt"))))
-                val stored = v(storageParam(role, p.name, hidden = true))
-                add(require(computed eq SolExpr.Cast(SolType.Bytes32, stored), "bad reveal"))
-            }
-            addAll(translateWhere(sig.requires.condition))
-            addAll(translateAssignments(role, clearParams))
-            add(assign(v("done_${role.name}_$phaseIdx"), bool(true)))
-        }
+        modifiers = listOf(ModifierCall("at_final_phase", emptyList())),
+        body = body
     )
 }
 
-/** Withdraw like your goldens (handles exact/partial withdrawal, effects-first, low-level call). */
+
+/** Withdraw function (matches golden) */
 private fun buildWithdraw(): FunctionDecl {
-    val amount = "amount"
     val bal = "bal"
-    val d = "d"
     return FunctionDecl(
         name = "withdraw",
         params = emptyList(),
@@ -397,38 +591,171 @@ private fun buildWithdraw(): FunctionDecl {
         stateMutability = StateMutability.NONPAYABLE,
         modifiers = emptyList(),
         body = listOf(
-            // uint256 bal = balanceOf[msg.sender];
-            Statement.VarDecl(SolType.Uint256, bal, index(BALANCE_MAPPING, msgSender)),
+            // int256 bal = balanceOf[msg.sender];
+            Statement.VarDecl(SolType.Int256, bal, index(BALANCE_MAPPING, msgSender)),
             // require(bal > 0, "no funds");
             require(v(bal) gt int(0), "no funds"),
-            // uint256 amount = bal;
-            Statement.VarDecl(SolType.Uint256, amount, v(bal)),
-            // if (msg.value > 0) { uint256 d = msg.value; require(bal >= d, "insufficient"); amount = bal - d; }
-            Statement.If(
-                condition = msgValue gt int(0),
-                thenBranch = listOf(
-                    Statement.VarDecl(SolType.Uint256, d, msgValue),
-                    require(v(bal) ge v(d), "insufficient"),
-                    assign(v(amount), v(bal) - v(d))
-                )
-            ),
             // Effects-first: balanceOf[msg.sender] = 0;
             assign(index(BALANCE_MAPPING, msgSender), int(0)),
-            // Interaction: (bool ok, ) = payable(msg.sender).call{value: amount}("");
-            Statement.Raw("(bool ok, ) = payable(msg.sender).call{value: amount}(\"\");"),
+            // Interaction: (bool ok, ) = payable(msg.sender).call{value: bal}("");
+            Statement.Raw("(bool ok, ) = payable(msg.sender).call{value: uint256($bal)}(\"\");"),
             require(v("ok"), "ETH send failed")
         )
     )
 }
+
+/**
+ * Helper function to generate the common "join" logic.
+ * This includes role assignment, address saving, deposit handling, and 'done' flag.
+ */
+private fun buildJoinLogic(role: RoleId, sig: Signature): List<Statement> {
+    val deposit = sig.join?.deposit?.v ?: 0
+    val statements = mutableListOf<Statement>()
+
+    statements.add(require(not(v(roleDone(role))), "already joined"))
+    statements.add(assign(index(ROLE_MAPPING, msgSender), role(role.name)))
+    statements.add(assign(v(roleAddr(role)), msgSender)) // Save address
+
+    if (deposit > 0) {
+        statements.add(requireDeposit(deposit))
+        statements.add(setBalance())
+    }
+
+    statements.add(assign(v(roleDone(role)), bool(true))) // Mark as joined
+
+    return statements
+}
+
+private fun role(byRole: String): SolExpr.EnumValue = enumVal(ROLE_ENUM, byRole)
 
 /* ====================== IR→Solidity translation atoms ====================== */
 
 private fun translateType(t: Type): SolType = when (t) {
     is Type.IntType -> SolType.Int256
     is Type.BoolType -> SolType.Bool
-    is Type.SetType -> SolType.Int256
+    is Type.SetType -> SolType.Int256 // Enums/sets are represented as integers
 }
 
+/**
+ * Translates a vegas.ir.Expr into a vegas.backend.solidity.SolExpr.
+ * This is the core logic engine that replaces the 'translateWhere' stub.
+ */
+private fun translateIrExpr(
+    expr: Expr,
+    g: GameIR,
+    history: ParamHistory,
+    currentRole: RoleId,
+    phaseIdx: Int,
+    context: ExprContext
+): SolExpr {
+    when (expr) {
+        // Literals
+        is Expr.IntVal -> return int(expr.v)
+        is Expr.BoolVal -> return bool(expr.v)
+
+        // Field Access
+        is Expr.Field -> {
+            val (role, param) = expr.field
+            val sig = g.phases.getOrNull(phaseIdx)?.get(currentRole)
+
+            // Is this field an input to the CURRENT function?
+            val paramDef = sig?.parameters?.find { it.name == param }
+            val isInput = paramDef != null && context == ExprContext.WHERE_CLAUSE
+
+            if (isInput) {
+                // Read from function input (e.g., "_param_car" or "_hidden_car")
+                return v(inputParam(param, !paramDef.visible))
+            } else {
+                // Read from storage (e.g., "Alice_car_visible")
+                // For payoffs, always read visible.
+                // For 'where', we must know if it's been revealed yet.
+                val readVisible = history.wasDefinedVisible(role, param) ||
+                        context == ExprContext.PAYOFF ||
+                        // Check if it was revealed in a *previous* phase
+                        (0 until phaseIdx).any { p -> history.isReveal(role, param, p) }
+
+                return v(storageParam(role, param, hidden = !readVisible))
+            }
+        }
+
+        // 'isDefined' check
+        is Expr.IsDefined -> {
+            val (role, param) = expr.field
+            // Check if the *visible* param done flag is set
+            // (Assuming isDefined always refers to the public, revealed value)
+            return v(doneFlag(role, param, hidden = false))
+        }
+
+        // --- Arithmetic ---
+        is Expr.Add -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) +
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Sub -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) -
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Mul -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) *
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Div -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) /
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Neg -> return neg(translateIrExpr(expr.x, g, history, currentRole, phaseIdx, context))
+
+        // --- Comparison ---
+        is Expr.Eq -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) eq
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Ne -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) ne
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Lt -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) lt
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Le -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) le
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Gt -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) gt
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Ge -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) ge
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        // --- Boolean ---
+        is Expr.And -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) and
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Or -> return translateIrExpr(expr.l, g, history, currentRole, phaseIdx, context) or
+                translateIrExpr(expr.r, g, history, currentRole, phaseIdx, context)
+
+        is Expr.Not -> return not(translateIrExpr(expr.x, g, history, currentRole, phaseIdx, context))
+
+        // --- Ternary ---
+        is Expr.Ite -> return SolExpr.Ternary(
+            condition = translateIrExpr(expr.c, g, history, currentRole, phaseIdx, context),
+            ifTrue = translateIrExpr(expr.t, g, history, currentRole, phaseIdx, context),
+            ifFalse = translateIrExpr(expr.e, g, history, currentRole, phaseIdx, context)
+        )
+    }
+}
+
+
+/** Translates the IR 'where' condition into Solidity 'require' statements. */
+private fun translateWhere(
+    expr: Expr,
+    g: GameIR,
+    history: ParamHistory,
+    role: RoleId,
+    phaseIdx: Int
+): List<Statement.Require> {
+    if (expr == Expr.BoolVal(true)) return emptyList() // Don't emit 'require(true)'
+
+    val solCondition = translateIrExpr(
+        expr, g, history, role, phaseIdx, ExprContext.WHERE_CLAUSE
+    )
+    return listOf(require(solCondition, "where"))
+}
+
+/** Generates 'require' statements for domain validation (e.g., `x in {1, 2, 3}`) */
 private fun translateDomainGuards(params: List<Parameter>): List<Statement.Require> =
     params.filter { it.visible }.mapNotNull { p ->
         when (val t = p.type) {
@@ -445,17 +772,11 @@ private fun translateDomainGuards(params: List<Parameter>): List<Statement.Requi
         }
     }
 
-private fun translateWhere(expr: Expr): List<Statement.Require> {
-    // Current goldens effectively use `require(true, "where")` as a stub.
-    // Hook for real expression compiler if/when you wire it.
-    return listOf(require(bool(true), "where"))
-}
-
+/** Generates assignment statements to store visible parameters and set their done flags. */
 private fun translateAssignments(role: RoleId, params: List<Parameter>): List<Statement.Assign> =
-    params.flatMap { p ->
-        val hidden = !p.visible
-        val storage = v(storageParam(role, p.name, hidden))
-        val input = v(inputParam(p.name, hidden))
-        val done = v(doneFlag(role, p.name, hidden))
+    params.filter { it.visible }.flatMap { p ->
+        val storage = v(storageParam(role, p.name, false))
+        val input = v(inputParam(p.name, false))
+        val done = v(doneFlag(role, p.name, false))
         listOf(assign(storage, input), assign(done, bool(true)))
     }

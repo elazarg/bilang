@@ -216,7 +216,7 @@ $prefix}
 
 private fun renderExpr(expr: SolExpr): String = when (expr) {
     // Literals
-    is SolExpr.IntLit -> "int256(${expr.value})"
+    is SolExpr.IntLit -> "${expr.value}"
     is SolExpr.BoolLit -> "${expr.value}"
     is SolExpr.StringLit -> "\"${expr.value}\""
     is SolExpr.AddressLit -> expr.hex

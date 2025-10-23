@@ -1,66 +1,79 @@
-
 pragma solidity ^0.8.31;
+
 contract Trivial1 {
     constructor() {
-        lastTs = block.timestamp;
+            lastTs = block.timestamp;
     }
-    function keccak(bool x, uint256 salt) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(x, salt));
-    }
-    // Step
-    uint256 public constant STEP_TIME = 500;
-    uint256 public step;
-    uint256 public lastTs;
-    modifier at_step(uint256 _step) {
-        require(step == _step, "wrong step");
-        // require(block.timestamp < lastTs + STEP_TIME, "step expired");
-        _;
-    }
-    // roles
+
     enum Role { None, A }
+
+    uint256 constant public PHASE_TIME = uint256(500);
+
+    uint256 public phase;
+
+    uint256 public lastTs;
+
     mapping(address => Role) public role;
-    mapping(address => uint256) public balanceOf;
+
+    mapping(address => int256) public balanceOf;
+
+    address public address_A;
+
+    bool public payoffs_distributed;
+
+    bool public done_A;
+
+    bool public done_Phase0_A;
+
+    modifier at_phase(uint256 _phase) {
+            require((phase == _phase), "wrong phase");
+    }
+
     modifier by(Role r) {
-        require(role[msg.sender] == r, "bad role");
-        _;
+            require((role[msg.sender] == r), "bad role");
     }
-    // step 0
-    bool public doneA;
-    function join_A() public by(Role.None) at_step(0) {
-        require(!doneA, "already joined");
-        role[msg.sender] = Role.A;
-        balanceOf[msg.sender] = msg.value;
-        require(true, "where");
-        doneA = true;
+
+    modifier at_final_phase() {
+            require((phase == 1), "game not over");
+            require((!payoffs_distributed), "payoffs already sent");
     }
-    event Broadcast0(); // TODO: add params
-    function __nextStep0() public {
-        require(step == 0, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast0();
-        step = 1;
-        lastTs = block.timestamp;
+
+    function keccak(bool x, uint256 salt) public pure returns (bytes32 out) {
+            return keccak256(abi.encodePacked(x, salt));
     }
-    // end 0
-    function withdraw_1_A() public by(Role.A) at_step(1) {
-        int256 delta = int256(0);
-        uint256 bal = balanceOf[msg.sender];
-        uint256 amount;
-        if (delta >= 0) {
-            amount = bal + uint256(delta);
-        } else {
-            uint256 d = uint256(-delta);
-            require(bal >= d, "insufficient");
-            amount = bal - d;
-        }
-        // Effects first
-        balanceOf[msg.sender] = 0;
-        // Interaction
-        (bool ok, ) = payable(msg.sender).call{value: amount}("");
-        require(ok, "ETH send failed");
+
+    function join_A() public by(Role.None) at_phase(0) {
+            require((!done_A), "already joined");
+            role[msg.sender] = Role.A;
+            address_A = msg.sender;
+            done_A = true;
+            done_Phase0_A = true;
     }
-    // Reject stray ETH by default
-    receive() external payable {
-        revert("direct ETH not allowed");
+
+    function __nextPhase_Phase0() public {
+            require((phase == 0), "wrong phase");
+            require(done_Phase0_A, "A not done");
+            emit Broadcast_Phase0();
+            phase = 1;
+            lastTs = block.timestamp;
+    }
+
+    function distributePayoffs() public at_final_phase {
+            payoffs_distributed = true;
+            balanceOf[address_A] = 0;
+    }
+
+    function withdraw() public {
+            int256 bal = balanceOf[msg.sender];
+            require((bal > 0), "no funds");
+            balanceOf[msg.sender] = 0;
+            (bool ok, ) = payable(msg.sender).call{value: uint256(bal)}("");
+            require(ok, "ETH send failed");
+    }
+
+    event Broadcast_Phase0();
+
+    receive() public payable {
+            revert("direct ETH not allowed");
     }
 }

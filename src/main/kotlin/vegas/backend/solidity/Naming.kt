@@ -5,61 +5,53 @@ import vegas.VarId
 
 
 /**
- * Centralized naming scheme for all Solidity identifiers.
- * Single source of truth for variable/function name generation.
- */
-    // ===== Storage Variables =====
+* Centralized naming scheme for all Solidity identifiers.
+* Single source of truth for variable/function name generation.
+*/
+// ===== Storage Variables =====
 
-    fun storageParam(role: RoleId, param: VarId, hidden: Boolean): String {
-        val prefix = if (hidden) "hidden_" else ""
-        return "${role.name}_$prefix${param.name}"
-    }
+fun storageParam(role: RoleId, param: VarId, hidden: Boolean): String {
+    val prefix = if (hidden) "hidden_" else ""
+    return "${role.name}_$prefix${param.name}"
+}
 
-    fun doneFlag(role: RoleId, param: VarId, hidden: Boolean): String {
-        return storageParam(role, param, hidden) + "_done"
-    }
+fun doneFlag(role: RoleId, param: VarId, hidden: Boolean): String {
+    return "done_${storageParam(role, param, hidden)}"
+}
 
-    fun stepDone(role: RoleId, step: Int): String {
-        return "done_${role.name}_$step"
-    }
+fun phaseDone(role: RoleId, phase: Int): String {
+    return "done_Phase${phase}_${role.name}"
+}
 
-    fun roleDone(role: RoleId): String {
-        return "done${role.name}"
-    }
+fun roleDone(role: RoleId): String {
+    return "done_${role.name}"
+}
 
-    // ===== Commit-Reveal Infrastructure =====
+fun roleAddr(role: RoleId): String = "address_${role.name}"
 
-    fun commitMap(role: RoleId): String = "commits${role.name}"
-    fun timeMap(role: RoleId): String = "times${role.name}"
-    fun halfStepFlag(role: RoleId): String = "halfStep${role.name}"
+// ===== Functions =====
 
-    // ===== Functions =====
+fun joinFunc(role: RoleId): String = "join_${role.name}"
+fun yieldFunc(role: RoleId, phase: Int): String = "yield_Phase${phase}_${role.name}"
+fun revealFunc(role: RoleId, phase: Int): String = "reveal_Phase${phase}_${role.name}"
+fun nextPhaseFunc(phase: Int): String = "__nextPhase_Phase$phase"
 
-    fun joinFunc(role: RoleId): String = "join_${role.name}"
-    fun joinCommitFunc(role: RoleId): String = "join_commit_${role.name}"
-    fun halfStepFunc(role: RoleId): String = "__nextHalfStep${role.name}"
-    fun yieldFunc(role: RoleId, step: Int): String = "yield_${role.name}$step"
-    fun revealFunc(role: RoleId, step: Int): String = "reveal_${role.name}$step"
-    fun withdrawFunc(role: RoleId, step: Int): String = "withdraw_${step}_${role.name}"
-    fun nextStepFunc(step: Int): String = "__nextStep$step"
+// ===== Events =====
 
-    // ===== Events =====
+fun broadcastEvent(phase: Int): String = "Broadcast_Phase$phase"
 
-    fun broadcastEvent(step: Int): String = "Broadcast$step"
-    fun broadcastHalfEvent(role: RoleId): String = "BroadcastHalf${role.name}"
+// ===== Parameters =====
 
-    // ===== Parameters =====
+fun inputParam(param: VarId, hidden: Boolean): String {
+    val prefix = if (hidden) "hidden_" else ""
+    return "_$prefix${param.name}"
+}
 
-    fun inputParam(param: VarId, hidden: Boolean): String {
-        val prefix = if (hidden) "hidden_" else ""
-        return "_$prefix${param.name}"
-    }
+// ===== Built-in Names =====
 
-    // ===== Built-in Names =====
-
-    const val ROLE_ENUM = "Role"
-    const val ROLE_MAPPING = "role"
-    const val BALANCE_MAPPING = "balanceOf"
-    const val STEP_VAR = "step"
-    const val LAST_TS_VAR = "lastTs"
-    const val STEP_TIME_CONST = "STEP_TIME"
+const val ROLE_ENUM = "Role"
+const val ROLE_MAPPING = "role"
+const val BALANCE_MAPPING = "balanceOf"
+const val PHASE_VAR = "phase"
+const val LAST_TS_VAR = "lastTs"
+const val PHASE_TIME_CONST = "PHASE_TIME"

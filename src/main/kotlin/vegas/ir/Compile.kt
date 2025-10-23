@@ -18,7 +18,7 @@ import vegas.frontend.*
  */
 fun compileToIR(ast: GameAst): GameIR {
     val typeEnv = ast.types
-    val roles = findRoleIds(ast.game)
+    val roles = findRoleIdsWithChance(ast.game)
 
     val phases = collectPhases(ast.game, typeEnv)
     val payoffs = extractPayoffs(ast.game, typeEnv)
