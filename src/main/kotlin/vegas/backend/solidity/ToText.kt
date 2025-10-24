@@ -49,7 +49,7 @@ $body
 // ========== Declarations ==========
 
 private fun renderConstructor(constructor: Constructor): String {
-    val body = constructor.body.joinToString("\n") { renderStatement(it, 2) }
+    val body = constructor.body.joinToString("\n") { renderStatement(it, 1) }
     return """
 constructor() {
 $body
@@ -71,7 +71,7 @@ private fun renderStorage(decl: StorageDecl): String {
 
 private fun renderModifier(modifier: ModifierDecl): String {
     val params = modifier.params.joinToString(", ") { renderParam(it) }
-    val body = modifier.body.joinToString("\n") { renderStatement(it, 2) }
+    val body = modifier.body.joinToString("\n") { renderStatement(it, 1) }
     return """
 modifier ${modifier.name}($params) {
 $body
@@ -94,7 +94,7 @@ private fun renderFunction(func: FunctionDecl): String {
     val returns = if (func.returns.isNotEmpty()) {
         " returns (${func.returns.joinToString(", ") { renderParam(it) }})"
     } else ""
-    val body = func.body.joinToString("\n") { renderStatement(it, 2) }
+    val body = func.body.joinToString("\n") { renderStatement(it, 1) }
 
     return """
 function ${func.name}($params) $visibility$stateMutability$modifiers$returns {
@@ -130,7 +130,7 @@ private fun renderFallback(fallback: FallbackDecl): String {
         StateMutability.PAYABLE -> " payable"
         else -> ""
     }
-    val body = fallback.body.joinToString("\n") { renderStatement(it, 2) }
+    val body = fallback.body.joinToString("\n") { renderStatement(it, 1) }
     return """
 receive() $visibility$stateMutability {
 $body

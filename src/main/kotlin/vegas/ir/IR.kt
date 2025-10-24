@@ -68,7 +68,8 @@ sealed class Expr {
  * All backends implement via "done flags": <action>_<param>_done.
  */
 data class Requirement(
-    val captures: Set<FieldRef>,        // fields this guard MAY read (must be from earlier phases)
+    val captures: Set<FieldRef>,    // Fields this guard MAY read (must be from earlier phases)
+//    val deferred: Set<FieldRef>,    // Captures that are hidden (deferred)
     val condition: Expr             // boolean; see "Guard scheduling"
 )
 

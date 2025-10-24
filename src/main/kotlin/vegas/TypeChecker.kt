@@ -7,7 +7,6 @@ import vegas.frontend.Ext
 import vegas.frontend.Kind
 import vegas.frontend.Outcome
 import vegas.frontend.Query
-import vegas.frontend.Role
 import vegas.frontend.TypeExp.*
 import vegas.frontend.SourceLoc
 import vegas.frontend.Span
@@ -151,8 +150,33 @@ private class Checker(private val typeMap: Map<TypeId, TypeExp>, private val rol
         }
     }
 
+    // Extract all field references from an expression
+    private fun getReferencedFields(exp: Exp): Set<FieldRef> = when (exp) {
+        is Exp.Field -> setOf(exp.fieldRef)
+        is Exp.BinOp -> getReferencedFields(exp.left) + getReferencedFields(exp.right)
+        is Exp.UnOp -> getReferencedFields(exp.operand)
+        is Exp.Cond -> getReferencedFields(exp.cond) +
+                getReferencedFields(exp.ifTrue) +
+                getReferencedFields(exp.ifFalse)
+        is Exp.Call -> exp.args.flatMap { getReferencedFields(it) }.toSet()
+        is Exp.Let -> getReferencedFields(exp.init) + getReferencedFields(exp.exp)
+        is Exp.Var, is Exp.Const -> emptySet()
+    }
+
     private fun checkWhere(n: Set<RoleId>, m: Map<FieldRef, TypeExp>, q: Query) {
-        requireStatic(Checker(typeMap, n, env withMap m).type(q.where) == BOOL, "Where clause failed", q)
+        val newEnv = env withMap m
+        requireStatic(Checker(typeMap, n, newEnv).type(q.where) == BOOL, "Where clause failed", q)
+
+        // Validate: same-role hidden fields are ok (deferred checking)
+        // Other-role hidden fields are NOT ok (use-before-def)
+        getReferencedFields(q.where).forEach { fieldRef ->
+            if (newEnv.safeGetValue(fieldRef, q) is Hidden && fieldRef.role != q.role.id) {
+                throw StaticError(
+                    "Where clause uses $fieldRef before it is revealed",
+                    q
+                )
+            }
+        }
     }
 
     private fun type(outcome: Outcome) {
@@ -262,7 +286,7 @@ private class Checker(private val typeMap: Map<TypeId, TypeExp>, private val rol
         is Exp.Const.Hidden -> Hidden(type(exp.value as Exp))
         is Exp.Var -> try {
             env.getValue(exp.id)
-        } catch (e: NoSuchElementException) {
+        } catch (_: NoSuchElementException) {
             throw StaticError("Variable '${exp}' is undefined", exp)
         }
         is Exp.Field -> {
