@@ -108,6 +108,10 @@ private fun toPhaseMap(role: RoleId, pkt: Map<VarId, IrVal>): PhaseMap {
     return pkt.mapKeys { (v, _) -> FieldRef(role, v) }
 }
 
+private fun State.hasUndefined(role: RoleId): Boolean {
+    return lastPhase.any {p->p.key.role == role && p.value == IrVal.Undefined } || past?.hasUndefined(role) ?: false
+}
+
 /**
  * Manages information set identification and numbering.
  */
@@ -227,12 +231,12 @@ private class IrGameTreeBuilder(private val ir: GameIR) {
     // -----------------------------
     private fun enumeratePackets(sig: Signature, state: State, role: RoleId): List<Map<VarId, IrVal>> {
         if (sig.parameters.isEmpty()) return listOf(emptyMap())
-
+        if (state.hasUndefined(role))
+            return emptyList()  // No enumerated choices
         // enumerate per parameter, then cartesian product
         val lists: List<List<Pair<VarId, IrVal>>> = sig.parameters.map { p ->
             val fieldRef = FieldRef(role, p.name)
             val priorValue = state.get(fieldRef)
-
             val vals = when {
                 // If revealing a hidden value, only allow that specific value
                 priorValue is IrVal.Hidden && p.visible -> {
