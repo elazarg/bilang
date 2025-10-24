@@ -212,6 +212,9 @@ private fun buildGameStorage(g: GameIR): List<StorageDecl> = buildList {
     g.roles.forEach { role ->
         add(StorageDecl(SolType.Address, Visibility.PUBLIC, roleAddr(role)))
     }
+    g.chanceRoles.forEach { role ->
+        add(StorageDecl(SolType.Address, Visibility.PUBLIC, roleAddr(role)))
+    }
     // Add flag to ensure payoffs are only sent once
     add(StorageDecl(SolType.Bool, Visibility.PUBLIC, "payoffs_distributed"))
 
@@ -551,8 +554,8 @@ private fun buildPayoffFunction(g: GameIR, history: ParamHistory, finalPhase: In
         // Mark payoffs as distributed (effects-first)
         add(assign(v("payoffs_distributed"), bool(true)))
 
-        // Calculate and assign payoffs to each role's balance; chanceRoles are not considered
-        g.roles.forEach { role ->
+        // Calculate and assign payoffs to each role's balance
+        (g.roles + g.chanceRoles).forEach { role ->
             val payoffExpr = g.payoffs[role] ?: return@forEach // Skip roles with no payoff
 
             val solPayoff = translateIrExpr(
