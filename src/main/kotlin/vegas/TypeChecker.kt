@@ -14,8 +14,8 @@ import vegas.frontend.Span
 import vegas.frontend.TypeExp
 import vegas.frontend.VarDec
 
-internal class StaticError(reason: String, val node: Ast) : RuntimeException(reason) {
-    fun span(): Span? = SourceLoc.get(node)
+internal class StaticError(reason: String, val node: Ast? = null) : RuntimeException(reason) {
+    fun span(): Span? = if (node != null)  SourceLoc.get(node) else null
 }
 
 // Short helpers to keep call sites terse

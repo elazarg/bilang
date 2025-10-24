@@ -16,7 +16,7 @@ data class Index(
 fun buildIndex(g: GameIR): Index {
     val pos = mutableMapOf<FieldRef, MutableList<Occurrence>>()
     g.phases.forEachIndexed { pi, phase ->
-        phase.forEach { (role, sig) ->
+        phase.actions.forEach { (role, sig) ->
             sig.parameters.forEach { p ->
                 pos.getOrPut(FieldRef(role, p.name)) { mutableListOf() }
                     .add(Occurrence(pi, p.visible))
@@ -79,9 +79,9 @@ fun checkWellFormed(g: GameIR): List<WF> {
     val errs = mutableListOf<WF>()
 
     // 1) no duplicate param per role per phase
-    g.phases.forEachIndexed { pi, ph ->
+    g.phases.forEachIndexed { pi, phase ->
         val seen = mutableSetOf<FieldRef>()
-        ph.forEach { (r, sig) ->
+        phase.actions.forEach { (r, sig) ->
             sig.parameters.forEach { p ->
                 val key = FieldRef(r, p.name)
                 if (!seen.add(key)) errs += WF.DuplicateInPhase(key, pi)
@@ -98,8 +98,8 @@ fun checkWellFormed(g: GameIR): List<WF> {
     }
 
     // 3) guards’ captures only from earlier phases
-    g.phases.forEachIndexed { pi, ph ->
-        ph.forEach { (r, sig) ->
+    g.phases.forEachIndexed { pi, phase ->
+        phase.actions.forEach { (r, sig) ->
             sig.requires.captures.forEach { f ->
                 val occs = idx.pos[FieldRef(f.role, f.param)] ?: emptyList()
                 if (occs.any { it.phase == pi }) errs += WF.SamePhaseRead(r, pi, f)

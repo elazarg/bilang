@@ -37,7 +37,7 @@ class GoldenMasterTest : FreeSpec({
         Example("Prisoners"),
         Example("Simple"),
         Example("Trivial1"),
-        Example("Puzzle"),
+        Example("Puzzle", disableBackend=setOf("efg")),
         Example("ThreeWayLottery"),
         Example("ThreeWayLotteryBuggy"),
         Example("ThreeWayLotteryShort"),

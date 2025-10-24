@@ -5,7 +5,7 @@ contract MontyHallChance {
             lastTs = block.timestamp;
     }
 
-    enum Role { None, Host, Guest }
+    enum Role { None, Guest, Host }
 
     uint256 constant public PHASE_TIME = uint256(500);
 
@@ -16,8 +16,6 @@ contract MontyHallChance {
     mapping(address => Role) public role;
 
     mapping(address => int256) public balanceOf;
-
-    address public address_Host;
 
     address public address_Guest;
 
@@ -197,7 +195,6 @@ contract MontyHallChance {
 
     function distributePayoffs() public at_final_phase {
             payoffs_distributed = true;
-            balanceOf[address_Host] = (((done_Host_car && done_Host_goat) && done_Guest_switch)) ? 0 : (((!done_Host_car) || (!done_Host_goat))) ? (-100) : 0;
             balanceOf[address_Guest] = (((done_Host_car && done_Host_goat) && done_Guest_switch)) ? (((Guest_d != Host_car) == Guest_switch)) ? 20 : (-20) : (((!done_Host_car) || (!done_Host_goat))) ? 20 : (-100);
     }
 

@@ -51,7 +51,7 @@ private fun phaseToScribble(
     allRoles: Set<RoleId>
 ): List<Sast.Action> {
     // Process signatures in consistent order (matches AST sortedBy rankOrder)
-    return phase.entries
+    return phase.actions.entries
         .flatMap { (role, sig) ->
             signatureToScribble(role, sig, phaseIdx, history, allRoles)
         }
@@ -123,7 +123,7 @@ private fun buildParamHistory(g: GameIR): Map<FieldRef, List<ParamOccurrence>> {
     val history = mutableMapOf<FieldRef, MutableList<ParamOccurrence>>()
 
     g.phases.forEachIndexed { phaseIdx, phase ->
-        phase.forEach { (role, sig) ->
+        phase.actions.forEach { (role, sig) ->
             sig.parameters.forEach { param ->
                 val key = FieldRef(role, param.name)
                 history.getOrPut(key) { mutableListOf() }

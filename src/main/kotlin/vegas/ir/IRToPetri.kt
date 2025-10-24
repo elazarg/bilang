@@ -52,7 +52,7 @@ fun irToPetri(g: GameIR): PNSystem {
 
         // Per-role action transitions
         val roleDonePlaces = mutableListOf<PlaceId>()
-        for ((role, sig) in phase) {
+        for ((role, sig) in phase.actions) {
             val t = tidAct(i, role)
             trans += t
             // Pre: phase open

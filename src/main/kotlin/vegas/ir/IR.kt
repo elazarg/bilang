@@ -94,7 +94,10 @@ data class Signature(
  * - Can execute in any order (commute)
  * - Belong to same information set if they can't observe each other's choices
  * */
-typealias Phase = Map<RoleId, Signature>
+data class Phase(val actions: Map<RoleId, Signature>) {
+    fun roles(): Set<RoleId> = actions.keys
+    fun signature(role: RoleId) = actions[role]
+}
 
 /**
  * A GameIR describes a multi-party interaction where roles perform actions
@@ -103,6 +106,7 @@ typealias Phase = Map<RoleId, Signature>
 data class GameIR(
     val name: String,
     val roles: Set<RoleId>,
+    val chanceRoles: Set<RoleId>,
     val phases: List<Phase>,        // index is phase order; straight-path
     val payoffs: Map<RoleId, Expr>    // evaluated at terminal
 )

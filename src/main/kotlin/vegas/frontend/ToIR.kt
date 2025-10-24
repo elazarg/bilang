@@ -18,7 +18,8 @@ import vegas.ir.*
  */
 fun compileToIR(ast: GameAst): GameIR {
     val typeEnv = ast.types
-    val roles = findRoleIdsWithChance(ast.game)
+    val roles = findRoleIds(ast.game)
+    val chanceRoles = findChanceRoleIds(ast.game)
 
     val phases = collectPhases(ast.game, typeEnv)
     val payoffs = extractPayoffs(ast.game, typeEnv)
@@ -26,6 +27,7 @@ fun compileToIR(ast: GameAst): GameIR {
     return GameIR(
         name = ast.name,
         roles = roles,
+        chanceRoles = chanceRoles,
         phases = phases,
         payoffs = payoffs
     )
@@ -37,18 +39,18 @@ private fun collectPhases(ext: Ext, typeEnv: Map<AstType.TypeId, AstType>): List
     return when (ext) {
         is Ext.Bind -> {
             // Multiple queries in same Bind -> same phase (simultaneous)
-            val phase: Phase = ext.qs.associate { query ->
+            val phase = ext.qs.associate { query ->
                 query.role.id to lowerQuery(query, ext.kind, typeEnv)
             }
-            listOf(phase) + collectPhases(ext.ext, typeEnv)
+            listOf(Phase(phase)) + collectPhases(ext.ext, typeEnv)
         }
 
         is Ext.BindSingle -> {
             // Single query -> single-entry phase
-            val phase: Phase = mapOf(
+            val phase = mapOf(
                 ext.q.role.id to lowerQuery(ext.q, ext.kind, typeEnv)
             )
-            listOf(phase) + collectPhases(ext.ext, typeEnv)
+            listOf(Phase(phase)) + collectPhases(ext.ext, typeEnv)
         }
 
         is Ext.Value -> emptyList() // Terminal: no more phases

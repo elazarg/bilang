@@ -1,19 +1,33 @@
 package vegas.backend.gambit
 
-import vegas.FieldRef
 import vegas.Rational
 import vegas.RoleId
 import vegas.VarId
-import vegas.frontend.Exp.Const
-import vegas.frontend.Exp.Const.Num
 
 
-typealias OutcomeType = Num
+internal typealias OutcomeType = IrVal
 
 /**
- * Represents an extensive form game tree with better type safety and clearer semantics.
+ * Main class for extensive form game generation.
  */
-sealed class GameTree {
+internal class ExtensiveFormGame(
+    private val name: String,
+    private val description: String,
+    private val strategicPlayers: Set<RoleId>,
+    private val tree: GameTree
+) {
+    fun toEfg(): String {
+        val writer = EfgWriter(name, description, strategicPlayers)
+        return writer.write(tree)
+    }
+
+    override fun toString(): String = toEfg()
+}
+
+/**
+ * Represents an extensive form game tree.
+ */
+internal sealed class GameTree {
     /**
      * A decision/chance node in the game tree.
      * @property owner The role making the decision
@@ -23,12 +37,14 @@ sealed class GameTree {
      */
     data class Decision(
         val owner: RoleId,
-        val infosetId: InfosetId,
+        val infosetId: Int,
         val choices: List<Choice>,
         val isChance: Boolean = false
     ) : GameTree() {
         init {
-            require(choices.isNotEmpty()) { "Decision node must have at least one choice" }
+            require(choices.isNotEmpty()) {
+                "Decision node must have at least one choice"
+            }
             if (isChance) {
                 require(choices.all { it.probability != null }) {
                     "Chance nodes must have probabilities"
@@ -53,49 +69,8 @@ sealed class GameTree {
      * A single choice/action with its outcome.
      */
     data class Choice(
-        val action: Map<VarId, Const>,
+        val action: Map<VarId, IrVal>,
         val subtree: GameTree,
         val probability: Rational? = null  // Only for chance nodes
     )
-}
-
-/**
- * Unique identifier for an information set, based on the role and
- * the visible information available to that role.
- */
-data class InfosetId(
-    val role: RoleId,
-    val visibleState: Map<FieldRef, Const>
-) {
-    // Sequential numbering within each role
-    var number: Int = 0
-}
-
-// ============================================================================
-// Information Set Management
-// ============================================================================
-
-/**
- * Manages information set identification and numbering.
- */
-class InfosetManager {
-    private val infosetMap = mutableMapOf<InfosetId, Int>()
-    private val counters = mutableMapOf<RoleId, Int>()
-
-    /**
-     * Get or create an information set ID for the given role and visible state.
-     */
-    fun getInfosetNumber(role: RoleId, visibleState: Map<FieldRef, Const>): Int {
-        val key = InfosetId(role, visibleState)
-        return infosetMap.getOrPut(key) {
-            val count = counters.getOrDefault(role, 0) + 1
-            counters[role] = count
-            count
-        }
-    }
-
-    fun reset() {
-        infosetMap.clear()
-        counters.clear()
-    }
 }

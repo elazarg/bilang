@@ -99,12 +99,12 @@ internal fun findRoleIds(ext: Ext): Set<RoleId> = when (ext) {
     is Ext.Value -> setOf()
 }
 
-internal fun findRoleIdsWithChance(ext: Ext): Set<RoleId> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role.id }.toSet() else setOf()) + findRoleIdsWithChance(
+internal fun findChanceRoleIds(ext: Ext): Set<RoleId> = when (ext) {
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role.id }.toSet() else setOf()) + findChanceRoleIds(
         ext.ext
     )
 
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) setOf(ext.q.role.id) else setOf()) + findRoleIdsWithChance(
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN_CHANCE) setOf(ext.q.role.id) else setOf()) + findChanceRoleIds(
         ext.ext
     )
 

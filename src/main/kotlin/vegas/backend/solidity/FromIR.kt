@@ -40,7 +40,7 @@ fun irToSolidity(g: GameIR): SolidityContract {
     // ---- Role enum (None + all roles)
     val roleEnum = EnumDecl(
         name = ROLE_ENUM,
-        values = listOf(NO_ROLE.name) + g.roles.map { it.name }
+        values = (listOf(NO_ROLE) + g.roles + g.chanceRoles).map { it.name }
     )
 
     // ---- Storage (timing, role/balance, per-field state, payoff state)
@@ -141,7 +141,7 @@ private class ParamHistory(g: GameIR) {
 
     init {
         g.phases.forEachIndexed { p, phase ->
-            phase.forEach { (role, sig) ->
+            phase.actions.forEach { (role, sig) ->
                 sig.parameters.forEach { prm ->
                     occ.getOrPut(FieldRef(role, prm.name)) { mutableListOf() }
                         .add(Occ(p, prm.visible))
@@ -219,7 +219,7 @@ private fun buildGameStorage(g: GameIR): List<StorageDecl> = buildList {
     // ---- Game State Storage ----
     val definedFields = mutableSetOf<FieldRef>()
     g.phases.forEachIndexed { phaseIdx, phase ->
-        phase.forEach { (role, sig) ->
+        phase.actions.forEach { (role, sig) ->
             // Per-role “joined” flag (for first join)
             if (sig.join != null) {
                 add(StorageDecl(SolType.Bool, Visibility.PUBLIC, roleDone(role)))
@@ -259,7 +259,7 @@ private fun buildPhaseFunctions(
 ): List<FunctionDecl> = buildList {
 
     // 1. Generate all role-specific functions for this phase
-    phase.forEach { (role, sig) ->
+    phase.actions.forEach { (role, sig) ->
         // Is this *this* signature a reveal phase for at least one param?
         val isReveal = sig.parameters.any { p -> history.isReveal(role, p.name, phaseIdx) }
         // Is this *this* signature a commit phase?
@@ -525,7 +525,7 @@ private fun atPhase(phaseIdx: Int): ModifierCall = ModifierCall("at_phase", list
 
 /** Single phase-advancing function, called after all role actions in a phase are done. */
 private fun buildNextPhase(phaseIdx: Int, phase: Phase): FunctionDecl {
-    val guards = phase.keys.map { role ->
+    val guards = phase.roles().map { role ->
         require(v(phaseDone(role, phaseIdx)), "${role.name} not done")
     }
 
@@ -551,7 +551,7 @@ private fun buildPayoffFunction(g: GameIR, history: ParamHistory, finalPhase: In
         // Mark payoffs as distributed (effects-first)
         add(assign(v("payoffs_distributed"), bool(true)))
 
-        // Calculate and assign payoffs to each role's balance
+        // Calculate and assign payoffs to each role's balance; chanceRoles are not considered
         g.roles.forEach { role ->
             val payoffExpr = g.payoffs[role] ?: return@forEach // Skip roles with no payoff
 
@@ -656,7 +656,7 @@ private fun translateIrExpr(
         // Field Access
         is Expr.Field -> {
             val (role, param) = expr.field
-            val sig = g.phases.getOrNull(phaseIdx)?.get(currentRole)
+            val sig = g.phases.getOrNull(phaseIdx)?.actions?.get((currentRole))
 
             // Is this field an input to the CURRENT function?
             val paramDef = sig?.parameters?.find { it.name == param }

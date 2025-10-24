@@ -1,5 +1,5 @@
 EFG 2 R "MontyHallChance" { "Guest" }
-"MontyHallChance"
+"Generated from IR"
 
 c "" 1 "" { "Hidden(0)" 1/3 "Hidden(1)" 1/3 "Hidden(2)" 1/3 } 0
 p "" 1 1 "" { "0" "1" "2" "None" } 0
