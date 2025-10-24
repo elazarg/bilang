@@ -1,15 +1,25 @@
 package vegas
 
-import vegas.Exp.*
-import vegas.Outcome.*
-import vegas.TypeExp.*
+import vegas.frontend.Exp.*
+import vegas.frontend.Outcome.*
+import vegas.frontend.TypeExp.*
 import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.string.shouldContain
+import vegas.frontend.Exp
+import vegas.frontend.GameAst
+import vegas.frontend.Ext
+import vegas.frontend.Kind
+import vegas.frontend.Outcome
+import vegas.frontend.Query
+import vegas.frontend.Role
+import vegas.frontend.TypeExp
+import vegas.frontend.VarDec
+import vegas.ir.desugar
 
-// -------- Test-local builders (readable, minimal) --------
+// -------- Test-local builders --------
 private object B {
     // literals
     fun n(i: Int) = Const.Num(i)
@@ -18,28 +28,28 @@ private object B {
     fun hid(e: Const) = Const.Hidden(e)
 
     // variables / members
-    fun v(name: String) = Var(name)
-    fun m(role: Role, field: String) = Member(role, Var(field))
+    fun v(name: String) = Var(VarId(name))
+    fun m(role: Role, field: String) = Field(FieldRef(role.id, VarId(field)))
 
     fun not(e: Exp) = UnOp("!", e)
     fun isDef(e: Exp) = UnOp("isDefined", e)
     fun isUndef(e: Exp) = UnOp("isUndefined", e)
-    fun abs(e: Exp) = Call(Var("abs"), listOf(e))
+    fun abs(e: Exp) = Call(v("abs"), listOf(e))
 
     fun ite(c: Exp, t: Exp, f: Exp) = Exp.Cond(c, t, f)
 
     // let (expression & outcome)
     fun letE(name: String, t: TypeExp, init: Exp, body: Exp) =
-        Exp.Let(VarDec(Var(name), t), init, body)
+        Exp.Let(VarDec(v(name), t), init, body)
 
     fun letO(name: String, t: TypeExp, init: Exp, body: Outcome) =
-        Outcome.Let(VarDec(Var(name), t), init, body)
+        Outcome.Let(VarDec(v(name), t), init, body)
 
     // param declarations
-    fun dec(name: String, t: String) = VarDec(Var(name), TypeId(t))
-    fun dec(name: String, t: TypeExp) = VarDec(Var(name), t)
-    fun i(name: String) = VarDec(Var(name), INT)
-    fun bl(name: String) = VarDec(Var(name), BOOL)
+    fun dec(name: String, t: String) = VarDec(v(name), TypeId(t))
+    fun dec(name: String, t: TypeExp) = VarDec(v(name), t)
+    fun i(name: String) = VarDec(v(name), INT)
+    fun bl(name: String) = VarDec(v(name), BOOL)
     fun opt(t: TypeExp) = Opt(t)
     fun hidden(t: TypeExp) = Hidden(t)
 
@@ -73,7 +83,7 @@ private object B {
         vararg binds: Ext,
         value: Value? = null,
         name: String = "TestProgram"
-    ): ExpProgram {
+    ): GameAst {
         val end: Ext = Ext.Value(value ?: Value(emptyMap()))
         val game = binds.reversed().fold(end) { acc, e ->
             when (e) {
@@ -82,14 +92,14 @@ private object B {
                 is Ext.Value -> error("Value belongs in 'value' param")
             }
         }
-        return ExpProgram(name, desc = "", types = types, game = game)
+        return GameAst(name, desc = "", types = types, game = game)
     }
 
     fun program(
         vararg binds: Ext,
         value: Value? = null,
         name: String = "TestProgram"
-    ): ExpProgram {
+    ): GameAst {
         return program(emptyMap(), binds = binds, value = value, name = name)
     }
 }
@@ -110,22 +120,24 @@ infix fun Exp.neq(r: Exp) = BinOp("!=", this, r)
 infix fun Exp.iff(r: Exp) = BinOp("<->", this, r)
 infix fun Exp.xnor(r: Exp) = BinOp("<-!->", this, r)
 
-val Q = Role("Q")
-val P = Role("P")
-val P1 = Role("P1")
-val P2 = Role("P2")
-val P3 = Role("P3")
-val H = Role("H")
-val Host = Role("Host")
-val Guest = Role("Guest")
-val Alice = Role("Alice")
-val Bob = Role("Bob")
+fun role(name: String) = Role(RoleId(name))
+
+val Q = role("Q")
+val P = role("P")
+val P1 = role("P1")
+val P2 = role("P2")
+val P3 = role("P3")
+val H = role("H")
+val Host = role("Host")
+val Guest = role("Guest")
+val Alice = role("Alice")
+val Bob = role("Bob")
 
 class TypeCheckerTest : FreeSpec({
 
     "Type System - Basic Types" - {
         "should accept valid primitive types" - {
-            data class ValidCase(val prog: ExpProgram, val description: String)
+            data class ValidCase(val prog: GameAst, val description: String)
 
             withData(
                 ValidCase(
@@ -165,7 +177,7 @@ class TypeCheckerTest : FreeSpec({
 
 
         "should reject type mismatches in basic expressions" - {
-            data class TypeMismatchCase(val prog: ExpProgram, val expectedError: String)
+            data class TypeMismatchCase(val prog: GameAst, val expectedError: String)
 
             withData(
                 TypeMismatchCase(
@@ -393,7 +405,7 @@ class TypeCheckerTest : FreeSpec({
             }
         }
     }
-    "Type System - Roles and Member Access" - {
+    "Type System - Roles and Field Access" - {
 
         "should validate role declarations" - {
 
@@ -419,7 +431,7 @@ class TypeCheckerTest : FreeSpec({
 
             "rejects accessing undefined roles" {
                 val bad = B.program(
-                    B.yieldTo(Role("UnknownRole"), listOf(B.i("x")))
+                    B.yieldTo(role("UnknownRole"), listOf(B.i("x")))
                 )
                 val ex = shouldThrow<StaticError> { typeCheck(bad) }
                 ex.message shouldContain "UnknownRole is not a role"
@@ -783,7 +795,7 @@ class TypeCheckerTest : FreeSpec({
             shouldNotThrow<StaticError> { typeCheck(pConst) }
 
             // role members
-            val pMembers = B.program(
+            val pFields = B.program(
                 B.join(P),
                 B.yieldTo(P, listOf(B.i("a"), B.i("b"), B.i("c"))),
                 value = B.pay(
@@ -796,7 +808,7 @@ class TypeCheckerTest : FreeSpec({
                     )
                 )
             )
-            shouldNotThrow<StaticError> { typeCheck(pMembers) }
+            shouldNotThrow<StaticError> { typeCheck(pFields) }
         }
 
         "rejects alldiff with mixed or non-integer arguments" {
@@ -829,7 +841,7 @@ class TypeCheckerTest : FreeSpec({
     }
 
 
-    "Type System - Complex Game Scenarios" - {
+    "Type System - Complex GameIR Scenarios" - {
 
         "Monty Hall game type checking" {
             val types = mapOf(
@@ -958,7 +970,7 @@ class TypeCheckerTest : FreeSpec({
 
         "should provide helpful error messages" - {
             data class ErrorMessageCase(
-                val prog: ExpProgram,
+                val prog: GameAst,
                 val expectedKeywords: List<String>
             )
 
@@ -973,7 +985,7 @@ class TypeCheckerTest : FreeSpec({
                 ),
                 ErrorMessageCase(
                     B.program(
-                        B.yieldTo(Role("UnknownRole"), listOf(B.i("x")))
+                        B.yieldTo(role("UnknownRole"), listOf(B.i("x")))
                     ),
                     listOf("UnknownRole is not a role")
                 ),

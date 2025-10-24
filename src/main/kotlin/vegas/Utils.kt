@@ -1,5 +1,7 @@
 package vegas
 
+import vegas.frontend.TypeExp
+
 
 fun <K, V> Map<K, List<V>>.product(): List<Map<K, V>> =
         entries.map { (key, value) -> value.map { Pair(key, it) } }.product().map { it.toMap() }

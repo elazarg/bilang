@@ -1,5 +1,5 @@
 EFG 2 R "Prisoners" { "A" "B" }
-"Prisoners"
+"Generated from IR"
 
 p "" 1 1 "" { "true" "false" "None" } 0
 p "" 2 1 "" { "true" "false" "None" } 0

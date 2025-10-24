@@ -1,38 +1,20 @@
 package vegas
 
-import vegas.generated.VegasLexer
-import vegas.generated.VegasParser
-import org.antlr.v4.runtime.CharStreams
-import org.antlr.v4.runtime.CommonTokenStream
+import vegas.backend.scribble.prettyPrintAll
+import vegas.backend.scribble.generateScribble
+import vegas.backend.solidity.genSolidityFromIR
+import vegas.backend.gambit.generateExtensiveFormGame
+import vegas.backend.smt.generateSMT
+import vegas.frontend.parseFile
+import vegas.frontend.GameAst
+import vegas.frontend.findRoleIds
+import vegas.frontend.compileToIR
 import java.nio.file.Paths
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.system.exitProcess
 
-
-fun parseCode(code: String, uri: URI = URI.create("inmemory:repl.vg")): ExpProgram {
-    // Ensure there's always a withdraw statement
-    val fullCode = if (!code.contains("withdraw")) "$code; withdraw {}" else code
-
-    // Give ANTLR a source name that matches the URI (helps error messages)
-    val chars = CharStreams.fromString(fullCode, uri.toString())
-    val tokens = CommonTokenStream(VegasLexer(chars))
-    val ast = VegasParser(tokens).program()
-
-    return AstTranslator(uri).visitProgram(ast)
-}
-
-fun parseFile(inputFilename: String): ExpProgram {
-    val path = Paths.get(inputFilename)
-    val chars = CharStreams.fromPath(path) // source name = path.toString()
-    val tokens = CommonTokenStream(VegasLexer(chars))
-    val ast = VegasParser(tokens).program()
-
-    return AstTranslator(path.toUri()).visitProgram(ast)
-}
-
-private fun doTypecheck(program: ExpProgram) {
+private fun doTypecheck(program: GameAst) {
     try {
         typeCheck(program)
     } catch (ex: NotImplementedError) {
@@ -98,13 +80,13 @@ private fun runFile(inputPath: Path, outputs: Outputs) {
     println("Analyzing $inputPath ...")
     val program = parseFile(inputPath.toString()).copy(name = baseName, desc = baseName)
 
-    println("roles: " + findRoles(program.game))
+    println("roles: " + findRoleIds(program.game))
     doTypecheck(program)
-
-    if (outputs.z3) writeFile(outZ3.toString()) { smt(program) }
-    if (outputs.efg) writeFile(outEfg.toString()) { buildExtensiveFormGame(program).toEfg() }
-    if (outputs.scr) writeFile(outScr.toString()) { programToScribble(program).prettyPrintAll() }
-    if (outputs.sol) writeFile(outSol.toString()) { genGame(program) }
+    val ir = compileToIR(program)
+    if (outputs.z3) writeFile(outZ3.toString()) { generateSMT(program) }
+    if (outputs.efg) writeFile(outEfg.toString()) { generateExtensiveFormGame(ir) }
+    if (outputs.scr) writeFile(outScr.toString()) { generateScribble(program).prettyPrintAll() }
+    if (outputs.sol) writeFile(outSol.toString()) { genSolidityFromIR(ir) }
 
     println("Done")
     println()

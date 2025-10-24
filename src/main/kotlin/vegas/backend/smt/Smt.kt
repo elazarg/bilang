@@ -1,9 +1,20 @@
-package vegas
+package vegas.backend.smt
 
-import vegas.Exp.*
-import vegas.Exp.Const.*
+import vegas.FieldRef
+import vegas.RoleId
+import vegas.StaticError
+import vegas.VarId
+import vegas.frontend.Exp
+import vegas.frontend.Exp.*
+import vegas.frontend.Exp.Const.*
+import vegas.frontend.GameAst
+import vegas.frontend.Ext
+import vegas.frontend.Query
+import vegas.frontend.TypeExp
+import vegas.ir.desugar
+import vegas.join
 
-fun smt(g: ExpProgram) = """
+fun generateSMT(g: GameAst) = """
     |${defineTypes(g.types.mapKeys { it.key.name })}
     |
     |${ext(g.game)}
@@ -20,7 +31,7 @@ private fun ext(e: Ext): String = when (e) {
     is Ext.BindSingle -> bind(e.q) + ext(e.ext)
     is Ext.Value -> {
         desugar(e.outcome).ts.map { (a, b) ->
-            val m = Member(a, Var("outcome"))
+            val m = Field(FieldRef(a.id, VarId("outcome")))
             // TODO: define-fun? declare-fun?
             "(declare-const ${exp(m)} Int)\n" +
             "(assert ${exp(BinOp("=", m, b))})"
@@ -29,7 +40,7 @@ private fun ext(e: Ext): String = when (e) {
 }
 
 private fun bind(q: Query) = if (q.params.isEmpty()) "" else {
-    val vars = q.params.filter { it.type !is TypeExp.Hidden }.map { (v, type) -> Pair(Member(q.role, v), type) }
+    val vars = q.params.filter { it.type !is TypeExp.Hidden }.map { (v, type) -> Pair(Field(FieldRef(q.role.id, v.id)), type) }
     val decls = vars.map { (m, type) -> "(declare-const ${exp(m)} ${smtTypeOf(type)})" }.join("\n")
     val dones = vars.map { (m, _) -> "(declare-const ${exp(m)}_done Bool)" }.join("\n")
     //val doneQuit = vars.map { (m, _) -> "(assert (=> ${exp(m)}_done last_var_done))" }.join("\n")
@@ -49,12 +60,12 @@ private fun exp(e: Exp): String = when (e) {
 
     is UnOp -> when (e.op) {
         "isUndefined" -> {
-            val m = e.operand as Member
-            "(not ${m.target}_${m.field}_done)"
+            val m = (e.operand as Field).fieldRef
+            "(not ${m.role}_${m.param}_done)"
         }
         "isDefined" -> {
-            val m = e.operand as Member
-            "${m.target}_${m.field}_done"
+            val m =(e.operand as Field).fieldRef
+            "${m.role}_${m.param}_done"
         }
         else -> "(${unop(e.op)} ${exp(e.operand)})"
     }
@@ -63,14 +74,14 @@ private fun exp(e: Exp): String = when (e) {
         if (e.op == "!=") exp(UnOp("!", e.copy(op = "==")))
         else "(${binop(e.op)} ${exp(e.left)} ${exp(e.right)})"
 
-    is Var -> e.name
-    is Member -> "${e.target}_${e.field}"
+    is Var -> e.id.name
+    is Field -> "${e.fieldRef.role}_${e.fieldRef.param}"
     is Cond -> "(ite ${exp(e.cond)} ${exp(e.ifTrue)} ${exp(e.ifFalse)})"
     is Num -> "${e.n}"
     is Bool -> "${e.truth}"
     is Address -> TODO()
     is Hidden -> exp(e.value as Exp)
-    is Let -> "(let ${e.dec.v.name} ${exp(e.init)} ${exp(e.exp)})"
+    is Let -> "(let ${e.dec.v.id.name} ${exp(e.init)} ${exp(e.exp)})"
     UNDEFINED -> throw StaticError("Undefined", e)
 }
 
@@ -104,7 +115,7 @@ private fun smtTypeOf(t: TypeExp): String = when (t) {
 
 
 fun main(args: Array<String>) {
-    val e = BinOp("<", Num(5), Member(Role("Host"), Var("choice")))
+    val e = BinOp("<", Num(5), Field(FieldRef(RoleId("Host"), VarId("choice"))))
     println(e)
     println(exp(e))
 }

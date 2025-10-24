@@ -1,4 +1,4 @@
-package vegas
+package vegas.frontend
 
 import java.net.URI
 import java.util.IdentityHashMap

@@ -1,21 +1,21 @@
 package vegas
 
 
-data class Env<T>(val g: Map<Exp.Var, T>, val r: Map<Role, T>, val h: Map<Pair<Role, Exp.Var>, T>) {
+data class Env<T>(val g: Map<VarId, T>, val r: Map<RoleId, T>, val h: Map<FieldRef, T>) {
     constructor(): this(mapOf(), mapOf(), mapOf())
 
-    operator fun plus(p: Pair<Exp.Var, T>) = Env(g + p, r, h)
-    operator fun plus(p: Map<Exp.Var, T>) = Env(g + p, r, h)
-    infix fun withMap(p: Map<Pair<Role, Exp.Var>, T>) = Env(g, r, h + p)
-    infix fun withRole(p: Pair<Role, T>) = Env(g, r + p, h)
+    operator fun plus(p: Pair<VarId, T>) = Env(g + p, r, h)
+    operator fun plus(p: Map<VarId, T>) = Env(g + p, r, h)
+    infix fun withMap(p: Map<FieldRef, T>) = Env(g, r, h + p)
+    infix fun withRole(p: Pair<RoleId, T>) = Env(g, r + p, h)
 
-    fun getValue(role: Role, field: Exp.Var) = getValue(Pair(role, field))
-    fun getValue(m: Pair<Role, Exp.Var>) = h.getValue(m)
+    fun getValue(role: RoleId, field: VarId) = getValue(FieldRef(role, field))
+    fun getValue(m: FieldRef) = h.getValue(m)
 
-    fun getValue(v: Exp.Var) = g.getValue(v)
-    fun getValue(role: Role) = r.getValue(role)
+    fun getValue(v: VarId) = g.getValue(v)
+    fun getValue(role: RoleId) = r.getValue(role)
 
     // Utils
-    val Pair<Role, String>.role: Role get() = first
-    val Pair<Role, String>.field: String get() = second
+    val Pair<RoleId, VarId>.role: RoleId get() = first
+    val Pair<RoleId, VarId>.field: VarId get() = second
 }

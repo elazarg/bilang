@@ -1,202 +1,229 @@
-
 pragma solidity ^0.8.31;
+
 contract MontyHall {
     constructor() {
         lastTs = block.timestamp;
     }
-    function keccak(bool x, uint256 salt) public pure returns (bytes32) {
+
+    enum Role { None, Host, Guest }
+
+    uint256 constant public PHASE_TIME = uint256(500);
+
+    uint256 public phase;
+
+    uint256 public lastTs;
+
+    mapping(address => Role) public role;
+
+    mapping(address => int256) public balanceOf;
+
+    address public address_Host;
+
+    address public address_Guest;
+
+    bool public payoffs_distributed;
+
+    bool public done_Host;
+
+    bool public done_Phase0_Host;
+
+    bool public done_Guest;
+
+    bool public done_Phase1_Guest;
+
+    uint256 public Host_hidden_car;
+
+    bool public done_Host_hidden_car;
+
+    int256 public Host_car;
+
+    bool public done_Host_car;
+
+    bool public done_Phase2_Host;
+
+    int256 public Guest_d;
+
+    bool public done_Guest_d;
+
+    bool public done_Phase3_Guest;
+
+    int256 public Host_goat;
+
+    bool public done_Host_goat;
+
+    bool public done_Phase4_Host;
+
+    bool public Guest_switch;
+
+    bool public done_Guest_switch;
+
+    bool public done_Phase5_Guest;
+
+    bool public done_Phase6_Host;
+
+    modifier at_phase(uint256 _phase) {
+        require((phase == _phase), "wrong phase");
+    }
+
+    modifier by(Role r) {
+        require((role[msg.sender] == r), "bad role");
+    }
+
+    modifier at_final_phase() {
+        require((phase == 7), "game not over");
+        require((!payoffs_distributed), "payoffs already sent");
+    }
+
+    function keccak(bool x, uint256 salt) public pure returns (bytes32 out) {
         return keccak256(abi.encodePacked(x, salt));
     }
-    // Step
-    uint256 public constant STEP_TIME = 500;
-    uint256 public step;
-    uint256 public lastTs;
-    modifier at_step(uint256 _step) {
-        require(step == _step, "wrong step");
-        // require(block.timestamp < lastTs + STEP_TIME, "step expired");
-        _;
-    }
-    // roles
-    enum Role { None, Host, Guest }
-    mapping(address => Role) public role;
-    mapping(address => uint256) public balanceOf;
-    modifier by(Role r) {
-        require(role[msg.sender] == r, "bad role");
-        _;
-    }
-    // step 0
-    bool public doneHost;
-    function join_Host() public payable by(Role.None) at_step(0) {
-        require(!doneHost, "already joined");
+
+    function join_Host() public payable by(Role.None) at_phase(0) {
+        require((!done_Host), "already joined");
         role[msg.sender] = Role.Host;
-        require(msg.value == 100, "bad stake"); balanceOf[msg.sender] = msg.value;
-        require(true, "where");
-        doneHost = true;
+        address_Host = msg.sender;
+        require((msg.value == 100), "bad stake");
+        balanceOf[msg.sender] = msg.value;
+        done_Host = true;
+        done_Phase0_Host = true;
     }
-    event Broadcast0(); // TODO: add params
-    function __nextStep0() public {
-        require(step == 0, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast0();
-        step = 1;
+
+    function __nextPhase_Phase0() public {
+        require((phase == 0), "wrong phase");
+        require(done_Phase0_Host, "Host not done");
+        emit Broadcast_Phase0();
+        phase = 1;
         lastTs = block.timestamp;
     }
-    // end 0
-    // step 1
-    bool public doneGuest;
-    function join_Guest() public payable by(Role.None) at_step(1) {
-        require(!doneGuest, "already joined");
+
+    function join_Guest() public payable by(Role.None) at_phase(1) {
+        require((!done_Guest), "already joined");
         role[msg.sender] = Role.Guest;
-        require(msg.value == 100, "bad stake"); balanceOf[msg.sender] = msg.value;
-        require(true, "where");
-        doneGuest = true;
+        address_Guest = msg.sender;
+        require((msg.value == 100), "bad stake");
+        balanceOf[msg.sender] = msg.value;
+        done_Guest = true;
+        done_Phase1_Guest = true;
     }
-    event Broadcast1(); // TODO: add params
-    function __nextStep1() public {
-        require(step == 1, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast1();
-        step = 2;
+
+    function __nextPhase_Phase1() public {
+        require((phase == 1), "wrong phase");
+        require(done_Phase1_Guest, "Guest not done");
+        emit Broadcast_Phase1();
+        phase = 2;
         lastTs = block.timestamp;
     }
-    // end 1
-    // step 2
-    uint256 public Host_hidden_car;
-    bool public Host_hidden_car_done;
-    bool public done_Host_2;
-    function yield_Host2(uint256 _hidden_car) public by(Role.Host) at_step(2) {
-        require(!done_Host_2, "done");
-        require(true, "where");
+
+    function yield_Phase2_Host(uint256 _hidden_car) public by(Role.Host) at_phase(2) {
+        require((!done_Phase2_Host), "done");
         Host_hidden_car = _hidden_car;
-        Host_hidden_car_done = true;
-        done_Host_2 = true;
+        done_Host_hidden_car = true;
+        done_Phase2_Host = true;
     }
-    event Broadcast2(); // TODO: add params
-    function __nextStep2() public {
-        require(step == 2, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast2();
-        step = 3;
+
+    function __nextPhase_Phase2() public {
+        require((phase == 2), "wrong phase");
+        require(done_Phase2_Host, "Host not done");
+        emit Broadcast_Phase2();
+        phase = 3;
         lastTs = block.timestamp;
     }
-    // end 2
-    // step 3
-    int256 public Guest_d;
-    bool public Guest_d_done;
-    bool public done_Guest_3;
-    function yield_Guest3(int256 _d) public by(Role.Guest) at_step(3) {
-        require(!done_Guest_3, "done");
-        require(true, "where");
+
+    function yield_Phase3_Guest(int256 _d) public by(Role.Guest) at_phase(3) {
+        require((!done_Phase3_Guest), "done");
+        require((((_d == 0) || (_d == 1)) || (_d == 2)), "domain");
         Guest_d = _d;
-        Guest_d_done = true;
-        done_Guest_3 = true;
+        done_Guest_d = true;
+        done_Phase3_Guest = true;
     }
-    event Broadcast3(); // TODO: add params
-    function __nextStep3() public {
-        require(step == 3, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast3();
-        step = 4;
+
+    function __nextPhase_Phase3() public {
+        require((phase == 3), "wrong phase");
+        require(done_Phase3_Guest, "Guest not done");
+        emit Broadcast_Phase3();
+        phase = 4;
         lastTs = block.timestamp;
     }
-    // end 3
-    // step 4
-    int256 public Host_goat;
-    bool public Host_goat_done;
-    bool public done_Host_4;
-    function yield_Host4(int256 _goat) public by(Role.Host) at_step(4) {
-        require(!done_Host_4, "done");
-        require((Host_goat != Guest_d), "where");
+
+    function yield_Phase4_Host(int256 _goat) public by(Role.Host) at_phase(4) {
+        require((!done_Phase4_Host), "done");
+        require((((_goat == 0) || (_goat == 1)) || (_goat == 2)), "domain");
+        require((_goat != Guest_d), "where");
         Host_goat = _goat;
-        Host_goat_done = true;
-        done_Host_4 = true;
+        done_Host_goat = true;
+        done_Phase4_Host = true;
     }
-    event Broadcast4(); // TODO: add params
-    function __nextStep4() public {
-        require(step == 4, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast4();
-        step = 5;
+
+    function __nextPhase_Phase4() public {
+        require((phase == 4), "wrong phase");
+        require(done_Phase4_Host, "Host not done");
+        emit Broadcast_Phase4();
+        phase = 5;
         lastTs = block.timestamp;
     }
-    // end 4
-    // step 5
-    bool public Guest_switch;
-    bool public Guest_switch_done;
-    bool public done_Guest_5;
-    function yield_Guest5(bool _switch) public by(Role.Guest) at_step(5) {
-        require(!done_Guest_5, "done");
-        require(true, "where");
+
+    function yield_Phase5_Guest(bool _switch) public by(Role.Guest) at_phase(5) {
+        require((!done_Phase5_Guest), "done");
         Guest_switch = _switch;
-        Guest_switch_done = true;
-        done_Guest_5 = true;
+        done_Guest_switch = true;
+        done_Phase5_Guest = true;
     }
-    event Broadcast5(); // TODO: add params
-    function __nextStep5() public {
-        require(step == 5, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast5();
-        step = 6;
+
+    function __nextPhase_Phase5() public {
+        require((phase == 5), "wrong phase");
+        require(done_Phase5_Guest, "Guest not done");
+        emit Broadcast_Phase5();
+        phase = 6;
         lastTs = block.timestamp;
     }
-    // end 5
-    // step 6
-    int256 public Host_car;
-    bool public Host_car_done;
-    bool public done_Host_6;
-    function reveal_Host6(int256 _car, uint256 salt) public by(Role.Host) at_step(6) {
-        require(!done_Host_6, "done");
-        require(keccak256(abi.encodePacked(_car, salt)) == bytes32(Host_hidden_car), "bad reveal");
-        require((Host_goat != Host_car), "where");
+
+    function reveal_Phase6_Host(int256 _car, uint256 salt) public by(Role.Host) at_phase(6) {
+        require((!done_Phase6_Host), "done");
+        require((keccak256(abi.encodePacked(_car, salt)) == bytes32(Host_hidden_car)), "bad reveal");
+        require((((_car == 0) || (_car == 1)) || (_car == 2)), "domain");
+        require((Host_goat != _car), "where");
         Host_car = _car;
-        Host_car_done = true;
-        done_Host_6 = true;
+        done_Host_car = true;
+        done_Phase6_Host = true;
     }
-    event Broadcast6(); // TODO: add params
-    function __nextStep6() public {
-        require(step == 6, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast6();
-        step = 7;
+
+    function __nextPhase_Phase6() public {
+        require((phase == 6), "wrong phase");
+        require(done_Phase6_Host, "Host not done");
+        emit Broadcast_Phase6();
+        phase = 7;
         lastTs = block.timestamp;
     }
-    // end 6
-    function withdraw_7_Guest() public by(Role.Guest) at_step(7) {
-        int256 delta = (((Host_car_done && Guest_switch_done)) ? ((((Guest_d != Host_car) == Guest_switch)) ? int256(20) : (- int256(20))) : ((! Host_car_done) ? int256(20) : (- int256(100))));
-        uint256 bal = balanceOf[msg.sender];
-        uint256 amount;
-        if (delta >= 0) {
-            amount = bal + uint256(delta);
-        } else {
-            uint256 d = uint256(-delta);
-            require(bal >= d, "insufficient");
-            amount = bal - d;
-        }
-        // Effects first
+
+    function distributePayoffs() public at_final_phase {
+        payoffs_distributed = true;
+        balanceOf[address_Host] = ((done_Host_car && done_Guest_switch)) ? 0 : ((!done_Host_car)) ? (-100) : 0;
+        balanceOf[address_Guest] = ((done_Host_car && done_Guest_switch)) ? (((Guest_d != Host_car) == Guest_switch)) ? 20 : (-20) : ((!done_Host_car)) ? 20 : (-100);
+    }
+
+    function withdraw() public {
+        int256 bal = balanceOf[msg.sender];
+        require((bal > 0), "no funds");
         balanceOf[msg.sender] = 0;
-        // Interaction
-        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        (bool ok, ) = payable(msg.sender).call{value: uint256(bal)}("");
         require(ok, "ETH send failed");
     }
-    function withdraw_7_Host() public by(Role.Host) at_step(7) {
-        int256 delta = (((Host_car_done && Guest_switch_done)) ? int256(0) : ((! Host_car_done) ? (- int256(100)) : int256(0)));
-        uint256 bal = balanceOf[msg.sender];
-        uint256 amount;
-        if (delta >= 0) {
-            amount = bal + uint256(delta);
-        } else {
-            uint256 d = uint256(-delta);
-            require(bal >= d, "insufficient");
-            amount = bal - d;
-        }
-        // Effects first
-        balanceOf[msg.sender] = 0;
-        // Interaction
-        (bool ok, ) = payable(msg.sender).call{value: amount}("");
-        require(ok, "ETH send failed");
-    }
-    // Reject stray ETH by default
-    receive() external payable {
+
+    event Broadcast_Phase0();
+
+    event Broadcast_Phase1();
+
+    event Broadcast_Phase2();
+
+    event Broadcast_Phase3();
+
+    event Broadcast_Phase4();
+
+    event Broadcast_Phase5();
+
+    event Broadcast_Phase6();
+
+    receive() public payable {
         revert("direct ETH not allowed");
     }
 }

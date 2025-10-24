@@ -1,5 +1,5 @@
 EFG 2 R "ThreeWayLotteryBuggy" { "Issuer" "Alice" "Bob" }
-"ThreeWayLotteryBuggy"
+"Generated from IR"
 
 p "" 1 1 "" { "1" "2" "3" "None" } 0
 p "" 2 1 "" { "1" "2" "3" "None" } 0

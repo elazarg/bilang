@@ -1,11 +1,22 @@
-package vegas
+package vegas.frontend
+
+import vegas.RoleId
+import vegas.VarId
+import vegas.FieldRef
 
 sealed class Ast
 
 interface Step
 
-data class Role(val name: String) : Ast() {
-    override fun toString(): String = name
+data class Role(val id: RoleId) : Ast() {
+    override fun toString(): String = id.toString()
+    val name = id.name
+
+    companion object {
+        @JvmStatic
+        fun of(name: String) = Role(RoleId(name))
+        val Chance = Role(RoleId("_Chance"))
+    }
 }
 
 sealed class Ext : Ast() {
@@ -21,11 +32,20 @@ sealed class Exp : Ast() {
     data class UnOp(val op: String, val operand: Exp) : Exp()
     data class BinOp(val op: String, val left: Exp, val right: Exp) : Exp()
 
-    data class Var(val name: String) : Exp() {
-        override fun toString(): String = name
+    data class Var(val id: VarId) : Exp() {
+        override fun toString(): String = id.toString()
+        companion object {
+            @JvmStatic
+            fun of(name: String) = Var(VarId(name))
+        }
     }
 
-    data class Member(val target: Role, val field: Var) : Exp()
+    data class Field(val fieldRef: FieldRef) : Exp() {
+        companion object {
+            @JvmStatic
+            fun of(role: Role, param: Var) = Field(FieldRef(role.id, param.id))
+        }
+    }
     data class Cond(val cond: Exp, val ifTrue: Exp, val ifFalse: Exp) : Exp()
 
     sealed class Const : Exp() {
@@ -70,58 +90,23 @@ sealed class TypeExp : Ast() {
     data class Opt(val type: TypeExp) : TypeExp()
 }
 
-data class ExpProgram(val name: String, val desc: String, val types: Map<TypeExp.TypeId, TypeExp>, val game: Ext) :
+data class GameAst(val name: String, val desc: String, val types: Map<TypeExp.TypeId, TypeExp>, val game: Ext) :
     Ast()
 
+internal fun findRoleIds(ext: Ext): Set<RoleId> = when (ext) {
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role.id }.toSet() else setOf()) + findRoleIds(ext.ext)
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) setOf(ext.q.role.id) else setOf()) + findRoleIds(ext.ext)
+    is Ext.Value -> setOf()
+}
 
-internal fun findRolesWithChance(ext: Ext): List<Role> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role } else setOf()) + findRoles(
+internal fun findChanceRoleIds(ext: Ext): Set<RoleId> = when (ext) {
+    is Ext.Bind -> (if (ext.kind == Kind.JOIN_CHANCE) ext.qs.map { it.role.id }.toSet() else setOf()) + findChanceRoleIds(
         ext.ext
     )
 
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN || ext.kind == Kind.JOIN_CHANCE) listOf(ext.q.role) else setOf()) + findRoles(
+    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN_CHANCE) setOf(ext.q.role.id) else setOf()) + findChanceRoleIds(
         ext.ext
     )
 
-    is Ext.Value -> listOf()
+    is Ext.Value -> setOf()
 }
-
-internal fun findRoles(ext: Ext): List<Role> = when (ext) {
-    is Ext.Bind -> (if (ext.kind == Kind.JOIN) ext.qs.map { it.role } else setOf()) + findRoles(ext.ext)
-    is Ext.BindSingle -> (if (ext.kind == Kind.JOIN) listOf(ext.q.role) else setOf()) + findRoles(ext.ext)
-    is Ext.Value -> listOf()
-}
-
-fun desugar(outcome: Outcome): Outcome.Value = desugar(outcome, listOf())
-
-private fun <T : Ast> copySpan(to: T, from: Ast): T {
-    SourceLoc.copy(to, from)
-    return to
-}
-
-// TODO: FIX. let binding does not seem to happen
-private fun desugar(outcome: Outcome, names: List<Pair<VarDec, Exp>>): Outcome.Value = when (outcome) {
-    is Outcome.Value -> outcome.copy(ts = outcome.ts.mapValues { (_, exp) ->
-        names.foldRight(exp) { (vd, init), acc -> copySpan(Exp.Let(vd, init, acc), outcome) }
-    })
-
-    is Outcome.Cond -> {
-        val ifTrue = desugar(outcome.ifTrue).ts
-        val ifFalse = desugar(outcome.ifFalse).ts
-        fun safeGetRole(m: Map<Role, Exp>, role: Role): Exp {
-            try {
-                return m.getValue(role)
-            } catch (e: NoSuchElementException) {
-                throw StaticError("$role is not a role", role)
-            }
-        }
-
-        val ts = ifTrue.keys.associateWith {
-            copySpan(Exp.Cond(outcome.cond, safeGetRole(ifTrue, it), safeGetRole(ifFalse, it)), it)
-        }
-        copySpan(Outcome.Value(ts), outcome)
-    }
-
-    is Outcome.Let -> desugar(outcome.outcome, names + Pair(outcome.dec, outcome.init))
-}
-

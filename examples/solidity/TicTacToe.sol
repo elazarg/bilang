@@ -1,261 +1,307 @@
-
 pragma solidity ^0.8.31;
+
 contract TicTacToe {
     constructor() {
         lastTs = block.timestamp;
     }
-    function keccak(bool x, uint256 salt) public pure returns (bytes32) {
+
+    enum Role { None, X, O }
+
+    uint256 constant public PHASE_TIME = uint256(500);
+
+    uint256 public phase;
+
+    uint256 public lastTs;
+
+    mapping(address => Role) public role;
+
+    mapping(address => int256) public balanceOf;
+
+    address public address_X;
+
+    address public address_O;
+
+    bool public payoffs_distributed;
+
+    bool public done_X;
+
+    bool public done_Phase0_X;
+
+    bool public done_O;
+
+    bool public done_Phase1_O;
+
+    int256 public X_c1;
+
+    bool public done_X_c1;
+
+    bool public done_Phase2_X;
+
+    int256 public O_c1;
+
+    bool public done_O_c1;
+
+    bool public done_Phase3_O;
+
+    int256 public X_c2;
+
+    bool public done_X_c2;
+
+    bool public done_Phase4_X;
+
+    int256 public O_c2;
+
+    bool public done_O_c2;
+
+    bool public done_Phase5_O;
+
+    int256 public X_c3;
+
+    bool public done_X_c3;
+
+    bool public done_Phase6_X;
+
+    int256 public O_c3;
+
+    bool public done_O_c3;
+
+    bool public done_Phase7_O;
+
+    int256 public X_c4;
+
+    bool public done_X_c4;
+
+    bool public done_Phase8_X;
+
+    int256 public O_c4;
+
+    bool public done_O_c4;
+
+    bool public done_Phase9_O;
+
+    modifier at_phase(uint256 _phase) {
+        require((phase == _phase), "wrong phase");
+    }
+
+    modifier by(Role r) {
+        require((role[msg.sender] == r), "bad role");
+    }
+
+    modifier at_final_phase() {
+        require((phase == 10), "game not over");
+        require((!payoffs_distributed), "payoffs already sent");
+    }
+
+    function keccak(bool x, uint256 salt) public pure returns (bytes32 out) {
         return keccak256(abi.encodePacked(x, salt));
     }
-    // Step
-    uint256 public constant STEP_TIME = 500;
-    uint256 public step;
-    uint256 public lastTs;
-    modifier at_step(uint256 _step) {
-        require(step == _step, "wrong step");
-        // require(block.timestamp < lastTs + STEP_TIME, "step expired");
-        _;
-    }
-    // roles
-    enum Role { None, X, O }
-    mapping(address => Role) public role;
-    mapping(address => uint256) public balanceOf;
-    modifier by(Role r) {
-        require(role[msg.sender] == r, "bad role");
-        _;
-    }
-    // step 0
-    bool public doneX;
-    function join_X() public payable by(Role.None) at_step(0) {
-        require(!doneX, "already joined");
+
+    function join_X() public payable by(Role.None) at_phase(0) {
+        require((!done_X), "already joined");
         role[msg.sender] = Role.X;
-        require(msg.value == 100, "bad stake"); balanceOf[msg.sender] = msg.value;
-        require(true, "where");
-        doneX = true;
+        address_X = msg.sender;
+        require((msg.value == 100), "bad stake");
+        balanceOf[msg.sender] = msg.value;
+        done_X = true;
+        done_Phase0_X = true;
     }
-    event Broadcast0(); // TODO: add params
-    function __nextStep0() public {
-        require(step == 0, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast0();
-        step = 1;
+
+    function __nextPhase_Phase0() public {
+        require((phase == 0), "wrong phase");
+        require(done_Phase0_X, "X not done");
+        emit Broadcast_Phase0();
+        phase = 1;
         lastTs = block.timestamp;
     }
-    // end 0
-    // step 1
-    bool public doneO;
-    function join_O() public payable by(Role.None) at_step(1) {
-        require(!doneO, "already joined");
+
+    function join_O() public payable by(Role.None) at_phase(1) {
+        require((!done_O), "already joined");
         role[msg.sender] = Role.O;
-        require(msg.value == 100, "bad stake"); balanceOf[msg.sender] = msg.value;
-        require(true, "where");
-        doneO = true;
+        address_O = msg.sender;
+        require((msg.value == 100), "bad stake");
+        balanceOf[msg.sender] = msg.value;
+        done_O = true;
+        done_Phase1_O = true;
     }
-    event Broadcast1(); // TODO: add params
-    function __nextStep1() public {
-        require(step == 1, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast1();
-        step = 2;
+
+    function __nextPhase_Phase1() public {
+        require((phase == 1), "wrong phase");
+        require(done_Phase1_O, "O not done");
+        emit Broadcast_Phase1();
+        phase = 2;
         lastTs = block.timestamp;
     }
-    // end 1
-    // step 2
-    int256 public X_c1;
-    bool public X_c1_done;
-    bool public done_X_2;
-    function yield_X2(int256 _c1) public by(Role.X) at_step(2) {
-        require(!done_X_2, "done");
-        require(true, "where");
+
+    function yield_Phase2_X(int256 _c1) public by(Role.X) at_phase(2) {
+        require((!done_Phase2_X), "done");
+        require((((_c1 == 0) || (_c1 == 1)) || (_c1 == 4)), "domain");
         X_c1 = _c1;
-        X_c1_done = true;
-        done_X_2 = true;
+        done_X_c1 = true;
+        done_Phase2_X = true;
     }
-    event Broadcast2(); // TODO: add params
-    function __nextStep2() public {
-        require(step == 2, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast2();
-        step = 3;
+
+    function __nextPhase_Phase2() public {
+        require((phase == 2), "wrong phase");
+        require(done_Phase2_X, "X not done");
+        emit Broadcast_Phase2();
+        phase = 3;
         lastTs = block.timestamp;
     }
-    // end 2
-    // step 3
-    int256 public O_c1;
-    bool public O_c1_done;
-    bool public done_O_3;
-    function yield_O3(int256 _c1) public by(Role.O) at_step(3) {
-        require(!done_O_3, "done");
-        require((X_c1 != O_c1), "where");
+
+    function yield_Phase3_O(int256 _c1) public by(Role.O) at_phase(3) {
+        require((!done_Phase3_O), "done");
+        require((((((_c1 == 1) || (_c1 == 3)) || (_c1 == 4)) || (_c1 == 5)) || (_c1 == 9)), "domain");
+        require((_c1 != _c1), "where");
         O_c1 = _c1;
-        O_c1_done = true;
-        done_O_3 = true;
+        done_O_c1 = true;
+        done_Phase3_O = true;
     }
-    event Broadcast3(); // TODO: add params
-    function __nextStep3() public {
-        require(step == 3, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast3();
-        step = 4;
+
+    function __nextPhase_Phase3() public {
+        require((phase == 3), "wrong phase");
+        require(done_Phase3_O, "O not done");
+        emit Broadcast_Phase3();
+        phase = 4;
         lastTs = block.timestamp;
     }
-    // end 3
-    // step 4
-    int256 public X_c2;
-    bool public X_c2_done;
-    bool public done_X_4;
-    function yield_X4(int256 _c2) public by(Role.X) at_step(4) {
-        require(!done_X_4, "done");
-        require((X_c1 != O_c1 && X_c1 != X_c2 && O_c1 != X_c2), "where");
+
+    function yield_Phase4_X(int256 _c2) public by(Role.X) at_phase(4) {
+        require((!done_Phase4_X), "done");
+        require((((((((((_c2 == 0) || (_c2 == 1)) || (_c2 == 2)) || (_c2 == 3)) || (_c2 == 4)) || (_c2 == 5)) || (_c2 == 6)) || (_c2 == 7)) || (_c2 == 8)), "domain");
+        require((((X_c1 != O_c1) && (X_c1 != _c2)) && (O_c1 != _c2)), "where");
         X_c2 = _c2;
-        X_c2_done = true;
-        done_X_4 = true;
+        done_X_c2 = true;
+        done_Phase4_X = true;
     }
-    event Broadcast4(); // TODO: add params
-    function __nextStep4() public {
-        require(step == 4, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast4();
-        step = 5;
+
+    function __nextPhase_Phase4() public {
+        require((phase == 4), "wrong phase");
+        require(done_Phase4_X, "X not done");
+        emit Broadcast_Phase4();
+        phase = 5;
         lastTs = block.timestamp;
     }
-    // end 4
-    // step 5
-    int256 public O_c2;
-    bool public O_c2_done;
-    bool public done_O_5;
-    function yield_O5(int256 _c2) public by(Role.O) at_step(5) {
-        require(!done_O_5, "done");
-        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && O_c1 != X_c2 && O_c1 != O_c2 && X_c2 != O_c2), "where");
+
+    function yield_Phase5_O(int256 _c2) public by(Role.O) at_phase(5) {
+        require((!done_Phase5_O), "done");
+        require((((((((((_c2 == 0) || (_c2 == 1)) || (_c2 == 2)) || (_c2 == 3)) || (_c2 == 4)) || (_c2 == 5)) || (_c2 == 6)) || (_c2 == 7)) || (_c2 == 8)), "domain");
+        require(((((((X_c1 != O_c1) && (X_c1 != _c2)) && (X_c1 != _c2)) && (O_c1 != _c2)) && (O_c1 != _c2)) && (_c2 != _c2)), "where");
         O_c2 = _c2;
-        O_c2_done = true;
-        done_O_5 = true;
+        done_O_c2 = true;
+        done_Phase5_O = true;
     }
-    event Broadcast5(); // TODO: add params
-    function __nextStep5() public {
-        require(step == 5, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast5();
-        step = 6;
+
+    function __nextPhase_Phase5() public {
+        require((phase == 5), "wrong phase");
+        require(done_Phase5_O, "O not done");
+        emit Broadcast_Phase5();
+        phase = 6;
         lastTs = block.timestamp;
     }
-    // end 5
-    // step 6
-    int256 public X_c3;
-    bool public X_c3_done;
-    bool public done_X_6;
-    function yield_X6(int256 _c3) public by(Role.X) at_step(6) {
-        require(!done_X_6, "done");
-        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && X_c2 != O_c2 && X_c2 != X_c3 && O_c2 != X_c3), "where");
+
+    function yield_Phase6_X(int256 _c3) public by(Role.X) at_phase(6) {
+        require((!done_Phase6_X), "done");
+        require((((((((((_c3 == 0) || (_c3 == 1)) || (_c3 == 2)) || (_c3 == 3)) || (_c3 == 4)) || (_c3 == 5)) || (_c3 == 6)) || (_c3 == 7)) || (_c3 == 8)), "domain");
+        require(((((((((((X_c1 != O_c1) && (X_c1 != X_c2)) && (X_c1 != O_c2)) && (X_c1 != _c3)) && (O_c1 != X_c2)) && (O_c1 != O_c2)) && (O_c1 != _c3)) && (X_c2 != O_c2)) && (X_c2 != _c3)) && (O_c2 != _c3)), "where");
         X_c3 = _c3;
-        X_c3_done = true;
-        done_X_6 = true;
+        done_X_c3 = true;
+        done_Phase6_X = true;
     }
-    event Broadcast6(); // TODO: add params
-    function __nextStep6() public {
-        require(step == 6, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast6();
-        step = 7;
+
+    function __nextPhase_Phase6() public {
+        require((phase == 6), "wrong phase");
+        require(done_Phase6_X, "X not done");
+        emit Broadcast_Phase6();
+        phase = 7;
         lastTs = block.timestamp;
     }
-    // end 6
-    // step 7
-    int256 public O_c3;
-    bool public O_c3_done;
-    bool public done_O_7;
-    function yield_O7(int256 _c3) public by(Role.O) at_step(7) {
-        require(!done_O_7, "done");
-        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && X_c1 != O_c3 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && O_c1 != O_c3 && X_c2 != O_c2 && X_c2 != X_c3 && X_c2 != O_c3 && O_c2 != X_c3 && O_c2 != O_c3 && X_c3 != O_c3), "where");
+
+    function yield_Phase7_O(int256 _c3) public by(Role.O) at_phase(7) {
+        require((!done_Phase7_O), "done");
+        require((((((((((_c3 == 0) || (_c3 == 1)) || (_c3 == 2)) || (_c3 == 3)) || (_c3 == 4)) || (_c3 == 5)) || (_c3 == 6)) || (_c3 == 7)) || (_c3 == 8)), "domain");
+        require((((((((((((((((X_c1 != O_c1) && (X_c1 != X_c2)) && (X_c1 != O_c2)) && (X_c1 != _c3)) && (X_c1 != _c3)) && (O_c1 != X_c2)) && (O_c1 != O_c2)) && (O_c1 != _c3)) && (O_c1 != _c3)) && (X_c2 != O_c2)) && (X_c2 != _c3)) && (X_c2 != _c3)) && (O_c2 != _c3)) && (O_c2 != _c3)) && (_c3 != _c3)), "where");
         O_c3 = _c3;
-        O_c3_done = true;
-        done_O_7 = true;
+        done_O_c3 = true;
+        done_Phase7_O = true;
     }
-    event Broadcast7(); // TODO: add params
-    function __nextStep7() public {
-        require(step == 7, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast7();
-        step = 8;
+
+    function __nextPhase_Phase7() public {
+        require((phase == 7), "wrong phase");
+        require(done_Phase7_O, "O not done");
+        emit Broadcast_Phase7();
+        phase = 8;
         lastTs = block.timestamp;
     }
-    // end 7
-    // step 8
-    int256 public X_c4;
-    bool public X_c4_done;
-    bool public done_X_8;
-    function yield_X8(int256 _c4) public by(Role.X) at_step(8) {
-        require(!done_X_8, "done");
-        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && X_c1 != O_c3 && X_c1 != X_c4 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && O_c1 != O_c3 && O_c1 != X_c4 && X_c2 != O_c2 && X_c2 != X_c3 && X_c2 != O_c3 && X_c2 != X_c4 && O_c2 != X_c3 && O_c2 != O_c3 && O_c2 != X_c4 && X_c3 != O_c3 && X_c3 != X_c4 && O_c3 != X_c4), "where");
+
+    function yield_Phase8_X(int256 _c4) public by(Role.X) at_phase(8) {
+        require((!done_Phase8_X), "done");
+        require((((((((((_c4 == 0) || (_c4 == 1)) || (_c4 == 2)) || (_c4 == 3)) || (_c4 == 4)) || (_c4 == 5)) || (_c4 == 6)) || (_c4 == 7)) || (_c4 == 8)), "domain");
+        require((((((((((((((((((((((X_c1 != O_c1) && (X_c1 != X_c2)) && (X_c1 != O_c2)) && (X_c1 != X_c3)) && (X_c1 != O_c3)) && (X_c1 != _c4)) && (O_c1 != X_c2)) && (O_c1 != O_c2)) && (O_c1 != X_c3)) && (O_c1 != O_c3)) && (O_c1 != _c4)) && (X_c2 != O_c2)) && (X_c2 != X_c3)) && (X_c2 != O_c3)) && (X_c2 != _c4)) && (O_c2 != X_c3)) && (O_c2 != O_c3)) && (O_c2 != _c4)) && (X_c3 != O_c3)) && (X_c3 != _c4)) && (O_c3 != _c4)), "where");
         X_c4 = _c4;
-        X_c4_done = true;
-        done_X_8 = true;
+        done_X_c4 = true;
+        done_Phase8_X = true;
     }
-    event Broadcast8(); // TODO: add params
-    function __nextStep8() public {
-        require(step == 8, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast8();
-        step = 9;
+
+    function __nextPhase_Phase8() public {
+        require((phase == 8), "wrong phase");
+        require(done_Phase8_X, "X not done");
+        emit Broadcast_Phase8();
+        phase = 9;
         lastTs = block.timestamp;
     }
-    // end 8
-    // step 9
-    int256 public O_c4;
-    bool public O_c4_done;
-    bool public done_O_9;
-    function yield_O9(int256 _c4) public by(Role.O) at_step(9) {
-        require(!done_O_9, "done");
-        require((X_c1 != O_c1 && X_c1 != X_c2 && X_c1 != O_c2 && X_c1 != X_c3 && X_c1 != O_c3 && X_c1 != X_c4 && X_c1 != O_c4 && O_c1 != X_c2 && O_c1 != O_c2 && O_c1 != X_c3 && O_c1 != O_c3 && O_c1 != X_c4 && O_c1 != O_c4 && X_c2 != O_c2 && X_c2 != X_c3 && X_c2 != O_c3 && X_c2 != X_c4 && X_c2 != O_c4 && O_c2 != X_c3 && O_c2 != O_c3 && O_c2 != X_c4 && O_c2 != O_c4 && X_c3 != O_c3 && X_c3 != X_c4 && X_c3 != O_c4 && O_c3 != X_c4 && O_c3 != O_c4 && X_c4 != O_c4), "where");
+
+    function yield_Phase9_O(int256 _c4) public by(Role.O) at_phase(9) {
+        require((!done_Phase9_O), "done");
+        require((((((((((_c4 == 0) || (_c4 == 1)) || (_c4 == 2)) || (_c4 == 3)) || (_c4 == 4)) || (_c4 == 5)) || (_c4 == 6)) || (_c4 == 7)) || (_c4 == 8)), "domain");
+        require(((((((((((((((((((((((((((((X_c1 != O_c1) && (X_c1 != X_c2)) && (X_c1 != O_c2)) && (X_c1 != X_c3)) && (X_c1 != O_c3)) && (X_c1 != _c4)) && (X_c1 != _c4)) && (O_c1 != X_c2)) && (O_c1 != O_c2)) && (O_c1 != X_c3)) && (O_c1 != O_c3)) && (O_c1 != _c4)) && (O_c1 != _c4)) && (X_c2 != O_c2)) && (X_c2 != X_c3)) && (X_c2 != O_c3)) && (X_c2 != _c4)) && (X_c2 != _c4)) && (O_c2 != X_c3)) && (O_c2 != O_c3)) && (O_c2 != _c4)) && (O_c2 != _c4)) && (X_c3 != O_c3)) && (X_c3 != _c4)) && (X_c3 != _c4)) && (O_c3 != _c4)) && (O_c3 != _c4)) && (_c4 != _c4)), "where");
         O_c4 = _c4;
-        O_c4_done = true;
-        done_O_9 = true;
+        done_O_c4 = true;
+        done_Phase9_O = true;
     }
-    event Broadcast9(); // TODO: add params
-    function __nextStep9() public {
-        require(step == 9, "wrong step");
-        // require(block.timestamp >= lastTs + STEP_TIME, "not yet");
-        emit Broadcast9();
-        step = 10;
+
+    function __nextPhase_Phase9() public {
+        require((phase == 9), "wrong phase");
+        require(done_Phase9_O, "O not done");
+        emit Broadcast_Phase9();
+        phase = 10;
         lastTs = block.timestamp;
     }
-    // end 9
-    function withdraw_10_X() public by(Role.X) at_step(10) {
-        int256 delta = int256(0);
-        uint256 bal = balanceOf[msg.sender];
-        uint256 amount;
-        if (delta >= 0) {
-            amount = bal + uint256(delta);
-        } else {
-            uint256 d = uint256(-delta);
-            require(bal >= d, "insufficient");
-            amount = bal - d;
-        }
-        // Effects first
+
+    function distributePayoffs() public at_final_phase {
+        payoffs_distributed = true;
+        balanceOf[address_X] = 0;
+        balanceOf[address_O] = 0;
+    }
+
+    function withdraw() public {
+        int256 bal = balanceOf[msg.sender];
+        require((bal > 0), "no funds");
         balanceOf[msg.sender] = 0;
-        // Interaction
-        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        (bool ok, ) = payable(msg.sender).call{value: uint256(bal)}("");
         require(ok, "ETH send failed");
     }
-    function withdraw_10_O() public by(Role.O) at_step(10) {
-        int256 delta = int256(0);
-        uint256 bal = balanceOf[msg.sender];
-        uint256 amount;
-        if (delta >= 0) {
-            amount = bal + uint256(delta);
-        } else {
-            uint256 d = uint256(-delta);
-            require(bal >= d, "insufficient");
-            amount = bal - d;
-        }
-        // Effects first
-        balanceOf[msg.sender] = 0;
-        // Interaction
-        (bool ok, ) = payable(msg.sender).call{value: amount}("");
-        require(ok, "ETH send failed");
-    }
-    // Reject stray ETH by default
-    receive() external payable {
+
+    event Broadcast_Phase0();
+
+    event Broadcast_Phase1();
+
+    event Broadcast_Phase2();
+
+    event Broadcast_Phase3();
+
+    event Broadcast_Phase4();
+
+    event Broadcast_Phase5();
+
+    event Broadcast_Phase6();
+
+    event Broadcast_Phase7();
+
+    event Broadcast_Phase8();
+
+    event Broadcast_Phase9();
+
+    receive() public payable {
         revert("direct ETH not allowed");
     }
 }

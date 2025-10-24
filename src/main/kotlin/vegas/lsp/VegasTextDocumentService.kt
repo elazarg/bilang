@@ -2,16 +2,16 @@ package vegas.lsp
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.TextDocumentService
-import vegas.ExpProgram
+import vegas.frontend.GameAst
 import vegas.StaticError
-import vegas.parseCode
 import vegas.typeCheck
 import org.eclipse.lsp4j.SemanticTokens
 import org.eclipse.lsp4j.SemanticTokensParams
 import vegas.generated.VegasLexer
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
-import vegas.Span
+import vegas.frontend.Span
+import vegas.frontend.parseCode
 import java.util.concurrent.CompletableFuture
 
 class VegasTextDocumentService(private val server: VegasLanguageServer) : TextDocumentService {
@@ -50,7 +50,7 @@ class VegasTextDocumentService(private val server: VegasLanguageServer) : TextDo
         val content = documentManager[uri] ?: return
         val diagnostics = mutableListOf<Diagnostic>()
         try {
-            val program: ExpProgram = parseCode(content)
+            val program: GameAst = parseCode(content)
             typeCheck(program)
         } catch (e: StaticError) {
             diagnostics.add(Diagnostic(spanToRange(e.span()), e.message, DiagnosticSeverity.Error, "vegas"))

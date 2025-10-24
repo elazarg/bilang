@@ -1,4 +1,4 @@
-package vegas;
+package vegas.frontend;
 
 import vegas.generated.VegasBaseVisitor;
 import vegas.generated.VegasParser.*;
@@ -16,9 +16,6 @@ import static java.util.stream.Collectors.*;
 class AstTranslator extends VegasBaseVisitor<Ast> {
 
     private final URI uri; // document being translated
-
-    /** Optional: legacy no-arg ctor (use a synthetic URI) */
-    public AstTranslator() { this(URI.create("inmemory:unknown.vg")); }
 
     public AstTranslator(URI uri) {
         this.uri = Objects.requireNonNull(uri);
@@ -54,8 +51,8 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     @Override
-    public ExpProgram visitProgram(ProgramContext ctx) {
-        return new ExpProgram("", "", map(ctx.typeDec()), ext(ctx.ext()));
+    public GameAst visitProgram(ProgramContext ctx) {
+        return new GameAst("", "", map(ctx.typeDec()), ext(ctx.ext()));
     }
 
     private Map<TypeExp.TypeId, TypeExp> map(List<TypeDecContext> ctxs) {
@@ -92,7 +89,7 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     private Role role(RoleIdContext roleId) {
-        return withSpan(new Role(roleId.getText()), roleId);
+        return withSpan(Role.of(roleId.getText()), roleId);
     }
 
     private Exp exp(ExpContext ctx) {
@@ -156,13 +153,13 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     @Override
-    public Exp.Member visitMemberExp(MemberExpContext ctx) {
-        return new Exp.Member(role(ctx.role), var(ctx.field));
+    public Exp.Field visitMemberExp(MemberExpContext ctx) {
+        return Exp.Field.of(role(ctx.role), var(ctx.field));
     }
 
     @Override
     public Exp.Call visitCallExp(CallExpContext ctx) {
-        return new Exp.Call(new Exp.Var(ctx.callee.getText()), list(ctx.args, this::exp));
+        return new Exp.Call(Exp.Var.of(ctx.callee.getText()), list(ctx.args, this::exp));
     }
 
     @Override
@@ -224,11 +221,11 @@ class AstTranslator extends VegasBaseVisitor<Ast> {
     }
 
     private Exp.Var var(IdExpContext v) {
-        return withSpan(new Exp.Var(v.getText()), v);
+        return withSpan(Exp.Var.of(v.getText()), v);
     }
 
     private Exp.Var var(VarIdContext v) {
-        return withSpan(new Exp.Var(v.getText()), v);
+        return withSpan(Exp.Var.of(v.getText()), v);
     }
 
     @Override
